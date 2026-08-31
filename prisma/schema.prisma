@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Property {
+  id                  String   @id @default(cuid())
+  title               String   // Nombre proyecto
+  description         String?  // Descripción (html/rich text)
+  propertyType        String   // Tipo (Casas, Departamento, Terrenos)
+  operation           String   // Operación (Venta, Arriendo)
+  isTemporaryRent     Boolean  @default(false) // Arriendo Temporal
+  status              String?  // Status (Usada, Nueva)
+  city                String   // Ciudad
+  sector              String   // Sector
+  address             String?  // Dirección
+  latitude            String?
+  longitude           String?
+  currency            String   @default("UF") // Valorado en (UF, Pesos, Dolar)
+  price               Float    // Valor
+  beds                Int      @default(0) // Habitaciones
+  baths               Int      @default(0) // Wc
+  landArea            Float?   // Metros terreno / totales
+  builtArea           Float?   // Metros construido / útiles
+  parking             Int?     @default(0) // Estacionamiento
+  storage             Int?     @default(0) // Bodega
+  isGreenProject      Boolean  @default(false) // Proyecto En Verde
+  salesRoom           String?  // Sala de venta (html)
+  executive           String?  // Ejecutivo Piloto (html)
+  publishedState      String   @default("Publicado") // Estado (Borrador, Publicado)
+  images              String[] // Galería
+  blueprints          String[] // Planos
+  featured            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model SiteContent {
+  id          String   @id @default(cuid())
+  key         String   @unique // Identificador único (ej: "quienes_somos", "contacto_talca")
+  title       String   // Título a mostrar en el panel
+  content     String   // Contenido rico (HTML o texto largo)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
