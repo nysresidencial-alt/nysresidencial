@@ -114,9 +114,11 @@ export function Navbar({ topPhone }: { topPhone?: string }) {
                 )}
                 <span className="sr-only">Toggle theme</span>
               </Button>
-              <Button variant={isScrolled ? "default" : "secondary"}>
-                Publicar Propiedad
-              </Button>
+                <Link href="/publicar">
+                  <Button variant={isScrolled ? "default" : "secondary"}>
+                    Publicar Propiedad
+                  </Button>
+                </Link>
               <Link
                 href="/admin/login"
                 className={cn(
@@ -174,7 +176,9 @@ export function Navbar({ topPhone }: { topPhone?: string }) {
                     <Moon className="h-5 w-5" />
                   )}
                 </Button>
-                <Button>Publicar Propiedad</Button>
+                <Link href="/publicar">
+                  <Button>Publicar Propiedad</Button>
+                </Link>
               </div>
             </div>
           )}
