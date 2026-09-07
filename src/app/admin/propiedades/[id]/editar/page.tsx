@@ -1,8 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
 import prisma from '@/lib/db'
-import { PropertyForm } from './PropertyForm'
+import { PropertyForm } from '@/components/PropertyForm'
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
+import { updateProperty } from './actions'
 
 export default async function EditarPropiedadPage({
   params
@@ -38,7 +39,13 @@ export default async function EditarPropiedadPage({
         <p className="text-muted-foreground mt-2">Modifica los detalles de la publicación. Los cambios se reflejarán inmediatamente en el sitio público.</p>
       </div>
 
-      <PropertyForm property={property} />
+      <PropertyForm 
+        property={property} 
+        actionFn={async (formData) => {
+          'use server'
+          await updateProperty(id, formData)
+        }} 
+      />
     </div>
   )
 }

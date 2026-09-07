@@ -3,7 +3,7 @@
 import prisma from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 
-export async function updateProperty(id: string, formData: FormData) {
+export async function createProperty(formData: FormData) {
   let parsedImages: string[] = []
   try {
     const imagesRaw = formData.get('images') as string
@@ -33,13 +33,14 @@ export async function updateProperty(id: string, formData: FormData) {
     salesRoom: formData.get('salesRoom') as string,
     executive: formData.get('executive') as string,
     images: parsedImages, // Added parsed images array!
+    publishedState: 'Publicado'
   }
 
-  await prisma.property.update({
-    where: { id },
+  await prisma.property.create({
     data,
   })
 
   revalidatePath('/admin')
-  revalidatePath(`/propiedades/${id}`)
+  revalidatePath('/propiedades')
+  revalidatePath('/')
 }
