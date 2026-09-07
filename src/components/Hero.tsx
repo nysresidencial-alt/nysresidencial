@@ -55,7 +55,7 @@ export function Hero() {
           <div className="flex-1 w-full flex flex-col md:flex-row items-center gap-2 px-4">
             
             <div className="w-full md:w-1/3">
-              <Select value={operation} onValueChange={setOperation}>
+              <Select value={operation} onValueChange={(val) => setOperation(val || "")}>
                 <SelectTrigger className="w-full border-none shadow-none bg-transparent focus:ring-0 text-foreground text-base">
                   <SelectValue placeholder="Comprar o Arrendar" />
                 </SelectTrigger>
@@ -69,7 +69,7 @@ export function Hero() {
             <div className="hidden md:block w-px h-8 bg-border" />
 
             <div className="w-full md:w-1/3">
-              <Select value={type} onValueChange={setType}>
+              <Select value={type} onValueChange={(val) => setType(val || "")}>
                 <SelectTrigger className="w-full border-none shadow-none bg-transparent focus:ring-0 text-foreground text-base">
                   <SelectValue placeholder="Tipo de Propiedad" />
                 </SelectTrigger>
