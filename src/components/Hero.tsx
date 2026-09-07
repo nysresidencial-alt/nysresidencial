@@ -80,6 +80,8 @@ export function Hero() {
                   <SelectItem value="Oficina">Oficina</SelectItem>
                   <SelectItem value="Comercial">Local Comercial</SelectItem>
                   <SelectItem value="Parcela">Parcela</SelectItem>
+                  <SelectItem value="Agricola">Predio Agrícola</SelectItem>
+                  <SelectItem value="Institucional">Institucional</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -92,6 +92,8 @@ export default async function PropiedadesPage({
                 <option value="Oficina">Oficina</option>
                 <option value="Comercial">Local Comercial</option>
                 <option value="Parcela">Parcela</option>
+                <option value="Agricola">Predio Agrícola</option>
+                <option value="Institucional">Institucional</option>
               </select>
             </div>
 

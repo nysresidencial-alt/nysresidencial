@@ -84,6 +84,8 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
                 <SelectItem value="Oficina">Oficina</SelectItem>
                 <SelectItem value="Comercial">Local Comercial</SelectItem>
                 <SelectItem value="Parcela">Parcela</SelectItem>
+                <SelectItem value="Agricola">Predio Agrícola/Forestal</SelectItem>
+                <SelectItem value="Institucional">Edificio/Institucional</SelectItem>
               </SelectContent>
             </Select>
           </div>
