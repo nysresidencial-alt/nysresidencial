@@ -4,6 +4,7 @@ import { Bed, Bath, Square, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Property } from "@prisma/client";
+import { formatCurrency } from "@/lib/utils";
 
 export function PropertyCard({ property }: { property: Property }) {
   return (
@@ -32,7 +33,7 @@ export function PropertyCard({ property }: { property: Property }) {
           </div>
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 md:p-4">
             <p className="text-white font-bold text-lg md:text-2xl tracking-tight drop-shadow-sm">
-              {property.currency} {property.price}
+              {formatCurrency(property.currency, property.price)}
             </p>
           </div>
         </div>

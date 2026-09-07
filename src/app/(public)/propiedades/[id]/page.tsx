@@ -3,6 +3,7 @@ import prisma from '@/lib/db'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Bed, Bath, Square, MapPin, Car, Box } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
@@ -46,7 +47,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </div>
         )}
         <div className="absolute bottom-6 right-6 bg-background/90 backdrop-blur-md px-6 py-3 rounded-xl shadow-lg border border-border">
-          <p className="text-3xl font-bold">{property.currency} {property.price}</p>
+          <p className="text-3xl font-bold">{formatCurrency(property.currency, property.price)}</p>
         </div>
       </div>
 
