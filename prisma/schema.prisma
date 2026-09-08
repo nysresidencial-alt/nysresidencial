@@ -46,3 +46,15 @@ model SiteContent {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model PublicationRequest {
+  id           String   @id @default(cuid())
+  name         String
+  phone        String
+  email        String
+  propertyType String
+  operation    String
+  message      String
+  status       String   @default("Pendiente") // Pendiente, Contactado, Descartado
+  createdAt    DateTime @default(now())
+}
