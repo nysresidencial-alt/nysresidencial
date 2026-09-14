@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useTransition, useState, useEffect } from "react";
+import { useTransition, useState, useRef } from "react";
 
 export function AdminSearch() {
   const router = useRouter();
@@ -12,23 +12,27 @@ export function AdminSearch() {
   
   const [isPending, startTransition] = useTransition();
   const [query, setQuery] = useState(searchParams.get("q") || "");
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounce the search so it searches automatically as they type
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  const handleSearch = (term: string) => {
+    setQuery(term);
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
       startTransition(() => {
         const params = new URLSearchParams(searchParams.toString());
-        if (query) {
-          params.set("q", query);
+        if (term) {
+          params.set("q", term);
         } else {
           params.delete("q");
         }
         router.replace(`${pathname}?${params.toString()}`);
       });
-    }, 400); // 400ms debounce
-
-    return () => clearTimeout(timer);
-  }, [query, pathname, router, searchParams]);
+    }, 400);
+  };
 
   return (
     <div className="relative w-full max-w-md">
@@ -41,7 +45,7 @@ export function AdminSearch() {
       </div>
       <Input
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => handleSearch(e.target.value)}
         placeholder="Buscar por nombre, ciudad o sector..."
         className="pl-10 w-full bg-background border-border rounded-full shadow-sm transition-all focus-visible:ring-primary"
       />
