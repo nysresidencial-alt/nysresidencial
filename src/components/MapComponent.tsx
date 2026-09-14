@@ -41,7 +41,13 @@ export default function MapComponent({ properties }: MapComponentProps) {
   }
 
   return (
-    <MapContainer center={center} zoom={9} className="w-full h-full z-0 rounded-2xl shadow-md border border-border">
+    <MapContainer 
+      center={center} 
+      zoom={9} 
+      scrollWheelZoom={false}
+      preferCanvas={true}
+      className="w-full h-full z-0 rounded-2xl shadow-md border border-border"
+    >
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
