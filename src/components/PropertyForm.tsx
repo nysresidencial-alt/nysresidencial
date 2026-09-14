@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Property } from '@prisma/client'
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 
 // Adjust prop to accept undefined property for creation mode, and submit action function
 interface PropertyFormProps {
@@ -24,7 +25,9 @@ interface PropertyFormProps {
 
 export function PropertyForm({ property, actionFn }: PropertyFormProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  type SaveState = 'idle' | 'saving' | 'success' | 'error'
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
   
   // States for complex fields
   const [description, setDescription] = useState(property?.description || '')
@@ -33,7 +36,7 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
   const [images, setImages] = useState<string[]>(property?.images || [])
 
   async function handleSubmit(formData: FormData) {
-    setLoading(true)
+    setSaveState('saving')
     formData.append('description', description)
     formData.append('salesRoom', salesRoom)
     formData.append('executive', executive)
@@ -41,15 +44,58 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
     
     try {
       await actionFn(formData)
-      router.push('/admin')
-      router.refresh()
-    } catch (e) {
+      setSaveState('success')
+      setTimeout(() => {
+        router.push('/admin')
+        router.refresh()
+      }, 2000)
+    } catch (e: any) {
       console.error(e)
-      setLoading(false)
+      setErrorMessage(e.message || 'Ocurrió un error al guardar la propiedad.')
+      setSaveState('error')
     }
   }
 
   return (
+    <>
+      {/* Modal Overlay */}
+      {saveState !== 'idle' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4 text-center border border-border animate-in fade-in zoom-in duration-300">
+            {saveState === 'saving' && (
+              <>
+                <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+                <h3 className="text-xl font-bold">Guardando Propiedad...</h3>
+                <p className="text-muted-foreground mt-2 text-sm">Por favor, no cierres esta ventana.</p>
+              </>
+            )}
+            
+            {saveState === 'success' && (
+              <>
+                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold">¡Guardado con éxito!</h3>
+                <p className="text-muted-foreground mt-2 text-sm">Redirigiendo al panel...</p>
+              </>
+            )}
+
+            {saveState === 'error' && (
+              <>
+                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                  <XCircle className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-red-600">Ocurrió un error</h3>
+                <p className="text-muted-foreground mt-2 text-sm">{errorMessage}</p>
+                <Button className="mt-6 rounded-full" onClick={() => setSaveState('idle')}>
+                  Volver a intentar
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
     <form action={handleSubmit} className="space-y-12 pb-12">
       
       {/* Imágenes */}
@@ -209,11 +255,12 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
         <Button variant="outline" type="button" onClick={() => router.push('/admin')} className="rounded-full px-6">
           Cancelar
         </Button>
-        <Button type="submit" disabled={loading} className="rounded-full px-8">
-          {loading ? 'Guardando...' : (property ? 'Guardar Cambios' : 'Crear Propiedad')}
+        <Button type="submit" disabled={saveState === 'saving'} className="rounded-full px-8">
+          {saveState === 'saving' ? 'Guardando...' : (property ? 'Guardar Cambios' : 'Crear Propiedad')}
         </Button>
       </div>
 
     </form>
+    </>
   )
 }
