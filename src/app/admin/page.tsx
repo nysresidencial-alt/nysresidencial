@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { AdminSearch } from '@/components/admin/AdminSearch'
 
+import { DeletePropertyModal } from '@/components/admin/DeletePropertyModal'
+
 export default async function AdminDashboard({
   searchParams,
 }: {
@@ -129,14 +131,13 @@ export default async function AdminDashboard({
                       <Pencil className="h-4 w-4" />
                     </Button>
                   </Link>
-                  <form action={async () => {
-                    'use server'
-                    await prisma.property.delete({ where: { id: prop.id } })
-                  }}>
-                    <Button variant="ghost" size="icon" type="submit" className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-full">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </form>
+                  <DeletePropertyModal 
+                    property={{ 
+                      id: prop.id, 
+                      title: prop.title, 
+                      image: prop.images && prop.images[0] ? prop.images[0] : undefined 
+                    }} 
+                  />
                 </div>
               </div>
             </div>
