@@ -52,7 +52,7 @@ function SortableImage({ url, index, onRemove }: SortableImageProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group aspect-video rounded-xl overflow-hidden border-2 ${index === 0 ? 'border-primary' : 'border-border'} bg-muted shadow-sm`}
+      className={`relative group aspect-[4/3] rounded-xl overflow-hidden border-2 ${index === 0 ? 'border-primary' : 'border-border'} bg-muted shadow-sm`}
     >
       <div
         {...attributes}

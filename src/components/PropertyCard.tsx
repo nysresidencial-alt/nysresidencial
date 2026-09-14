@@ -10,7 +10,7 @@ export function PropertyCard({ property }: { property: Property }) {
   return (
     <Link href={`/propiedades/${property.id}`} className="block group h-full">
       <Card className="overflow-hidden h-full flex flex-col group-hover:shadow-xl transition-all duration-300 border-border/50 bg-card cursor-pointer">
-        <div className="relative h-48 md:h-64 w-full shrink-0 overflow-hidden">
+        <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
           {property.images && property.images.length > 0 ? (
             <Image
               src={property.images[0]}
