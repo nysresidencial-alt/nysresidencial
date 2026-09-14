@@ -1,10 +1,44 @@
 import { Hero } from "@/components/Hero";
 import { PropertiesGrid } from "@/components/PropertiesGrid";
+import { GlobalMap } from "@/components/GlobalMap";
+import prisma from "@/lib/db";
 
-export default function Home() {
+export default async function Home() {
+  // Obtener propiedades para el mapa (solo las que tienen latitud y longitud)
+  const properties = await prisma.property.findMany({
+    where: {
+      latitude: { not: null },
+      longitude: { not: null },
+    },
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      currency: true,
+      images: true,
+      latitude: true,
+      longitude: true,
+      sector: true,
+      city: true,
+    }
+  });
+
   return (
     <div className="flex flex-col min-h-screen">
       <Hero />
+
+      {/* Mapa Interactivo */}
+      <section className="w-full py-12 md:py-20 bg-card border-b border-border">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="flex flex-col items-center text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Explora en el Mapa</h2>
+            <p className="text-muted-foreground text-lg max-w-2xl">
+              Navega por nuestra selección de propiedades directamente en el mapa y encuentra oportunidades en tu sector favorito.
+            </p>
+          </div>
+          <GlobalMap properties={properties as any} />
+        </div>
+      </section>
       
       {/* 1. Residenciales: Casas y Departamentos */}
       <PropertiesGrid 

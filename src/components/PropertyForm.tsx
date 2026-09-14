@@ -233,6 +233,14 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
             <Label htmlFor="address">Dirección exacta</Label>
             <Input id="address" name="address" defaultValue={property?.address || ''} />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="latitude">Latitud (Opcional, para el mapa global)</Label>
+            <Input id="latitude" name="latitude" placeholder="Ej. -35.4264" defaultValue={property?.latitude || ''} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="longitude">Longitud (Opcional, para el mapa global)</Label>
+            <Input id="longitude" name="longitude" placeholder="Ej. -71.6554" defaultValue={property?.longitude || ''} />
+          </div>
         </div>
       </section>
 

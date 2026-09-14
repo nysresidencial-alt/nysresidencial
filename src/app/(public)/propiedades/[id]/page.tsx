@@ -92,6 +92,27 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
           </section>
 
+          <section className="bg-card border border-border rounded-xl p-6">
+            <h2 className="text-2xl font-bold mb-4">Ubicación</h2>
+            <div className="w-full h-[400px] rounded-lg overflow-hidden border border-border">
+              <iframe
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                loading="lazy"
+                allowFullScreen
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                  (property.address ? property.address + ', ' : '') + 
+                  property.sector + ', ' + 
+                  property.city + ', Chile'
+                )}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+              ></iframe>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4">
+              La ubicación en el mapa es una aproximación basada en la dirección de la propiedad.
+            </p>
+          </section>
+
         </div>
 
         {/* Sidebar */}
