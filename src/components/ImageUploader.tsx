@@ -4,7 +4,6 @@ import React, { useState, useCallback } from 'react';
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
@@ -13,7 +12,6 @@ import {
 import {
   arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
@@ -102,9 +100,6 @@ export function ImageUploader({ images, onChange }: ImageUploaderProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
