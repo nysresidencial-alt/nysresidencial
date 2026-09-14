@@ -3,11 +3,12 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Pencil, Trash2, Search, Plus, MapPin } from 'lucide-react'
+import { Pencil, Trash2, Plus, MapPin } from 'lucide-react'
 import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { Badge } from '@/components/ui/badge'
+import { formatCurrency } from '@/lib/utils'
+import { AdminSearch } from '@/components/admin/AdminSearch'
 
 export default async function AdminDashboard({
   searchParams,
@@ -54,16 +55,8 @@ export default async function AdminDashboard({
 
       {/* Toolbar / Search */}
       <div className="bg-card border border-border p-4 rounded-2xl mb-8 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
-        <form className="relative w-full max-w-md" method="GET" action="/admin">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            name="q"
-            defaultValue={q}
-            placeholder="Buscar por nombre, ciudad o sector..." 
-            className="pl-10 w-full bg-background border-border rounded-full"
-          />
-        </form>
-        <div className="text-sm text-muted-foreground whitespace-nowrap">
+        <AdminSearch />
+        <div className="text-sm text-muted-foreground whitespace-nowrap bg-muted px-3 py-1.5 rounded-full font-medium">
           {properties.length} {properties.length === 1 ? 'propiedad' : 'propiedades'}
         </div>
       </div>
@@ -120,7 +113,7 @@ export default async function AdminDashboard({
                 </h3>
                 <div className="mt-auto pt-4">
                   <p className="text-2xl font-black text-foreground">
-                    {prop.currency} {prop.price.toLocaleString('es-CL')}
+                    {formatCurrency(prop.currency, prop.price)}
                   </p>
                 </div>
               </div>
