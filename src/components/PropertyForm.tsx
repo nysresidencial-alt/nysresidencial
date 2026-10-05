@@ -233,13 +233,10 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
             <Label htmlFor="address">Dirección exacta</Label>
             <Input id="address" name="address" defaultValue={property?.address || ''} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="latitude">Latitud (Opcional, para el mapa global)</Label>
-            <Input id="latitude" name="latitude" placeholder="Ej. -35.4264" defaultValue={property?.latitude || ''} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="longitude">Longitud (Opcional, para el mapa global)</Label>
-            <Input id="longitude" name="longitude" placeholder="Ej. -71.6554" defaultValue={property?.longitude || ''} />
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="googleMapsLink">Enlace de Google Maps (Recomendado)</Label>
+            <Input id="googleMapsLink" name="googleMapsLink" placeholder="Ej. https://maps.app.goo.gl/..." defaultValue={property?.googleMapsLink || ''} />
+            <p className="text-xs text-muted-foreground mt-1">Pega aquí el enlace directo para que los clientes puedan llegar fácilmente.</p>
           </div>
         </div>
       </section>

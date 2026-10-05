@@ -6,10 +6,13 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Cargar contenido del footer desde BD
-  const santiago = await prisma.siteContent.findUnique({ where: { key: 'santiago_contacto' } });
-  const talca = await prisma.siteContent.findUnique({ where: { key: 'talca_contacto' } });
   const fonos = await prisma.siteContent.findUnique({ where: { key: 'fonos_superior' } });
+  
+  // Obtener oficinas desde la base de datos (ordenadas por el campo 'order')
+  const offices = await prisma.office.findMany({
+    where: { isActive: true },
+    orderBy: { order: 'asc' }
+  });
 
   return (
     <>
@@ -20,32 +23,21 @@ export default async function PublicLayout({
       
       {/* Footer Dinámico */}
       <footer className="bg-zinc-950 py-12 text-zinc-400 mt-auto">
-        <div className="container mx-auto px-4 md:px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
+        <div className="container mx-auto px-4 md:px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-1">
             <h3 className="text-white font-bold text-xl mb-4">NYS Residencial</h3>
-            <p className="text-sm">Buscar la mejor opción es nuestro compromiso desde 1999.</p>
+            <p className="text-sm">Buscar la mejor opci&oacute;n es nuestro compromiso desde 1999.</p>
           </div>
-          <div>
-            <h4 className="text-white font-semibold mb-4">Santiago</h4>
-            {santiago?.content ? (
-              <div className="text-sm prose prose-sm prose-invert" dangerouslySetInnerHTML={{ __html: santiago.content }} />
-            ) : (
-              <>
-                <p className="text-sm">El Golf 40, piso 12 Las Condes</p>
-                <p className="text-sm">contacto@nys.cl</p>
-              </>
-            )}
-          </div>
-          <div>
-            <h4 className="text-white font-semibold mb-4">Talca</h4>
-            {talca?.content ? (
-              <div className="text-sm prose prose-sm prose-invert" dangerouslySetInnerHTML={{ __html: talca.content }} />
-            ) : (
-              <>
-                <p className="text-sm">6 Oriente 960, Edificio Manuel Solar, 4 piso</p>
-                <p className="text-sm">Celular: +56 9 9289 3145 | +56 9 7387 7812</p>
-              </>
-            )}
+          
+          <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+            {offices.map((office) => (
+              <div key={office.id}>
+                <h4 className="text-white font-semibold mb-4">{office.name}</h4>
+                <p className="text-sm">{office.address}</p>
+                {office.email && <p className="text-sm">{office.email}</p>}
+                {office.phone && <p className="text-sm">{office.phone}</p>}
+              </div>
+            ))}
           </div>
         </div>
       </footer>

@@ -9,29 +9,29 @@ datasource db {
 model Property {
   id                  String   @id @default(cuid())
   title               String   // Nombre proyecto
-  description         String?  // Descripción (html/rich text)
+  description         String?  // DescripciÃ³n (html/rich text)
   propertyType        String   // Tipo (Casas, Departamento, Terrenos)
-  operation           String   // Operación (Venta, Arriendo)
+  operation           String   // OperaciÃ³n (Venta, Arriendo)
   isTemporaryRent     Boolean  @default(false) // Arriendo Temporal
   status              String?  // Status (Usada, Nueva)
   city                String   // Ciudad
   sector              String   // Sector
-  address             String?  // Dirección
-  latitude            String?
-  longitude           String?
+  address             String?  // DirecciÃ³n
+  googleMapsLink      String?
+  
   currency            String   @default("UF") // Valorado en (UF, Pesos, Dolar)
   price               Float    // Valor
   beds                Int      @default(0) // Habitaciones
   baths               Int      @default(0) // Wc
   landArea            Float?   // Metros terreno / totales
-  builtArea           Float?   // Metros construido / útiles
+  builtArea           Float?   // Metros construido / Ãºtiles
   parking             Int?     @default(0) // Estacionamiento
   storage             Int?     @default(0) // Bodega
   isGreenProject      Boolean  @default(false) // Proyecto En Verde
   salesRoom           String?  // Sala de venta (html)
   executive           String?  // Ejecutivo Piloto (html)
   publishedState      String   @default("Publicado") // Estado (Borrador, Publicado)
-  images              String[] // Galería
+  images              String[] // GalerÃ­a
   blueprints          String[] // Planos
   featured            Boolean  @default(false)
   createdAt           DateTime @default(now())
@@ -40,8 +40,8 @@ model Property {
 
 model SiteContent {
   id          String   @id @default(cuid())
-  key         String   @unique // Identificador único (ej: "quienes_somos", "contacto_talca")
-  title       String   // Título a mostrar en el panel
+  key         String   @unique // Identificador Ãºnico (ej: "quienes_somos", "contacto_talca")
+  title       String   // TÃ­tulo a mostrar en el panel
   content     String   // Contenido rico (HTML o texto largo)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -65,4 +65,17 @@ model HeroImage {
   order     Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+model Office {
+  id        String   @id @default(cuid())
+  name      String   // ej: "Santiago" o "Talca"
+  address   String   // ej: "El Golf 40..."
+  email     String?  // ej: "contacto@nys.cl"
+  phone     String?  // ej: "+56 9 9289 3145"
+  mapLink   String?  // Enlace de Google Maps
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -41,7 +41,7 @@ export async function PropertiesGrid({
 
   return (
     <section className={`py-12 md:py-16 ${bgColor}`}>
-      <div className="container mx-auto px-4 md:px-6 2xl:px-8 max-w-[1600px]">
+      <div className="w-full max-w-[1700px] mx-auto px-4 md:px-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-10">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2 md:mb-3 text-secondary uppercase">
@@ -55,7 +55,7 @@ export async function PropertiesGrid({
           </div>
           {linkHref && (
             <Link href={linkHref} className="text-primary font-bold hover:underline mt-4 md:mt-0 whitespace-nowrap">
-              Ver más &rarr;
+              Ver m&aacute;s &rarr;
             </Link>
           )}
         </div>

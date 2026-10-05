@@ -30,8 +30,8 @@ export async function createProperty(formData: FormData) {
     city: formData.get('city') as string,
     sector: formData.get('sector') as string,
     address: formData.get('address') as string,
-    latitude: formData.get('latitude') as string || null,
-    longitude: formData.get('longitude') as string || null,
+    googleMapsLink: formData.get('googleMapsLink') as string || null,
+    
     salesRoom: formData.get('salesRoom') as string,
     executive: formData.get('executive') as string,
     images: parsedImages, // Added parsed images array!

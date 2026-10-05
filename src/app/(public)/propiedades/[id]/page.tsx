@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+﻿import { notFound } from 'next/navigation'
 import prisma from '@/lib/db'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
@@ -56,7 +56,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         <div className="lg:col-span-2 space-y-8">
           
           <section className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-6">Características Principales</h2>
+            <h2 className="text-2xl font-bold mb-6">CaracterÃ­sticas Principales</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-lg">
                 <Bed className="h-8 w-8 text-primary mb-2" />
@@ -66,12 +66,12 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               <div className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-lg">
                 <Bath className="h-8 w-8 text-primary mb-2" />
                 <span className="text-2xl font-bold">{property.baths}</span>
-                <span className="text-sm text-muted-foreground">Baños</span>
+                <span className="text-sm text-muted-foreground">BaÃ±os</span>
               </div>
               <div className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-lg">
                 <Square className="h-8 w-8 text-primary mb-2" />
                 <span className="text-2xl font-bold">{property.builtArea || 0}</span>
-                <span className="text-sm text-muted-foreground">m² útiles</span>
+                <span className="text-sm text-muted-foreground">mÂ² Ãºtiles</span>
               </div>
               <div className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-lg">
                 <Car className="h-8 w-8 text-primary mb-2" />
@@ -82,18 +82,18 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </section>
 
           <section className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-4">Descripción</h2>
+            <h2 className="text-2xl font-bold mb-4">DescripciÃ³n</h2>
             <div className="prose prose-zinc dark:prose-invert max-w-none">
               {property.description ? (
                 <div dangerouslySetInnerHTML={{ __html: property.description }} />
               ) : (
-                <p className="text-muted-foreground">No hay descripción disponible para esta propiedad.</p>
+                <p className="text-muted-foreground">No hay descripciÃ³n disponible para esta propiedad.</p>
               )}
             </div>
           </section>
 
           <section className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-4">Ubicación</h2>
+            <h2 className="text-2xl font-bold mb-4">UbicaciÃ³n</h2>
             <div className="w-full h-[400px] rounded-lg overflow-hidden border border-border">
               <iframe
                 width="100%"
@@ -109,7 +109,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               ></iframe>
             </div>
             <p className="text-sm text-muted-foreground mt-4">
-              La ubicación en el mapa es una aproximación basada en la dirección de la propiedad.
+              La ubicaciÃ³n en el mapa es una aproximaciÃ³n basada en la direcciÃ³n de la propiedad.
             </p>
           </section>
 
@@ -119,7 +119,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         <div className="space-y-6">
           <section className="bg-card border border-border rounded-xl p-6 sticky top-28">
             <h3 className="text-xl font-bold mb-4">Contacto</h3>
-            <p className="text-muted-foreground mb-6">¿Te interesa esta propiedad? Contáctanos para más información o agendar una visita.</p>
+            <p className="text-muted-foreground mb-6">Â¿Te interesa esta propiedad? ContÃ¡ctanos para mÃ¡s informaciÃ³n o agendar una visita.</p>
             
             <form className="space-y-4">
               <div className="space-y-2">

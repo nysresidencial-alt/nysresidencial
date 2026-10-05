@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut, Home, FileText, DollarSign, Building, MessageSquare, Image as ImageIcon } from 'lucide-react'
+import { LogOut, Home, FileText, DollarSign, Building, MessageSquare, Image as ImageIcon, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UFWidget } from '@/components/UFWidget'
 
@@ -19,6 +19,7 @@ export default function AdminLayout({
     { name: 'Contenido', href: '/admin/contenido', icon: FileText },
     { name: 'UF', href: '/admin/uf', icon: DollarSign },
     { name: 'Solicitudes', href: '/admin/solicitudes', icon: MessageSquare },
+    { name: 'Oficinas', href: '/admin/oficinas', icon: MapPin },
   ]
 
   return (
