@@ -1,6 +1,6 @@
-import { Hero } from "@/components/Hero";
+﻿import { Hero } from "@/components/Hero";
 import { PropertiesGrid } from "@/components/PropertiesGrid";
-import { GlobalMap } from "@/components/GlobalMap";
+
 import { OperationToggle } from "@/components/OperationToggle";
 import prisma from "@/lib/db";
 
@@ -133,7 +133,7 @@ export default async function Home({
         linkHref="/propiedades?type=Terreno"
       />
 
-      {/* 4. Predios AgrÃƒÂ­colas */}
+      {/* 4. Predios AgrÃƒÆ’Ã‚Â­colas */}
       <PropertiesGrid 
         title="Predios Agr&iacute;colas y Forestales" 
         description="Extensas hect&aacute;reas productivas en excelentes ubicaciones."
