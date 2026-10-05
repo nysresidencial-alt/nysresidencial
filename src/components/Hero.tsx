@@ -11,13 +11,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Image from "next/image";
 
-export function Hero() {
+interface HeroProps {
+  images?: string[];
+}
+
+export function Hero({ images = [] }: HeroProps) {
   const router = useRouter();
   const [operation, setOperation] = useState("");
   const [type, setType] = useState("");
   const [q, setQ] = useState("");
+  
+  const defaultImage = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075&auto=format&fit=crop";
+  const displayImages = images.length > 0 ? images : [defaultImage];
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    if (displayImages.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % displayImages.length);
+    }, 5000); // Rota cada 5 segundos
+    
+    return () => clearInterval(interval);
+  }, [displayImages.length]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,15 +50,24 @@ export function Hero() {
 
   return (
     <div className="relative h-[90vh] min-h-[600px] w-full flex items-center justify-center bg-zinc-900 rounded-b-[3rem] sm:rounded-b-[5rem] overflow-hidden">
-      {/* Background Image with Overlay */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center"
-        style={{ 
-          backgroundImage: "url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075&auto=format&fit=crop')",
-        }}
-      >
-        <div className="absolute inset-0 bg-black/40" />
-      </div>
+      {/* Background Image Carousel with Overlay */}
+      {displayImages.map((url, index) => (
+        <div
+          key={url}
+          className={`absolute inset-0 z-0 transition-opacity duration-1000 ease-in-out ${
+            index === currentImageIndex ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <Image
+            src={url}
+            alt="Hero Background"
+            fill
+            className="object-cover"
+            priority={index === 0}
+          />
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+      ))}
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 md:px-6 flex flex-col items-start mt-20">
@@ -56,7 +84,7 @@ export function Hero() {
             
             <div className="w-full md:w-1/3">
               <Select value={operation} onValueChange={(val) => setOperation(val || "")}>
-                <SelectTrigger className="w-full border-none shadow-none bg-transparent focus:ring-0 text-foreground text-base">
+                <SelectTrigger className="w-full border-none shadow-none bg-transparent focus:ring-0 text-foreground text-base font-medium">
                   <SelectValue placeholder="Comprar o Arrendar" />
                 </SelectTrigger>
                 <SelectContent>
@@ -70,7 +98,7 @@ export function Hero() {
 
             <div className="w-full md:w-1/3">
               <Select value={type} onValueChange={(val) => setType(val || "")}>
-                <SelectTrigger className="w-full border-none shadow-none bg-transparent focus:ring-0 text-foreground text-base">
+                <SelectTrigger className="w-full border-none shadow-none bg-transparent focus:ring-0 text-foreground text-base font-medium">
                   <SelectValue placeholder="Tipo de Propiedad" />
                 </SelectTrigger>
                 <SelectContent>
@@ -93,13 +121,13 @@ export function Hero() {
               <Input 
                 type="text" 
                 placeholder="Ingresa comuna, sector o dirección..." 
-                className="w-full border-none shadow-none bg-transparent focus-visible:ring-0 px-0 text-base"
+                className="w-full border-none shadow-none bg-transparent focus-visible:ring-0 px-0 text-base font-medium"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
             </div>
           </div>
-          <Button type="submit" size="lg" className="w-full md:w-auto rounded-full px-8 h-12 md:h-14 text-base shrink-0">
+          <Button type="submit" size="lg" className="w-full md:w-auto rounded-full px-8 h-12 md:h-14 text-base shrink-0 font-bold">
             Buscar
           </Button>
         </form>

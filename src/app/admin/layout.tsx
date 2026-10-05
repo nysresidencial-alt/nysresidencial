@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut, Home, FileText, DollarSign, Building, MessageSquare } from 'lucide-react'
+import { LogOut, Home, FileText, DollarSign, Building, MessageSquare, Image as ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UFWidget } from '@/components/UFWidget'
 
@@ -15,6 +15,7 @@ export default function AdminLayout({
 
   const navItems = [
     { name: 'Propiedades', href: '/admin', icon: Building },
+    { name: 'Carrusel', href: '/admin/carrusel', icon: ImageIcon },
     { name: 'Contenido', href: '/admin/contenido', icon: FileText },
     { name: 'UF', href: '/admin/uf', icon: DollarSign },
     { name: 'Solicitudes', href: '/admin/solicitudes', icon: MessageSquare },

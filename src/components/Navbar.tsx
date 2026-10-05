@@ -4,15 +4,19 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
+import { usePathname } from "next/navigation";
 import { UFWidget } from "@/components/UFWidget";
 import { Moon, Sun, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Navbar({ topPhone }: { topPhone?: string }) {
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+
+  const isScrolled = scrollY > 50 || pathname !== "/";
 
   useEffect(() => {
     setMounted(true);
@@ -20,7 +24,7 @@ export function Navbar({ topPhone }: { topPhone?: string }) {
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          setIsScrolled(window.scrollY > 50);
+          setScrollY(window.scrollY);
           ticking = false;
         });
         ticking = true;
@@ -131,7 +135,7 @@ export function Navbar({ topPhone }: { topPhone?: string }) {
                 className={cn(
                   "hidden md:inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-medium transition-colors border",
                   isScrolled 
-                    ? "bg-zinc-950 text-white border-zinc-800 hover:bg-zinc-800" 
+                    ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90" 
                     : "bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-md"
                 )}
               >
