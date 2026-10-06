@@ -2,8 +2,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -49,13 +47,13 @@
 }
 
 :root {
-  --background: #F8FAFC;
+  --background: #FFFFFF;
   --foreground: #1E293B;
   --card: #FFFFFF;
   --card-foreground: #1E293B;
   --popover: #FFFFFF;
   --popover-foreground: #1E293B;
-  --primary: #E51A4B;
+  --primary: #CE1156;
   --primary-foreground: #FFFFFF;
   --secondary: #26C6DA;
   --secondary-foreground: #FFFFFF;
@@ -66,55 +64,21 @@
   --destructive: #EF4444;
   --border: #E2E8F0;
   --input: #E2E8F0;
-  --ring: #E51A4B;
-  --chart-1: #E51A4B;
+  --ring: #CE1156;
+  --chart-1: #CE1156;
   --chart-2: #26C6DA;
   --chart-3: #F97316;
   --chart-4: #8B5CF6;
   --chart-5: #10B981;
-  --radius: 0.625rem;
+  --radius: 0.1rem;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #1E293B;
-  --sidebar-primary: #E51A4B;
+  --sidebar-primary: #CE1156;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #F1F5F9;
   --sidebar-accent-foreground: #0F172A;
   --sidebar-border: #E2E8F0;
-  --sidebar-ring: #E51A4B;
-}
-
-.dark {
-  --background: #1A2226;
-  --foreground: #F8FAFC;
-  --card: #212B30;
-  --card-foreground: #F8FAFC;
-  --popover: #212B30;
-  --popover-foreground: #F8FAFC;
-  --primary: #E51A4B;
-  --primary-foreground: #FFFFFF;
-  --secondary: #26C6DA;
-  --secondary-foreground: #1A2226;
-  --muted: #2A363D;
-  --muted-foreground: #94A3B8;
-  --accent: #2A363D;
-  --accent-foreground: #F8FAFC;
-  --destructive: #EF4444;
-  --border: #35444D;
-  --input: #35444D;
-  --ring: #E51A4B;
-  --chart-1: #E51A4B;
-  --chart-2: #26C6DA;
-  --chart-3: #F97316;
-  --chart-4: #8B5CF6;
-  --chart-5: #10B981;
-  --sidebar: #1A2226;
-  --sidebar-foreground: #F8FAFC;
-  --sidebar-primary: #E51A4B;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #2A363D;
-  --sidebar-accent-foreground: #F8FAFC;
-  --sidebar-border: #35444D;
-  --sidebar-ring: #E51A4B;
+  --sidebar-ring: #CE1156;
 }
 
 @layer base {
@@ -127,4 +91,23 @@
   html {
     @apply font-sans;
   }
+}
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --popover: #1e293b;
+  --popover-foreground: #f8fafc;
+  --primary: #CE1156;
+  --primary-foreground: #FFFFFF;
+  --secondary: #26C6DA;
+  --secondary-foreground: #0f172a;
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+  --accent: #334155;
+  --accent-foreground: #f8fafc;
+  --border: #334155;
+  --input: #334155;
+  --ring: #CE1156;
 }
