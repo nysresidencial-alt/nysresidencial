@@ -29,9 +29,9 @@ export default function AdminLayout({
   ]
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col" suppressHydrationWarning>
       {/* Admin Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" suppressHydrationWarning>
         <div className="container mx-auto flex h-16 items-center px-4">
           <Link href="/admin" className="mr-8 flex items-center space-x-2">
             <span className="font-bold text-xl tracking-tight">NYS<span className="font-light">Admin</span></span>
@@ -67,8 +67,12 @@ export default function AdminLayout({
               <span className="hidden sm:inline">Ver Sitio</span>
             </Link>
             
-            <form action="/admin/logout" method="POST">
-              <button className="text-red-500 hover:text-red-600 flex items-center gap-1.5 md:gap-2 text-sm font-medium transition-colors cursor-pointer">
+            <form action="/admin/logout" method="POST" suppressHydrationWarning>
+              <button 
+                type="submit"
+                suppressHydrationWarning
+                className="text-red-500 hover:text-red-600 flex items-center gap-1.5 md:gap-2 text-sm font-medium transition-colors cursor-pointer"
+              >
                 <LogOut className="h-4 w-4 shrink-0" />
                 <span className="hidden sm:inline">Salir</span>
               </button>

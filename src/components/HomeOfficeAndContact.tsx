@@ -43,6 +43,20 @@ export function HomeOfficeAndContact({ offices }: HomeOfficeAndContactProps) {
     }
   }
 
+  function getOfficeEmbedUrl(office: Office) {
+    if (office.mapLink) {
+      const coordMatch = office.mapLink.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (coordMatch) {
+        return `https://maps.google.com/maps?q=${coordMatch[1]},${coordMatch[2]}&t=&z=17&ie=UTF8&iwloc=&output=embed`;
+      }
+      const qMatch = office.mapLink.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (qMatch) {
+        return `https://maps.google.com/maps?q=${qMatch[1]},${qMatch[2]}&t=&z=17&ie=UTF8&iwloc=&output=embed`;
+      }
+    }
+    return `https://maps.google.com/maps?q=${encodeURIComponent(office.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+  }
+
   return (
     <section id="contacto-solicitud" className="py-12 md:py-16 bg-muted/30 border-t border-border scroll-mt-6">
       <div className="max-w-[1500px] mx-auto px-4 md:px-8">
@@ -123,7 +137,7 @@ export function HomeOfficeAndContact({ offices }: HomeOfficeAndContactProps) {
                     loading="lazy"
                     allowFullScreen
                     referrerPolicy="no-referrer-when-downgrade"
-                    src={`https://maps.google.com/maps?q=${encodeURIComponent(activeOffice.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                    src={getOfficeEmbedUrl(activeOffice)}
                   />
                 </div>
 
