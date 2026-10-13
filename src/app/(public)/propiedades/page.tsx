@@ -3,6 +3,27 @@ import { PropertyCard } from '@/components/PropertyCard'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Catálogo de Propiedades en Venta y Arriendo en Talca',
+  description: 'Explora nuestro catálogo completo de casas, departamentos, parcelas, terrenos y locales comerciales en Talca y Chile. Filtra por precio, comuna y tipo de operación.',
+  keywords: [
+    'departamentos en Talca',
+    'casas en Talca',
+    'venta departamentos Talca',
+    'arriendo departamentos Talca',
+    'parcelas Talca',
+    'terrenos Maule',
+    'catálogo propiedades Talca',
+    'NYS Residencial'
+  ],
+  openGraph: {
+    title: 'Catálogo de Propiedades en Venta y Arriendo en Talca | NYS Residencial',
+    description: 'Encuentra tu próximo hogar o inversión inmobiliaria en Talca y la Región del Maule.',
+    url: 'https://nysresidencial.cl/propiedades',
+  },
+}
 
 export default async function PropiedadesPage({
   searchParams,

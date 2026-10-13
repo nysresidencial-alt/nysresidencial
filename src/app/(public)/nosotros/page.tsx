@@ -1,5 +1,11 @@
 import prisma from '@/lib/db'
 import Image from 'next/image'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Quiénes Somos | Trayectoria Inmobiliaria desde 1999',
+  description: 'Conoce la historia, valores y trayectoria de NYS Residencial. Más de 25 años asesorando a familias e inversionistas en la compra y arriendo de propiedades en Talca y Chile.',
+}
 
 export default async function NosotrosPage() {
   const quienesSomos = await prisma.siteContent.findUnique({ where: { key: 'quienes_somos' } })

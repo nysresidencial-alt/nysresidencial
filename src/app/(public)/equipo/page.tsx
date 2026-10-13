@@ -2,6 +2,12 @@ import prisma from '@/lib/db';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Users } from 'lucide-react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Nuestro Equipo | Asesores Inmobiliarios y Corredores',
+  description: 'Conoce al equipo de corredores, asesores comerciales y peritos legales de NYS Residencial en Talca y Santiago.',
+};
 
 export default async function EquipoPage() {
   const equipo = await prisma.siteContent.findUnique({ where: { key: 'equipo' } });

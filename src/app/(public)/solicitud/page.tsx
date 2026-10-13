@@ -1,6 +1,12 @@
 import { SolicitudForm } from "./SolicitudForm";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Vender mi Propiedad o Trabajar con Nosotros",
+  description: "Publica y consigna tu propiedad con expertos inmobiliarios en Talca, o postula para formar parte de nuestro equipo comercial.",
+};
 
 export default async function SolicitudPage({
   searchParams,

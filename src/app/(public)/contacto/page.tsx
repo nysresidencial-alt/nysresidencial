@@ -4,6 +4,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Mail, Phone, MapPin } from 'lucide-react'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Contacto y Oficinas en Talca y Santiago',
+  description: 'Contáctate con nuestros asesores inmobiliarios en Talca (1 Sur 885) o Santiago. Atención personalizada para compra, venta y arriendo de propiedades.',
+}
 
 export default async function ContactoPage() {
   const offices = await prisma.office.findMany({
