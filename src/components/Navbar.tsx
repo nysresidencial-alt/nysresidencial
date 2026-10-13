@@ -7,7 +7,12 @@ import { Phone, Menu, X, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 
-export function Navbar({ topPhone }: { topPhone?: string }) {
+interface NavbarProps {
+  topPhone?: string;
+  slogan?: string;
+}
+
+export function Navbar({ topPhone, slogan }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
@@ -28,9 +33,9 @@ export function Navbar({ topPhone }: { topPhone?: string }) {
       {/* Top Header Section */}
       <div className="max-w-[1500px] mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
         
-        {/* Logo and Titles */}
+        {/* Logo y Eslogan */}
         <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-4 group">
             {/* Logo NYS */}
             <div className="flex items-center">
               <span className="text-[50px] font-thin leading-none text-primary tracking-tighter" style={{ fontFamily: 'Times New Roman, serif' }}>
@@ -41,18 +46,31 @@ export function Navbar({ topPhone }: { topPhone?: string }) {
               <span className="text-xl text-foreground tracking-widest font-light">
                 RESIDENCIAL
               </span>
-              <span className="text-[11px] text-muted-foreground">
-                Buscar la mejor opci&oacute;n es nuestro compromiso desde 1999
+              <span className="text-[11px] text-muted-foreground line-clamp-1">
+                {slogan || "Buscar la mejor opción es nuestro compromiso desde 1999"}
               </span>
             </div>
           </Link>
         </div>
 
-        {/* Contact Info Right */}
+        {/* Contact Info Right (Editable desde Admin) */}
         <div className="hidden md:flex flex-col items-end text-[12px] text-muted-foreground">
-          <Phone className="w-4 h-4 text-foreground mb-1" />
-          <span>+56 9 9289 3145 | +56 9 7387 7812</span>
-          <span>contacto@nys.cl</span>
+          {topPhone ? (
+            <div 
+              className="text-right [&>p]:m-0 [&>a]:hover:text-primary leading-tight"
+              dangerouslySetInnerHTML={{ __html: topPhone }}
+            />
+          ) : (
+            <>
+              <div className="flex items-center gap-1.5 text-foreground font-medium mb-0.5">
+                <Phone className="w-3.5 h-3.5 text-primary" />
+                <span>+56 9 9289 3145 | +56 9 7387 7812</span>
+              </div>
+              <a href="mailto:contacto@nys.cl" className="hover:text-primary transition-colors">
+                contacto@nys.cl
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -71,40 +89,42 @@ export function Navbar({ topPhone }: { topPhone?: string }) {
                   <Link
                     href={link.href}
                     className={cn(
-                      "px-6 text-sm transition-colors h-full flex items-center border-b-2 hover:text-primary hover:border-primary",
+                      "px-6 text-sm transition-colors h-full flex items-center border-b-2 hover:text-primary hover:border-primary font-medium",
                       isActive ? "text-primary border-primary" : "text-foreground border-transparent"
                     )}
                   >
                     {link.name}
                   </Link>
                   {index < navLinks.length - 1 && (
-                    <span className="text-muted-foreground opacity-50">|</span>
+                    <span className="text-muted-foreground opacity-30 select-none">|</span>
                   )}
                 </div>
               );
             })}
           </div>
 
-          {/* Theme Toggle & Mobile Menu */}
+          {/* Theme Toggle & Botón Ingresar */}
           <div className="flex items-center ml-auto gap-2">
             <Link 
               href="/admin/login" 
-              className="hidden md:inline-flex items-center justify-center bg-muted-foreground/10 hover:bg-muted-foreground/20 text-foreground px-4 py-1.5 rounded-sm text-xs font-semibold transition-colors border border-border"
+              className="hidden md:inline-flex items-center justify-center bg-muted/80 hover:bg-muted text-foreground hover:text-primary px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all border border-border/80 shadow-sm"
             >
               Ingresar
             </Link>
             <button 
+              type="button"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} 
-              className="p-2 text-muted-foreground hover:text-primary transition-colors"
-              title="Cambiar tema"
+              className="p-2 text-muted-foreground hover:text-primary transition-colors rounded-lg hover:bg-muted/50 cursor-pointer"
+              title="Cambiar tema claro/oscuro"
             >
-              {mounted && theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              {mounted && theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <button 
-              className="md:hidden text-foreground p-2 ml-2"
+              type="button"
+              className="md:hidden text-foreground p-2 ml-1 cursor-pointer"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? <X /> : <Menu />}
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
 
@@ -118,7 +138,7 @@ export function Navbar({ topPhone }: { topPhone?: string }) {
             <Link 
               key={link.href}
               href={link.href} 
-              className="text-foreground hover:text-primary py-3 px-4 border-b border-border last:border-none"
+              className="text-foreground hover:text-primary py-3 px-4 border-b border-border last:border-none font-medium"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               {link.name}
@@ -126,7 +146,7 @@ export function Navbar({ topPhone }: { topPhone?: string }) {
           ))}
           <Link 
             href="/admin/login" 
-            className="text-foreground font-semibold hover:text-primary py-3 px-4 border-t border-border bg-muted/50"
+            className="text-foreground font-semibold hover:text-primary py-3 px-4 border-t border-border bg-muted/40"
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Ingresar al Panel

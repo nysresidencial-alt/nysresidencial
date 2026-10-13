@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -12,6 +12,12 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname()
+  const isLoginPage = pathname === '/admin/login'
+
+  // En la página de login no mostramos la barra del panel de administración
+  if (isLoginPage) {
+    return <main className="min-h-screen bg-background">{children}</main>
+  }
 
   const navItems = [
     { name: 'Propiedades', href: '/admin', icon: Building },
@@ -62,7 +68,7 @@ export default function AdminLayout({
             </Link>
             
             <form action="/admin/logout" method="POST">
-              <button className="text-red-500 hover:text-red-600 flex items-center gap-1.5 md:gap-2 text-sm font-medium transition-colors">
+              <button className="text-red-500 hover:text-red-600 flex items-center gap-1.5 md:gap-2 text-sm font-medium transition-colors cursor-pointer">
                 <LogOut className="h-4 w-4 shrink-0" />
                 <span className="hidden sm:inline">Salir</span>
               </button>

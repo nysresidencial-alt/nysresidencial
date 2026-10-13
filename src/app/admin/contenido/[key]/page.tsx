@@ -5,11 +5,14 @@ import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 
 const DEFAULT_TITLES: Record<string, string> = {
-  'quienes_somos': 'Quiénes Somos',
-  'equipo': 'Equipo',
+  'fonos_superior': 'Teléfonos y Correos de Cabecera (Navbar)',
+  'eslogan_cabecera': 'Eslogan Institucional del Sitio',
+  'quienes_somos': 'Quiénes Somos (Página /nosotros)',
+  'equipo': 'Nuestro Equipo (Página /equipo y /nosotros)',
+  'vender_propiedad_info': 'Información: Vender tu Propiedad',
+  'trabajar_con_nosotros_info': 'Información: Trabajar con Nosotros',
   'santiago_contacto': 'Santiago Info Contacto',
   'talca_contacto': 'Talca Info Contacto',
-  'fonos_superior': 'Fonos Parte Superior',
 }
 
 export default async function EditarContenidoPage({

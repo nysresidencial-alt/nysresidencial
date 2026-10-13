@@ -1,5 +1,6 @@
 import { Hero } from "@/components/Hero";
 import { PropertiesGrid } from "@/components/PropertiesGrid";
+import { HomeOfficeAndContact } from "@/components/HomeOfficeAndContact";
 import prisma from "@/lib/db";
 
 export default async function Home({
@@ -18,6 +19,12 @@ export default async function Home({
   });
   const heroImageUrls = heroImages.map((img: { url: string }) => img.url);
 
+  // Obtener oficinas activas para la sección de mapa y contacto
+  const offices = await prisma.office.findMany({
+    where: { isActive: true },
+    orderBy: { order: 'asc' }
+  });
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Hero images={heroImageUrls} />
@@ -27,7 +34,8 @@ export default async function Home({
         title="Propiedades Residenciales" 
         categoryFilter={['Casa', 'Casas', 'Departamento']}
         operationFilter={operationFilter}
-        take={9}
+        take={24}
+        initialCount={6}
         bgColor="bg-background"
         linkHref="/propiedades?type=Casa"
       />
@@ -37,8 +45,9 @@ export default async function Home({
         title="Oportunidades Comerciales" 
         categoryFilter={['Comercial', 'Oficina', 'Institucional']}
         operationFilter={operationFilter}
-        take={9}
-        bgColor="bg-muted"
+        take={24}
+        initialCount={6}
+        bgColor="bg-muted/30"
         linkHref="/propiedades?type=Comercial"
       />
 
@@ -47,20 +56,25 @@ export default async function Home({
         title="Terrenos y Parcelas" 
         categoryFilter={['Terreno', 'Terrenos', 'Parcela']}
         operationFilter={operationFilter}
-        take={9}
+        take={24}
+        initialCount={6}
         bgColor="bg-background"
         linkHref="/propiedades?type=Terreno"
       />
 
-      {/* 4. Predios Agrícolas */}
+      {/* 4. Predios Agrícolas y Forestales */}
       <PropertiesGrid 
         title="Predios Agr&iacute;colas y Forestales" 
         categoryFilter={['Agricola']}
         operationFilter={operationFilter}
-        take={9}
-        bgColor="bg-muted"
+        take={24}
+        initialCount={6}
+        bgColor="bg-muted/30"
         linkHref="/propiedades?type=Agricola"
       />
+
+      {/* Ubicación de Oficina en Maps (50%) y Formulario de Contacto / Solicitudes (50%) */}
+      <HomeOfficeAndContact offices={offices} />
       
     </div>
   );
