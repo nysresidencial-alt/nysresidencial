@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, X, Moon, Sun, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -87,11 +88,15 @@ export function Navbar({ topPhone, slogan }: NavbarProps) {
         {/* Logo y Eslogan */}
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-4 group">
-            {/* Logo NYS */}
-            <div className="flex items-center">
-              <span className="text-[50px] font-thin leading-none text-primary tracking-tighter" style={{ fontFamily: 'Times New Roman, serif' }}>
-                N<span className="text-[40px] align-top">Y</span>S
-              </span>
+            {/* Logo NYS Oficial */}
+            <div className="relative h-14 w-20 shrink-0">
+              <Image
+                src="/logo-nys.png"
+                alt="NyS Residencial"
+                fill
+                priority
+                className="object-contain transition-transform group-hover:scale-105"
+              />
             </div>
             <div className="flex flex-col border-l border-border pl-4">
               <span className="text-xl text-foreground tracking-widest font-light">

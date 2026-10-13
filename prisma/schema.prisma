@@ -34,6 +34,8 @@ model Property {
   images              String[] // GalerÃ­a
   blueprints          String[] // Planos
   featured            Boolean  @default(false)
+  isAvailable         Boolean  @default(true) // Disponibilidad
+  availabilityStatus  String   @default("Disponible") // Disponible, No Disponible, Arrendada, Vendida, Reservada
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

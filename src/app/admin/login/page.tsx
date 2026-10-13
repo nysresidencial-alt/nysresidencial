@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { login } from './actions';
 import { Mail, Lock, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +42,15 @@ export default function LoginPage() {
           {/* Header del Logo */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center mb-3">
-              <span 
-                className="text-5xl font-thin leading-none text-primary tracking-tighter" 
-                style={{ fontFamily: 'Times New Roman, serif' }}
-              >
-                N<span className="text-4xl align-top">Y</span>S
-              </span>
+              <div className="relative h-16 w-24">
+                <Image
+                  src="/logo-nys.png"
+                  alt="NyS Residencial"
+                  fill
+                  priority
+                  className="object-contain"
+                />
+              </div>
             </div>
             
             <div className="text-xs tracking-widest uppercase font-light text-muted-foreground mb-4">

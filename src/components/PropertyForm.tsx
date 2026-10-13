@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Property } from '@prisma/client'
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 
 // Adjust prop to accept undefined property for creation mode, and submit action function
 interface PropertyFormProps {
@@ -34,6 +34,9 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
   const [salesRoom, setSalesRoom] = useState(property?.salesRoom || '')
   const [executive, setExecutive] = useState(property?.executive || '')
   const [images, setImages] = useState<string[]>(property?.images || [])
+  const [isAvailable, setIsAvailable] = useState<boolean>(property?.isAvailable ?? true)
+  const [availabilityStatus, setAvailabilityStatus] = useState<string>(property?.availabilityStatus || 'Disponible')
+  const [operation, setOperation] = useState<string>(property?.operation || 'Venta')
 
   async function handleSubmit(formData: FormData) {
     setSaveState('saving')
@@ -41,6 +44,8 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
     formData.append('salesRoom', salesRoom)
     formData.append('executive', executive)
     formData.append('images', JSON.stringify(images))
+    formData.append('isAvailable', isAvailable ? 'true' : 'false')
+    formData.append('availabilityStatus', availabilityStatus)
     
     try {
       await actionFn(formData)
@@ -98,6 +103,80 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
 
     <form action={handleSubmit} className="space-y-12 pb-12">
       
+      {/* Estado de Disponibilidad */}
+      <section className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              Estado de Disponibilidad
+              {!isAvailable && (
+                <span className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold px-2.5 py-1 rounded-full border border-amber-500/20">
+                  {availabilityStatus}
+                </span>
+              )}
+              {isAvailable && (
+                <span className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  Disponible
+                </span>
+              )}
+            </h2>
+            <p className="text-muted-foreground text-sm mt-1">
+              Si la propiedad ya fue arrendada o vendida, no es necesario eliminarla: márcala aquí para conservarla en tu portafolio público con aspecto translúcido y aviso de no disponible.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0 bg-muted/50 p-2.5 rounded-2xl border border-border">
+            <label className="flex items-center gap-2 cursor-pointer font-medium text-sm select-none">
+              <input
+                type="checkbox"
+                checked={isAvailable}
+                onChange={(e) => {
+                  const checked = e.target.checked
+                  setIsAvailable(checked)
+                  if (checked) {
+                    setAvailabilityStatus('Disponible')
+                  } else {
+                    setAvailabilityStatus(operation === 'Arriendo' ? 'Arrendada' : 'Vendida')
+                  }
+                }}
+                className="w-4 h-4 rounded accent-primary cursor-pointer"
+              />
+              <span>Disponible</span>
+            </label>
+
+            <Select
+              value={availabilityStatus}
+              onValueChange={(val) => {
+                if (val) {
+                  setAvailabilityStatus(val)
+                  setIsAvailable(val === 'Disponible')
+                }
+              }}
+            >
+              <SelectTrigger className="w-[170px] bg-background text-sm font-medium">
+                <SelectValue placeholder="Estado de publicación" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Disponible">Disponible</SelectItem>
+                <SelectItem value="Arrendada">Arrendada</SelectItem>
+                <SelectItem value="Vendida">Vendida</SelectItem>
+                <SelectItem value="Reservada">Reservada</SelectItem>
+                <SelectItem value="No Disponible">No Disponible</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {!isAvailable && (
+          <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>
+              Esta propiedad se mostrará a los clientes con distintivo <strong>{availabilityStatus.toUpperCase()}</strong> y tono translúcido oscuro, demostrando tu trayectoria sin recibir consultas activas como disponible.
+            </span>
+          </div>
+        )}
+      </section>
+
       {/* Imágenes */}
       <section className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-sm space-y-6">
         <div className="border-b pb-2">
@@ -113,7 +192,7 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="title">Nombre del Proyecto</Label>
+            <Label htmlFor="title">Nombre del Proyecto / Título</Label>
             <Input id="title" name="title" defaultValue={property?.title} required className="text-lg py-6" />
           </div>
 
@@ -138,7 +217,22 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="operation">Operación</Label>
-            <Select name="operation" defaultValue={property?.operation || "Venta"}>
+            <Select
+              name="operation"
+              defaultValue={operation}
+              onValueChange={(val) => {
+                if (val) {
+                  setOperation(val)
+                  if (!isAvailable) {
+                    if (val === 'Arriendo' && availabilityStatus === 'Vendida') {
+                      setAvailabilityStatus('Arrendada')
+                    } else if (val === 'Venta' && availabilityStatus === 'Arrendada') {
+                      setAvailabilityStatus('Vendida')
+                    }
+                  }
+                }
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona..." />
               </SelectTrigger>

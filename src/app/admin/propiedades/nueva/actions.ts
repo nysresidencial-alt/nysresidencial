@@ -14,6 +14,10 @@ export async function createProperty(formData: FormData) {
     console.error('Error parsing images array', e)
   }
 
+  const isAvailableRaw = formData.get('isAvailable')
+  const isAvailable = isAvailableRaw === null ? true : (isAvailableRaw === 'true' || isAvailableRaw === 'on')
+  const availabilityStatus = (formData.get('availabilityStatus') as string) || (isAvailable ? 'Disponible' : 'No Disponible')
+
   const data = {
     title: formData.get('title') as string,
     propertyType: formData.get('propertyType') as string,
@@ -34,8 +38,10 @@ export async function createProperty(formData: FormData) {
     
     salesRoom: formData.get('salesRoom') as string,
     executive: formData.get('executive') as string,
-    images: parsedImages, // Added parsed images array!
-    publishedState: 'Publicado'
+    images: parsedImages,
+    publishedState: 'Publicado',
+    isAvailable,
+    availabilityStatus,
   }
 
   await prisma.property.create({
@@ -43,6 +49,7 @@ export async function createProperty(formData: FormData) {
   })
 
   revalidatePath('/admin')
+  revalidatePath('/admin/portafolio')
   revalidatePath('/propiedades')
   revalidatePath('/')
 }

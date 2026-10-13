@@ -14,6 +14,10 @@ export async function updateProperty(id: string, formData: FormData) {
     console.error('Error parsing images array', e)
   }
 
+  const isAvailableRaw = formData.get('isAvailable')
+  const isAvailable = isAvailableRaw === null ? true : (isAvailableRaw === 'true' || isAvailableRaw === 'on')
+  const availabilityStatus = (formData.get('availabilityStatus') as string) || (isAvailable ? 'Disponible' : 'No Disponible')
+
   const data = {
     title: formData.get('title') as string,
     propertyType: formData.get('propertyType') as string,
@@ -34,7 +38,9 @@ export async function updateProperty(id: string, formData: FormData) {
     
     salesRoom: formData.get('salesRoom') as string,
     executive: formData.get('executive') as string,
-    images: parsedImages, // Added parsed images array!
+    images: parsedImages,
+    isAvailable,
+    availabilityStatus,
   }
 
   await prisma.property.update({
@@ -43,5 +49,8 @@ export async function updateProperty(id: string, formData: FormData) {
   })
 
   revalidatePath('/admin')
+  revalidatePath('/admin/portafolio')
   revalidatePath(`/propiedades/${id}`)
+  revalidatePath('/propiedades')
+  revalidatePath('/')
 }

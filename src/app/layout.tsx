@@ -81,12 +81,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon.png", sizes: "96x96", type: "image/png" },
+      { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/favicon.ico", sizes: "any" },
     ],
     shortcut: "/favicon.ico",
-    apple: "/icon.png",
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -96,7 +96,7 @@ const jsonLd = {
   "name": "NYS Residencial",
   "alternateName": "NyS Inmobiliaria",
   "url": "https://nysresidencial.cl",
-  "logo": "https://nysresidencial.cl/icon.png",
+  "logo": "https://nysresidencial.cl/logo-nys.png",
   "image": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=1200",
   "description": "Corredora de propiedades y asesoría inmobiliaria especializada en venta y arriendo de departamentos, casas y terrenos en Talca y Chile.",
   "telephone": "+56 9 9289 3145",
@@ -132,10 +132,10 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/icon.png" sizes="96x96" type="image/png" />
+        <link rel="icon" href="/favicon-96x96.png" sizes="96x96" type="image/png" />
+        <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png" />
         <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

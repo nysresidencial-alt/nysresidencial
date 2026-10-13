@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LogOut, Home, FileText, DollarSign, Building, MessageSquare, Image as ImageIcon, MapPin } from 'lucide-react'
+import { LogOut, Home, FileText, DollarSign, Building, MessageSquare, Image as ImageIcon, MapPin, Printer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UFWidget } from '@/components/UFWidget'
 
@@ -21,6 +22,7 @@ export default function AdminLayout({
 
   const navItems = [
     { name: 'Propiedades', href: '/admin', icon: Building },
+    { name: 'Portafolio PDF', href: '/admin/portafolio', icon: Printer },
     { name: 'Carrusel', href: '/admin/carrusel', icon: ImageIcon },
     { name: 'Contenido', href: '/admin/contenido', icon: FileText },
     { name: 'UF', href: '/admin/uf', icon: DollarSign },
@@ -33,8 +35,17 @@ export default function AdminLayout({
       {/* Admin Navbar */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" suppressHydrationWarning>
         <div className="container mx-auto flex h-16 items-center px-4">
-          <Link href="/admin" className="mr-8 flex items-center space-x-2">
-            <span className="font-bold text-xl tracking-tight">NYS<span className="font-light">Admin</span></span>
+          <Link href="/admin" className="mr-8 flex items-center space-x-2.5 group">
+            <div className="relative h-9 w-12 shrink-0">
+              <Image
+                src="/logo-nys.png"
+                alt="NyS Admin"
+                fill
+                priority
+                className="object-contain"
+              />
+            </div>
+            <span className="font-bold text-lg tracking-tight">Admin</span>
           </Link>
           
           <nav className="flex items-center space-x-4 md:space-x-6 text-sm font-medium flex-1 overflow-x-auto whitespace-nowrap px-2 no-scrollbar">
@@ -47,7 +58,7 @@ export default function AdminLayout({
                   href={item.href}
                   className={cn(
                     "transition-colors hover:text-foreground/80 flex items-center gap-1.5 md:gap-2",
-                    isActive ? "text-foreground" : "text-foreground/60"
+                    isActive ? "text-foreground font-semibold" : "text-foreground/60"
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
