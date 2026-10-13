@@ -4,6 +4,7 @@ import { Search, Home, Briefcase } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface HeroProps {
   images?: string[];
@@ -136,36 +137,20 @@ export function Hero({ images = [] }: HeroProps) {
 
         {/* Extra buttons below */}
         <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full max-w-[800px]">
-          <button 
-            type="button"
-            onClick={() => {
-              const el = document.getElementById('contacto-solicitud');
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth' });
-                const sel = document.getElementById('operation') as HTMLSelectElement | null;
-                if (sel) sel.value = 'Quiero vender un inmueble';
-              }
-            }}
-            className="flex-1 bg-muted-foreground/80 hover:bg-muted-foreground text-white py-2 px-4 rounded-sm flex items-center justify-center gap-2 text-sm transition-colors opacity-95 cursor-pointer"
+          <Link 
+            href="/solicitud?tipo=vender"
+            className="flex-1 bg-muted-foreground/80 hover:bg-muted-foreground text-white py-2.5 px-4 rounded-sm flex items-center justify-center gap-2 text-sm transition-colors opacity-95 cursor-pointer shadow-sm hover:shadow"
           >
             <Home className="w-4 h-4" />
             Quieres vender tu propiedad
-          </button>
-          <button 
-            type="button"
-            onClick={() => {
-              const el = document.getElementById('contacto-solicitud');
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth' });
-                const sel = document.getElementById('operation') as HTMLSelectElement | null;
-                if (sel) sel.value = 'Trabaja con nosotros / Postulación laboral';
-              }
-            }}
-            className="flex-1 bg-muted-foreground/80 hover:bg-muted-foreground text-white py-2 px-4 rounded-sm flex items-center justify-center gap-2 text-sm transition-colors opacity-95 cursor-pointer"
+          </Link>
+          <Link 
+            href="/solicitud?tipo=trabajar"
+            className="flex-1 bg-muted-foreground/80 hover:bg-muted-foreground text-white py-2.5 px-4 rounded-sm flex items-center justify-center gap-2 text-sm transition-colors opacity-95 cursor-pointer shadow-sm hover:shadow"
           >
             <Briefcase className="w-4 h-4" />
             Quieres trabajar con nosotros
-          </button>
+          </Link>
         </div>
 
       </div>
