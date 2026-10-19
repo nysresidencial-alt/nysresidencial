@@ -164,10 +164,25 @@ export function PortfolioView({ properties, currentDateText }: PortfolioViewProp
           }
 
           .cover-page {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            min-height: 100vh !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 24mm 22mm 22mm 26mm !important;
             page-break-after: always !important;
             break-after: page !important;
-            min-height: 100vh !important;
-            height: 100vh !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            border-left: 14px solid #ce1156 !important;
+            border-radius: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            background-color: #141721 !important;
+            color: #ffffff !important;
           }
 
           .content-page {
@@ -188,6 +203,12 @@ export function PortfolioView({ properties, currentDateText }: PortfolioViewProp
             size: A4 portrait;
             margin: 12mm 15mm 15mm 15mm;
           }
+
+          ${includeCover ? `
+          @page :first {
+            margin: 0 !important;
+          }
+          ` : ''}
         }
       `}</style>
 
@@ -361,7 +382,7 @@ export function PortfolioView({ properties, currentDateText }: PortfolioViewProp
         {/* 1. PORTADA EJECUTIVA (COVER PAGE) */}
         {/* ======================================================== */}
         {includeCover && (
-          <div className="cover-page print-sheet bg-[#141721] text-white p-12 md:p-16 mb-8 rounded-2xl print:rounded-none shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[297mm] border-l-[14px] border-[#ce1156]">
+          <div className="cover-page print-sheet bg-[#141721] text-white p-8 sm:p-12 md:p-16 mb-8 print:mb-0 rounded-2xl print:rounded-none shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[260mm] print:min-h-0 border-l-[14px] border-[#ce1156]">
             
             {/* Top brand */}
             <div>
@@ -382,7 +403,7 @@ export function PortfolioView({ properties, currentDateText }: PortfolioViewProp
             </div>
 
             {/* Center titles */}
-            <div className="my-auto py-16">
+            <div className="my-auto py-8 sm:py-12">
               <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white uppercase leading-none mb-6">
                 {reportTitle}
               </h1>
@@ -399,7 +420,7 @@ export function PortfolioView({ properties, currentDateText }: PortfolioViewProp
             </div>
 
             {/* Bottom footer */}
-            <div className="border-t border-zinc-800/80 pt-6">
+            <div className="border-t border-zinc-800/80 pt-4 sm:pt-6">
               <p className="text-[11px] text-zinc-400 font-medium tracking-widest uppercase mb-1">
                 ATACAMA · SANTIAGO · TALCA · CURICÓ · MAULE · CONCEPCIÓN · OSORNO
               </p>
