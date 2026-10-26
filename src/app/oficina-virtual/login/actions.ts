@@ -50,5 +50,5 @@ export async function loginClient(formData: FormData) {
 
 export async function logoutClient() {
   await clearClientSession()
-  redirect('/oficina-virtual/login')
+  redirect('/')
 }

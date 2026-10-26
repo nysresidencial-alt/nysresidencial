@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ClientUser, ClientDocument } from '@prisma/client'
@@ -33,6 +33,15 @@ export function ClientPortalDashboard({ client }: ClientPortalDashboardProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('TODOS')
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  function toggleTheme() {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
 
   // Available categories
   const categories = useMemo(() => {
@@ -69,7 +78,7 @@ export function ClientPortalDashboard({ client }: ClientPortalDashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/60 dark:bg-zinc-950 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       
       {/* Top Client Navbar */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border shadow-xs">
@@ -105,11 +114,11 @@ export function ClientPortalDashboard({ client }: ClientPortalDashboardProps) {
             <div className="flex items-center gap-2 sm:gap-3">
               <button
                 type="button"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={toggleTheme}
                 className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-muted/60 border border-border/60 cursor-pointer"
                 title="Cambiar tema claro/oscuro"
               >
-                {theme === 'dark' ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} />}
+                {mounted && theme === 'dark' ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} />}
               </button>
 
               <div className="hidden sm:flex flex-col items-end text-right">
