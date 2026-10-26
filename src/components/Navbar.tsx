@@ -191,7 +191,7 @@ export function Navbar({ topPhone, slogan }: NavbarProps) {
               href="/admin/login" 
               className="hidden md:inline-flex items-center justify-center bg-muted/80 hover:bg-muted text-foreground hover:text-primary px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border border-border/80 shadow-sm"
             >
-              Admin
+              Ingresar
             </Link>
             <button 
               type="button"
@@ -269,7 +269,7 @@ export function Navbar({ topPhone, slogan }: NavbarProps) {
             className="text-foreground font-semibold hover:text-primary py-3 px-4 border-t border-border bg-muted/40"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            Ingresar al Panel
+            Ingresar
           </Link>
         </div>
       )}
