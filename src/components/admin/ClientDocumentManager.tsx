@@ -59,35 +59,52 @@ export function ClientDocumentManager({ client }: ClientDocumentManagerProps) {
         return
       }
 
-      // Intentar subir a Supabase Storage (bucket 'client-documents')
+      // Subir a Supabase Storage (usamos el bucket 'properties' o 'client-documents')
       try {
         const supabase = createClient()
         const cleanName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-        const storagePath = `${client.id}/${Date.now()}_${cleanName}`
+        const fileExt = cleanName.split('.').pop() || 'pdf'
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`
+        const storagePath = `clients/${client.id}/${fileName}`
 
-        const { data: uploadData, error: uploadErr } = await supabase.storage
-          .from('client-documents')
+        // Intentar primero en 'client-documents', si no existe usar 'properties'
+        let bucketName = 'client-documents'
+        let { data: uploadData, error: uploadErr } = await supabase.storage
+          .from(bucketName)
           .upload(storagePath, selectedFile, {
             cacheControl: '3600',
             upsert: false,
           })
 
-        if (!uploadErr && uploadData) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('client-documents')
-            .getPublicUrl(storagePath)
-
-          formData.append('uploadedUrl', publicUrl)
-          formData.append('originalFileName', selectedFile.name)
-          formData.append('uploadedFileSize', String(selectedFile.size))
-        } else {
-          // Si el bucket no existe en Supabase o falla, se envía el archivo al server action como fallback
-          console.warn('Supabase storage fallback:', uploadErr?.message)
-          formData.append('file', selectedFile)
+        if (uploadErr && (uploadErr.message?.includes('not found') || uploadErr.message?.includes('Bucket'))) {
+          // El bucket properties ya existe en Supabase y funciona para propiedades
+          bucketName = 'properties'
+          const retry = await supabase.storage
+            .from(bucketName)
+            .upload(storagePath, selectedFile, {
+              cacheControl: '3600',
+              upsert: false,
+            })
+          uploadData = retry.data
+          uploadErr = retry.error
         }
-      } catch (e) {
-        console.warn('Storage upload error, using local fallback:', e)
-        formData.append('file', selectedFile)
+
+        if (uploadErr || !uploadData) {
+          throw new Error(uploadErr?.message || 'Error al subir a almacenamiento en la nube')
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(storagePath)
+
+        formData.append('uploadedUrl', publicUrl)
+        formData.append('originalFileName', selectedFile.name)
+        formData.append('uploadedFileSize', String(selectedFile.size))
+      } catch (err: any) {
+        console.error('Storage upload error:', err)
+        setError(`Error al subir el archivo: ${err.message || 'No se pudo subir a la nube'}`)
+        setIsSubmitting(false)
+        return
       }
     } else {
       if (!externalUrl) {
