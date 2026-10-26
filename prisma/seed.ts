@@ -110,6 +110,24 @@ async function main() {
 
 main()
   .then(async () => {
+    // Ensure demo client exists
+    const existing = await prisma.clientUser.findFirst({
+      where: { OR: [{ username: 'test' }, { email: 'test@nys.cl' }, { rut: '12345678-9' }] },
+    })
+    if (!existing) {
+      await prisma.clientUser.create({
+        data: {
+          name: 'Cliente Demo',
+          rut: '12345678-9',
+          email: 'test@nys.cl',
+          username: 'test',
+          password: 'test',
+          phone: '+56 9 9999 9999',
+          notes: 'Usuario de prueba para la oficina virtual',
+          isActive: true,
+        },
+      })
+    }
     await prisma.$disconnect()
   })
   .catch(async (e) => {

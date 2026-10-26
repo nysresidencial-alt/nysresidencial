@@ -81,3 +81,33 @@ model Office {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model ClientUser {
+  id           String           @id @default(cuid())
+  name         String
+  rut          String?          @unique
+  email        String?          @unique
+  username     String?          @unique
+  password     String
+  phone        String?
+  isActive     Boolean          @default(true)
+  notes        String?
+  documents    ClientDocument[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model ClientDocument {
+  id          String     @id @default(cuid())
+  clientId    String
+  client      ClientUser @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title       String
+  category    String     @default("Documento")
+  fileUrl     String
+  fileSize    String?
+  fileType    String     @default("PDF")
+  isExternal  Boolean    @default(false)
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}

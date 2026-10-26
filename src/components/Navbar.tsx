@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, Moon, Sun, Mail } from "lucide-react";
+import { Menu, X, Moon, Sun, Mail, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 
@@ -177,13 +177,21 @@ export function Navbar({ topPhone, slogan }: NavbarProps) {
             })}
           </div>
 
-          {/* Theme Toggle & Botón Ingresar */}
+          {/* Theme Toggle & Botones */}
           <div className="flex items-center ml-auto gap-2">
             <Link 
-              href="/admin/login" 
-              className="hidden md:inline-flex items-center justify-center bg-muted/80 hover:bg-muted text-foreground hover:text-primary px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all border border-border/80 shadow-sm"
+              href="/oficina-virtual" 
+              className="inline-flex items-center gap-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border border-primary/25 shadow-xs cursor-pointer"
+              title="Acceso exclusivo para clientes NyS"
             >
-              Ingresar
+              <Lock className="w-3.5 h-3.5" />
+              <span>Oficina Virtual</span>
+            </Link>
+            <Link 
+              href="/admin/login" 
+              className="hidden md:inline-flex items-center justify-center bg-muted/80 hover:bg-muted text-foreground hover:text-primary px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border border-border/80 shadow-sm"
+            >
+              Admin
             </Link>
             <button 
               type="button"
@@ -208,6 +216,16 @@ export function Navbar({ topPhone, slogan }: NavbarProps) {
       {/* Mobile Nav */}
       {isMobileMenuOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-background border-b border-border shadow-lg flex flex-col z-50">
+          <div className="p-3 bg-muted/30 border-b border-border">
+            <Link 
+              href="/oficina-virtual" 
+              className="w-full inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl text-xs font-bold shadow-sm"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Lock className="w-4 h-4" />
+              <span>Oficina Virtual de Clientes</span>
+            </Link>
+          </div>
           {navLinks.map((link) => (
             <Link 
               key={link.href}
