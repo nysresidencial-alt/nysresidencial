@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ClientUser, ClientDocument } from '@prisma/client'
 import { addClientDocument, deleteClientDocument } from '@/app/admin/clientes/actions'
+import { createClient } from '@/utils/supabase/client'
 import { 
   Upload, 
   Link as LinkIcon, 
@@ -57,7 +58,37 @@ export function ClientDocumentManager({ client }: ClientDocumentManagerProps) {
         setIsSubmitting(false)
         return
       }
-      formData.append('file', selectedFile)
+
+      // Intentar subir a Supabase Storage (bucket 'client-documents')
+      try {
+        const supabase = createClient()
+        const cleanName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const storagePath = `${client.id}/${Date.now()}_${cleanName}`
+
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('client-documents')
+          .upload(storagePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: false,
+          })
+
+        if (!uploadErr && uploadData) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('client-documents')
+            .getPublicUrl(storagePath)
+
+          formData.append('uploadedUrl', publicUrl)
+          formData.append('originalFileName', selectedFile.name)
+          formData.append('uploadedFileSize', String(selectedFile.size))
+        } else {
+          // Si el bucket no existe en Supabase o falla, se envía el archivo al server action como fallback
+          console.warn('Supabase storage fallback:', uploadErr?.message)
+          formData.append('file', selectedFile)
+        }
+      } catch (e) {
+        console.warn('Storage upload error, using local fallback:', e)
+        formData.append('file', selectedFile)
+      }
     } else {
       if (!externalUrl) {
         setError('Por favor pega el enlace de OneDrive o enlace web.')

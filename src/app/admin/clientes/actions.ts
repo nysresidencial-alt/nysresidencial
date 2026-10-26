@@ -131,6 +131,9 @@ export async function addClientDocument(clientId: string, formData: FormData) {
     const category = (formData.get('category') as string)?.trim() || 'Documento'
     const notes = (formData.get('notes') as string)?.trim() || null
     const externalUrl = (formData.get('externalUrl') as string)?.trim()
+    const uploadedUrl = (formData.get('uploadedUrl') as string)?.trim()
+    const originalFileName = (formData.get('originalFileName') as string)?.trim() || 'documento.pdf'
+    const uploadedFileSize = Number(formData.get('uploadedFileSize')) || 0
     const file = formData.get('file') as File | null
 
     if (!title) {
@@ -142,7 +145,28 @@ export async function addClientDocument(clientId: string, formData: FormData) {
     let fileType = 'PDF'
     let isExternal = false
 
-    if (externalUrl) {
+    if (uploadedUrl) {
+      // Subido directamente al Cloud Storage (Supabase)
+      fileUrl = uploadedUrl
+      isExternal = false
+      if (uploadedFileSize >= 1024 * 1024) {
+        fileSize = `${(uploadedFileSize / (1024 * 1024)).toFixed(1)} MB`
+      } else if (uploadedFileSize > 0) {
+        fileSize = `${Math.round(uploadedFileSize / 1024)} KB`
+      } else {
+        fileSize = 'Cloud Storage'
+      }
+
+      if (originalFileName.toLowerCase().endsWith('.pdf')) {
+        fileType = 'PDF'
+      } else if (originalFileName.toLowerCase().match(/\.(jpg|jpeg|png|webp)$/)) {
+        fileType = 'Imagen'
+      } else if (originalFileName.toLowerCase().match(/\.(doc|docx)$/)) {
+        fileType = 'Word'
+      } else {
+        fileType = 'Archivo'
+      }
+    } else if (externalUrl) {
       fileUrl = externalUrl
       isExternal = true
       fileType = externalUrl.toLowerCase().includes('onedrive') ? 'OneDrive' : 'Enlace'
