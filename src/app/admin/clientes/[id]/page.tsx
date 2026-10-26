@@ -29,11 +29,12 @@ export default async function AdminClientDetailPage({
   return (
     <div className="max-w-5xl mx-auto space-y-8 py-8">
       {/* Back button */}
-      <Button variant="ghost" asChild className="flex items-center gap-2 text-sm">
-        <Link href="/admin/clientes">
-          <ArrowLeft size={16} /> Volver a la lista de clientes
-        </Link>
-      </Button>
+      <Link
+        href="/admin/clientes"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground font-medium transition-colors"
+      >
+        <ArrowLeft size={16} /> Volver a la lista de clientes
+      </Link>
 
       {/* Client header */}
       <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
