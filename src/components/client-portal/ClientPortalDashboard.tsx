@@ -130,16 +130,15 @@ export function ClientPortalDashboard({ client }: ClientPortalDashboardProps) {
                 </span>
               </div>
 
-              <form action={logoutClient}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full text-xs font-semibold hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 border-border cursor-pointer gap-1.5"
+              <form action="/oficina-virtual/logout" method="POST">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-border bg-background hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors cursor-pointer shadow-xs"
                   title="Cerrar sesión"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span className="hidden md:inline">Cerrar Sesión</span>
-                </Button>
+                </button>
               </form>
             </div>
 
