@@ -30,10 +30,14 @@ export async function login(formData: FormData) {
       const isValid = verifyPassword(password, adminUser.passwordHash)
       if (isValid) {
         // Actualizar último login
-        await prisma.adminUser.update({
-          where: { id: adminUser.id },
-          data: { lastLoginAt: new Date() },
-        })
+        try {
+          await prisma.adminUser.update({
+            where: { id: adminUser.id },
+            data: { lastLoginAt: new Date() },
+          })
+        } catch (e) {
+          console.warn('Could not update lastLoginAt:', e)
+        }
 
         await createAdminSession({
           id: adminUser.id,
@@ -54,6 +58,8 @@ export async function login(formData: FormData) {
       throw err
     }
     console.error('Error during adminUser login lookup:', err)
+    // Devolver el error específico si falló la conexión con Prisma/DB en Vercel
+    return { error: `Error en base de datos: ${err.message || 'No se pudo conectar'}` }
   }
 
   // 2. MOCK de respaldo histórico (para no romper accesos previos si aún se usan)
