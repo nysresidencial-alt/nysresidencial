@@ -33,10 +33,11 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const hasMockSession = request.cookies.get('mock_admin_session')?.value === 'true'
+  const hasAdminSession = request.cookies.get('nys_admin_auth_session')?.value
   const isAuthRoute = request.nextUrl.pathname.startsWith('/admin/login')
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
 
-  const isAuthenticated = user || hasMockSession
+  const isAuthenticated = Boolean(user || hasMockSession || hasAdminSession)
 
   if (isAdminRoute && !isAuthRoute && !isAuthenticated) {
     // Si intenta entrar al admin y no está logueado, al login

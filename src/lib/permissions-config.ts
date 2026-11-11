@@ -1,0 +1,162 @@
+export type AdminModule =
+  | 'propiedades'
+  | 'clientes'
+  | 'portafolio'
+  | 'carrusel'
+  | 'contenido'
+  | 'uf'
+  | 'solicitudes'
+  | 'oficinas'
+  | 'usuarios'
+  | 'contabilidad' // Reservado para futura fase
+
+export type ActionType = 'view' | 'create' | 'edit' | 'delete'
+
+export interface ModulePermission {
+  view: boolean
+  create?: boolean
+  edit?: boolean
+  delete?: boolean
+}
+
+export type PermissionsMatrix = Record<string, ModulePermission>
+
+export interface AdminRoleConfig {
+  name: string
+  description: string
+  isSystem: boolean
+  permissions: PermissionsMatrix
+}
+
+export const ADMIN_MODULES: {
+  key: AdminModule
+  name: string
+  href: string
+  description: string
+  hasCrud: boolean
+}[] = [
+  {
+    key: 'propiedades',
+    name: 'Propiedades',
+    href: '/admin',
+    description: 'Gestión completa de inventario, publicación, fotos y disponibilidad',
+    hasCrud: true,
+  },
+  {
+    key: 'clientes',
+    name: 'Oficina Virtual • Clientes',
+    href: '/admin/clientes',
+    description: 'Cuentas de clientes, carpetas privadas y documentos oficiales',
+    hasCrud: true,
+  },
+  {
+    key: 'portafolio',
+    name: 'Portafolio PDF',
+    href: '/admin/portafolio',
+    description: 'Generación y exportación de dossier comercial en PDF',
+    hasCrud: false,
+  },
+  {
+    key: 'carrusel',
+    name: 'Carrusel Portada',
+    href: '/admin/carrusel',
+    description: 'Imágenes destacadas de la cabecera del sitio web',
+    hasCrud: true,
+  },
+  {
+    key: 'contenido',
+    name: 'Contenidos Web',
+    href: '/admin/contenido',
+    description: 'Textos de quiénes somos, teléfonos y eslogan',
+    hasCrud: true,
+  },
+  {
+    key: 'uf',
+    name: 'Valor UF',
+    href: '/admin/uf',
+    description: 'Consulta y ajuste de indicadores financieros',
+    hasCrud: false,
+  },
+  {
+    key: 'solicitudes',
+    name: 'Solicitudes Clientes',
+    href: '/admin/solicitudes',
+    description: 'Mensajes de contacto y solicitudes de publicación',
+    hasCrud: true,
+  },
+  {
+    key: 'oficinas',
+    name: 'Oficinas Físicas',
+    href: '/admin/oficinas',
+    description: 'Sucursales de Talca y Santiago',
+    hasCrud: true,
+  },
+  {
+    key: 'usuarios',
+    name: 'Usuarios y Permisos',
+    href: '/admin/usuarios',
+    description: 'Panel Superadmin: Control de acceso, roles y contraseñas',
+    hasCrud: true,
+  },
+  {
+    key: 'contabilidad',
+    name: 'Contabilidad (Próximamente)',
+    href: '/admin/contabilidad',
+    description: 'Módulo reservado para contabilidad y vouchers futuros',
+    hasCrud: true,
+  },
+]
+
+export const DEFAULT_ROLES: AdminRoleConfig[] = [
+  {
+    name: 'Superadmin',
+    description: 'Acceso total e irrestricto a todas las vistas, usuarios y configuraciones del sistema.',
+    isSystem: true,
+    permissions: {
+      propiedades: { view: true, create: true, edit: true, delete: true },
+      clientes: { view: true, create: true, edit: true, delete: true },
+      portafolio: { view: true },
+      carrusel: { view: true, create: true, edit: true, delete: true },
+      contenido: { view: true, create: true, edit: true, delete: true },
+      uf: { view: true },
+      solicitudes: { view: true, create: true, edit: true, delete: true },
+      oficinas: { view: true, create: true, edit: true, delete: true },
+      usuarios: { view: true, create: true, edit: true, delete: true },
+      contabilidad: { view: true, create: true, edit: true, delete: true },
+    },
+  },
+  {
+    name: 'Comercial',
+    description: 'Acceso enfocado a la gestión, publicación y modificación de propiedades y solicitudes.',
+    isSystem: true,
+    permissions: {
+      propiedades: { view: true, create: true, edit: true, delete: true },
+      portafolio: { view: true },
+      solicitudes: { view: true, edit: true },
+      uf: { view: true },
+      clientes: { view: false },
+      carrusel: { view: false },
+      contenido: { view: false },
+      oficinas: { view: false },
+      usuarios: { view: false },
+      contabilidad: { view: false },
+    },
+  },
+  {
+    name: 'Contabilidad',
+    description: 'Rol reservado para vistas contables, finanzas y vouchers (en desarrollo).',
+    isSystem: true,
+    permissions: {
+      contabilidad: { view: true, create: true, edit: true, delete: true },
+      propiedades: { view: true, create: false, edit: false, delete: false },
+      clientes: { view: false },
+      portafolio: { view: false },
+      carrusel: { view: false },
+      contenido: { view: false },
+      uf: { view: true },
+      solicitudes: { view: false },
+      oficinas: { view: false },
+      usuarios: { view: false },
+    },
+  },
+]

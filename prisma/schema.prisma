@@ -111,3 +111,29 @@ model ClientDocument {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
+
+model AdminRole {
+  id          String      @id @default(cuid())
+  name        String      @unique // "Superadmin", "Comercial", "Contabilidad", etc.
+  description String?
+  isSystem    Boolean     @default(false) // Superadmin no se puede eliminar ni renombrar
+  permissions Json        // Objeto JSON con la matriz de permisos por módulo
+  users       AdminUser[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model AdminUser {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  name              String
+  passwordHash      String
+  roleId            String
+  role              AdminRole  @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  isActive          Boolean    @default(true)
+  customPermissions Json?      // Excepciones individuales (override permisos del rol)
+  lastLoginAt       DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+

@@ -1,16 +1,20 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { clearAdminSession } from '@/lib/admin-auth'
 
 export async function POST() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-  
-  // Limpiar el mock si existe
-  const cookieStore = await cookies()
-  if (cookieStore.get('mock_admin_session')) {
-    cookieStore.delete('mock_admin_session')
+  try {
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+  } catch (e) {
+    // Si no está en supabase auth no pasa nada
   }
 
+  await clearAdminSession()
+  redirect('/admin/login')
+}
+
+export async function GET() {
+  await clearAdminSession()
   redirect('/admin/login')
 }
