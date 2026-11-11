@@ -22,13 +22,13 @@ async function main() {
       update: {
         description: roleDef.description,
         isSystem: roleDef.isSystem,
-        permissions: roleDef.permissions,
+        permissions: roleDef.permissions as any,
       },
       create: {
         name: roleDef.name,
         description: roleDef.description,
         isSystem: roleDef.isSystem,
-        permissions: roleDef.permissions,
+        permissions: roleDef.permissions as any,
       },
     })
     roleMap[roleDef.name] = role.id

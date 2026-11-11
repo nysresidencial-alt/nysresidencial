@@ -16,11 +16,15 @@ export async function login(formData: FormData) {
   }
 
   // 1. Verificar si existe como AdminUser en la base de datos (Superadmin y roles RBAC)
+  let dbLookupFailed = false
   try {
+    console.log('[login] Buscando AdminUser para:', email)
     const adminUser = await prisma.adminUser.findUnique({
       where: { email },
       include: { role: true },
     })
+
+    console.log('[login] AdminUser encontrado:', adminUser ? `${adminUser.email} (activo: ${adminUser.isActive})` : 'NO')
 
     if (adminUser) {
       if (!adminUser.isActive) {
@@ -28,6 +32,7 @@ export async function login(formData: FormData) {
       }
 
       const isValid = verifyPassword(password, adminUser.passwordHash)
+      console.log('[login] Verificación de contraseña:', isValid ? 'VÁLIDA' : 'INVÁLIDA')
       if (isValid) {
         // Actualizar último login
         try {
@@ -57,9 +62,14 @@ export async function login(formData: FormData) {
     if (err?.message?.includes('NEXT_REDIRECT')) {
       throw err
     }
-    console.error('Error during adminUser login lookup:', err)
+    console.error('[login] Error durante consulta AdminUser:', err)
+    dbLookupFailed = true
     // Devolver el error específico si falló la conexión con Prisma/DB en Vercel
-    return { error: `Error en base de datos: ${err.message || 'No se pudo conectar'}` }
+    return { error: `Error de conexión BD: ${err.message || 'No se pudo conectar'}` }
+  }
+
+  if (dbLookupFailed) {
+    return { error: 'No se pudo conectar con la base de datos. Contacta al administrador.' }
   }
 
   // 2. MOCK de respaldo histórico (para no romper accesos previos si aún se usan)
@@ -79,6 +89,26 @@ export async function login(formData: FormData) {
 
   if (error) {
     return { error: error.message || 'Credenciales inválidas.' }
+  }
+
+  // Si se autenticó por Supabase Auth, sincronizar la sesión RBAC de AdminUser si existe
+  try {
+    const adminUser = await prisma.adminUser.findUnique({
+      where: { email },
+      include: { role: true },
+    })
+
+    if (adminUser && adminUser.isActive) {
+      await createAdminSession({
+        id: adminUser.id,
+        name: adminUser.name,
+        email: adminUser.email,
+        roleId: adminUser.role.id,
+        roleName: adminUser.role.name,
+      })
+    }
+  } catch (e) {
+    console.warn('[login] No se pudo sincronizar la sesión RBAC tras login con Supabase:', e)
   }
 
   revalidatePath('/', 'layout')

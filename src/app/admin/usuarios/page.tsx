@@ -55,7 +55,7 @@ export default async function AdminUsersPage() {
     roleId: u.role.id,
     roleName: u.role.name,
     isActive: u.isActive,
-    customPermissions: (u.customPermissions as PermissionsMatrix) || null,
+    customPermissions: (u.customPermissions as unknown as PermissionsMatrix) || null,
     lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
     createdAt: u.createdAt.toISOString(),
   }))
@@ -65,7 +65,7 @@ export default async function AdminUsersPage() {
     name: r.name,
     description: r.description,
     isSystem: r.isSystem,
-    permissions: (r.permissions as PermissionsMatrix) || {},
+    permissions: (r.permissions as unknown as PermissionsMatrix) || {},
     userCount: r._count.users,
   }))
 

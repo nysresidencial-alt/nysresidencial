@@ -83,10 +83,10 @@ export async function getAdminSession(): Promise<AdminUserSession | null> {
     const isSuperadmin = user.role.name.toLowerCase() === 'superadmin'
 
     // Permisos base del rol
-    const basePermissions = (user.role.permissions as PermissionsMatrix) || {}
+    const basePermissions = (user.role.permissions as unknown as PermissionsMatrix) || {}
 
     // Excepciones individuales del usuario (si existen, sobreescriben al rol)
-    const customPermissions = (user.customPermissions as PermissionsMatrix) || {}
+    const customPermissions = (user.customPermissions as unknown as PermissionsMatrix) || {}
 
     const mergedPermissions: PermissionsMatrix = { ...basePermissions }
     for (const [modKey, modPerm] of Object.entries(customPermissions)) {
