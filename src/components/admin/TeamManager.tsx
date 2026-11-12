@@ -361,6 +361,7 @@ export function TeamManager({
                             src={member.photoUrl}
                             alt={member.name}
                             fill
+                            unoptimized
                             className="rounded-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (

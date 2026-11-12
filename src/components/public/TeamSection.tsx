@@ -123,6 +123,7 @@ export function TeamSection({
                       src={member.photoUrl}
                       alt={member.name}
                       fill
+                      unoptimized
                       className="rounded-full object-cover"
                     />
                   ) : (
