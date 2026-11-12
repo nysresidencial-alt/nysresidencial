@@ -137,3 +137,95 @@ model AdminUser {
   updatedAt         DateTime   @updatedAt
 }
 
+model OwnerCompany {
+  id            String          @id @default(cuid())
+  code          String          @unique // "JR", "BC", "GP", "JFR", "RB", "AMB"
+  name          String          // "Jose Retamal", "Buses Cipreses", etc.
+  rut           String?         // "10.943.065-K"
+  landlordName  String?         // "Patricia Retamal Bustos" / "José Manuel Retamal Bustos"
+  address       String?         // "1 Sur Nº 885 Talca"
+  phone         String?         // "+56 9 98859496"
+  email         String?         // "administracion@sunrisechile.cl"
+  contracts     RentalContract[]
+  vouchers      LeaseVoucher[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model RentalContract {
+  id                    String        @id @default(cuid())
+  companyId             String?
+  company               OwnerCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  newAssignee           String?       // "Patricia Retamal", "Jose Manuel Retamal", etc.
+  building              String        // "AMALFI", "LIBERTADOR", "COSTA AZUL", etc.
+  unitNumber            String        // "E-502", "1316", "708", etc.
+  propertyType          String        @default("Departamento") // "Departamento", "Casas", "Bodega", "Estacionamiento", "Local Comercial"
+  rol                   String?       // "491-022", "1193-213", etc.
+  address               String?       // Dirección específica (ej. "1 Poniente Nº 635 Talca")
+  storageNumber         String?       // Bodega N°
+  parkingNumber         String?       // Estacionamiento N°
+  contractDate          String?       // Fecha Contrato (texto o ISO)
+  renewalPeriod         String?       // "6 MESES", "1 AÑO", etc.
+  status                String        @default("Ocupado") // "Ocupado", "Disponible", "Vendido", "En Retiro"
+  
+  // Datos del arrendatario
+  tenantName            String        // Nombre arrendatario
+  tenantRut             String?       // RUT arrendatario
+  tenantPhone           String?       // Teléfono
+  tenantEmail           String?       // Correo
+  otherContactInfo      String?       // Otros datos
+  guarantorRelation     String?       // Relación con arrendatario (Aval, Esposa, Hija, etc.)
+  guarantorPhone        String?       // Teléfono contacto
+  guarantorEmail        String?       // Correo contacto
+  
+  // Valores base vigentes
+  baseRent              Float         @default(0) // Valor arriendo base
+  adjustmentPercentage  Float         @default(0) // % reajuste (ej: 0.035)
+  adjustmentAmount      Float         @default(0) // Monto reajuste $
+  totalRent             Float         @default(0) // Valor T / Arriendo final calculado
+  
+  vouchers              LeaseVoucher[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model LeaseVoucher {
+  id                String         @id @default(cuid())
+  contractId        String
+  contract          RentalContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  companyId         String?
+  company           OwnerCompany?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  
+  // Período y numeración
+  month             String         // "ENERO", "FEBRERO", ..., "OCTUBRE", etc.
+  year              Int            @default(2026)
+  receiptNumber     String?        // N° de Recibo (ej. "505", "14701", etc.)
+  invoiceNumber     String?        // N° de Factura si aplica
+  
+  // Valores financieros del mes
+  baseRent          Float          @default(0)
+  adjustmentPercent Float          @default(0)
+  adjustmentAmount  Float          @default(0)
+  totalRent         Float          @default(0) // Monto final arriendo del mes
+  guaranteeAmount   Float?         // Monto garantía si se cobra este mes
+  totalMonth        Float          @default(0) // Total liquidado (arriendo + garantía + extras)
+  amountInWords     String?        // "DOSCIENTOS NOVENTA Y TRES MIL QUINIENTOS PESOS"
+  
+  // Estado de recaudación y pagos
+  paymentStatus     String         @default("Pendiente") // "Pagado", "Pendiente", "Saldo a Favor", "Nulo"
+  paymentDate       String?        // Fecha de ingreso o pago
+  transferAmount    Float          @default(0)
+  cashAmount        Float          @default(0)
+  depositAmount     Float          @default(0)
+  accountsReceivable Float         @default(0) // Cuentas por cobrar
+  collectedAmount   Float          @default(0) // Total Recaudación
+  bank              String?        // "ITAU", "SANTANDER", etc.
+  pendingBalance    Float          @default(0) // Saldo pendiente
+  comment           String?        // Comentarios o notas
+  paymentMethod     String         @default("Transferencia") // "Transferencia", "Efectivo", "Documento"
+  
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+

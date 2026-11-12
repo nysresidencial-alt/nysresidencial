@@ -8,6 +8,7 @@ export type AdminModule =
   | 'solicitudes'
   | 'oficinas'
   | 'usuarios'
+  | 'vouchers'
   | 'contabilidad' // Reservado para futura fase
 
 export type ActionType = 'view' | 'create' | 'edit' | 'delete'
@@ -92,10 +93,17 @@ export const ADMIN_MODULES: {
     hasCrud: true,
   },
   {
+    key: 'vouchers',
+    name: 'Vouchers / Recibos',
+    href: '/admin/vouchers',
+    description: 'Liquidaciones de arriendo, recibos mensuales y recaudación',
+    hasCrud: true,
+  },
+  {
     key: 'contabilidad',
-    name: 'Contabilidad (Próximamente)',
+    name: 'Contabilidad',
     href: '/admin/contabilidad',
-    description: 'Módulo reservado para contabilidad y vouchers futuros',
+    description: 'Módulo contable general y estados de pago',
     hasCrud: true,
   },
 ]
@@ -114,6 +122,7 @@ export const DEFAULT_ROLES: AdminRoleConfig[] = [
       solicitudes: { view: true, create: true, edit: true, delete: true },
       oficinas: { view: true, create: true, edit: true, delete: true },
       usuarios: { view: true, create: true, edit: true, delete: true },
+      vouchers: { view: true, create: true, edit: true, delete: true },
       contabilidad: { view: true, create: true, edit: true, delete: true },
     },
   },
@@ -130,21 +139,22 @@ export const DEFAULT_ROLES: AdminRoleConfig[] = [
       contenido: { view: false },
       oficinas: { view: false },
       usuarios: { view: false },
+      vouchers: { view: false },
       contabilidad: { view: false },
     },
   },
   {
     name: 'Contabilidad',
-    description: 'Rol reservado para vistas contables, finanzas y vouchers (en desarrollo).',
+    description: 'Gestión de finanzas, vouchers de arriendo y liquidaciones mensuales.',
     isSystem: true,
     permissions: {
+      vouchers: { view: true, create: true, edit: true, delete: true },
       contabilidad: { view: true, create: true, edit: true, delete: true },
-      propiedades: { view: true, create: false, edit: false, delete: false },
-      clientes: { view: false },
-      portafolio: { view: false },
+      clientes: { view: true },
+      propiedades: { view: true },
+      portafolio: { view: true },
       carrusel: { view: false },
       contenido: { view: false },
-      uf: { view: true },
       solicitudes: { view: false },
       oficinas: { view: false },
       usuarios: { view: false },

@@ -14,6 +14,7 @@ import {
   Printer,
   Users,
   Shield,
+  Receipt,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -46,6 +47,7 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
     { key: 'carrusel', name: 'Carrusel', href: '/admin/carrusel', icon: ImageIcon },
     { key: 'contenido', name: 'Contenido', href: '/admin/contenido', icon: FileText },
     { key: 'solicitudes', name: 'Solicitudes', href: '/admin/solicitudes', icon: MessageSquare },
+    { key: 'vouchers', name: 'Vouchers / Recibos', href: '/admin/vouchers', icon: Receipt },
     { key: 'oficinas', name: 'Oficinas', href: '/admin/oficinas', icon: MapPin },
     { key: 'usuarios', name: 'Usuarios y Roles', href: '/admin/usuarios', icon: Shield },
   ];
