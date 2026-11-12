@@ -60,6 +60,20 @@ export default async function PublicLayout({
             ))}
           </div>
         </div>
+
+        {/* Sub-footer con accesos formales */}
+        <div className="max-w-[1500px] mx-auto px-4 md:px-8 mt-12 pt-6 border-t border-zinc-900 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-zinc-500">
+          <p>&copy; {new Date().getFullYear()} NyS Inmobiliaria &bull; Negocios y Soluciones Inmobiliarias.</p>
+          <div className="flex items-center gap-4">
+            <a href="/oficina-virtual" className="hover:text-zinc-300 transition-colors">
+              Oficina Virtual (Clientes)
+            </a>
+            <span>&bull;</span>
+            <a href="/admin/login" className="hover:text-zinc-300 transition-colors">
+              Ingreso Colaboradores
+            </a>
+          </div>
+        </div>
       </footer>
     </>
   );

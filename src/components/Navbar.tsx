@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, Moon, Sun, Mail, Lock } from "lucide-react";
+import { Menu, X, Moon, Sun, Mail, Lock, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 
@@ -191,9 +191,11 @@ export function Navbar({ topPhone, slogan, ufBadge }: NavbarProps) {
             </Link>
             <Link 
               href="/admin/login" 
-              className="hidden md:inline-flex items-center justify-center bg-muted/80 hover:bg-muted text-foreground hover:text-primary px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border border-border/80 shadow-sm"
+              className="hidden md:inline-flex items-center gap-1.5 bg-muted/80 hover:bg-muted text-foreground hover:text-primary px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border border-border/80 shadow-xs"
+              title="Acceso exclusivo para equipo y colaboradores NyS"
             >
-              Ingresar
+              <Briefcase className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Ingreso Colaboradores</span>
             </Link>
             <button 
               type="button"
@@ -268,10 +270,11 @@ export function Navbar({ topPhone, slogan, ufBadge }: NavbarProps) {
           </div>
           <Link 
             href="/admin/login" 
-            className="text-foreground font-semibold hover:text-primary py-3 px-4 border-t border-border bg-muted/40"
+            className="flex items-center gap-2 text-foreground font-semibold hover:text-primary py-3 px-4 border-t border-border bg-muted/40 text-xs"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            Ingresar
+            <Briefcase className="w-4 h-4 text-muted-foreground" />
+            <span>Ingreso Colaboradores</span>
           </Link>
         </div>
       )}
