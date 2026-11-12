@@ -41,6 +41,14 @@ export interface ContractItem {
     code: string
     name: string
   } | null
+  latestVoucher?: {
+    totalMonth: number
+    pendingBalance: number
+    paymentStatus: string
+    month: string
+    year: number
+    paymentDate: string | null
+  } | null
 }
 
 interface ContractEditModalProps {

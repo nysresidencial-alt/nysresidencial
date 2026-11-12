@@ -32,11 +32,23 @@ export default async function ArriendosAdminPage() {
   })
   const buildings = buildingRecords.map((b) => b.building).filter(Boolean)
 
-  // 3. Obtener todos los contratos con su empresa
+  // 3. Obtener todos los contratos con su empresa y última liquidación/voucher
   const contracts = await prisma.rentalContract.findMany({
     include: {
       company: {
         select: { id: true, code: true, name: true },
+      },
+      vouchers: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          totalMonth: true,
+          pendingBalance: true,
+          paymentStatus: true,
+          month: true,
+          year: true,
+          paymentDate: true,
+        },
       },
     },
     orderBy: [
@@ -77,6 +89,7 @@ export default async function ArriendosAdminPage() {
     expensesPayment: c.expensesPayment,
     previousRent: c.previousRent,
     company: c.company,
+    latestVoucher: c.vouchers[0] || null,
   }))
 
   return (
