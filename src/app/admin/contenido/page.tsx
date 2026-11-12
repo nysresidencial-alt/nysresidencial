@@ -36,16 +36,16 @@ export default async function ContenidoDashboard() {
     },
     {
       key: 'quienes_somos',
-      title: 'Quiénes Somos',
-      location: 'Página Pública /nosotros',
-      description: 'Texto corporativo, historia y propuesta de valor de NyS Inmobiliaria.',
-      icon: BookOpen,
+      title: 'Quiénes Somos y Equipo',
+      location: 'Páginas Públicas /nosotros y /equipo',
+      description: 'Gestión del equipo humano con fotos circulares, tags de empresas, LinkedIn e historia corporativa.',
+      icon: Users,
     },
     {
       key: 'equipo',
-      title: 'Nuestro Equipo',
-      location: 'Página Pública /equipo y /nosotros',
-      description: 'Presentación del equipo humano, directores y asesores comerciales.',
+      title: 'Nuestro Equipo (Integrantes y Empresas)',
+      location: 'Páginas Públicas /equipo y /nosotros',
+      description: 'Administración de personas, cargos, empresas asociadas y perfiles profesionales.',
       icon: Users,
     },
     {
