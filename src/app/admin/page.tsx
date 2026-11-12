@@ -8,14 +8,23 @@ import { formatCurrency } from '@/lib/utils'
 import { AdminSearch } from '@/components/admin/AdminSearch'
 import { DeletePropertyModal } from '@/components/admin/DeletePropertyModal'
 import { PropertyAvailabilityToggle } from '@/components/admin/PropertyAvailabilityToggle'
-import { requireAdminAuth } from '@/lib/admin-auth'
+import { requireAdminAuth, getFirstAllowedRoute } from '@/lib/admin-auth'
+import { redirect } from 'next/navigation'
 
 export default async function AdminDashboard({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>
 }) {
-  await requireAdminAuth('propiedades', 'view')
+  const session = await requireAdminAuth()
+
+  // Si el usuario no tiene permisos para ver Propiedades (/admin), redirigir a su primera vista disponible (ej: /admin/vouchers para Contabilidad)
+  if (!session.isSuperadmin && !session.permissions?.propiedades?.view) {
+    const target = getFirstAllowedRoute(session)
+    if (target !== '/admin') {
+      redirect(target)
+    }
+  }
 
   const { q } = await searchParams
   

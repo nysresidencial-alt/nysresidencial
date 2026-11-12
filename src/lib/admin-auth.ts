@@ -128,9 +128,50 @@ export const getAdminSession = cache(async (): Promise<AdminUserSession | null> 
 })
 
 /**
+ * Determina la primera ruta permitida según el rol y permisos del usuario.
+ * Para Contabilidad, prioriza /admin/vouchers.
+ * Para Superadmin y Comercial, /admin (Propiedades).
+ */
+export function getFirstAllowedRoute(session: {
+  isSuperadmin: boolean
+  roleName?: string
+  permissions?: PermissionsMatrix
+}): string {
+  if (session.isSuperadmin) return '/admin'
+
+  const roleName = session.roleName?.toLowerCase() || ''
+  
+  // Para el rol de Contabilidad, priorizar vouchers
+  if (roleName.includes('contabilidad')) {
+    return '/admin/vouchers'
+  }
+
+  // Lista ordenada de módulos según la navegación
+  const MODULE_ROUTES: { key: string; href: string }[] = [
+    { key: 'propiedades', href: '/admin' },
+    { key: 'vouchers', href: '/admin/vouchers' },
+    { key: 'clientes', href: '/admin/clientes' },
+    { key: 'solicitudes', href: '/admin/solicitudes' },
+    { key: 'portafolio', href: '/admin/portafolio' },
+    { key: 'carrusel', href: '/admin/carrusel' },
+    { key: 'contenido', href: '/admin/contenido' },
+    { key: 'oficinas', href: '/admin/oficinas' },
+    { key: 'usuarios', href: '/admin/usuarios' },
+  ]
+
+  for (const item of MODULE_ROUTES) {
+    if (session.permissions?.[item.key]?.view) {
+      return item.href
+    }
+  }
+
+  return '/admin'
+}
+
+/**
  * Valida sesión administrativa universal (RBAC, mock legacy y Supabase).
  * Redirige a /admin/login si no está autenticado.
- * Redirige a /admin si no tiene permiso para el módulo requerido.
+ * Redirige a la primera vista permitida si no tiene permiso para el módulo requerido.
  */
 export async function requireAdminAuth(
   moduleKey?: string,
@@ -143,7 +184,15 @@ export async function requireAdminAuth(
       return session
     }
     if (moduleKey && !hasPermission(session, moduleKey, action)) {
-      redirect('/admin')
+      const target = getFirstAllowedRoute(session)
+      // Evitar ciclo infinito si target es /admin y el módulo requerido era propiedades
+      if (moduleKey === 'propiedades' && target !== '/admin') {
+        redirect(target)
+      } else if (target && target !== '/admin') {
+        redirect(target)
+      } else {
+        redirect('/admin')
+      }
     }
     return session
   }

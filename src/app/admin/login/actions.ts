@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
-import { createAdminSession } from '@/lib/admin-auth'
+import { createAdminSession, getFirstAllowedRoute } from '@/lib/admin-auth'
 import { createClient } from '@/utils/supabase/server'
 
 export async function login(formData: FormData) {
@@ -52,8 +52,17 @@ export async function login(formData: FormData) {
           roleName: adminUser.role.name,
         })
 
+        const isSuperadmin = adminUser.role.name.toLowerCase() === 'superadmin'
+        const basePermissions = (adminUser.role.permissions as any) || {}
+        const customPermissions = (adminUser.customPermissions as any) || {}
+        const targetRoute = getFirstAllowedRoute({
+          isSuperadmin,
+          roleName: adminUser.role.name,
+          permissions: { ...basePermissions, ...customPermissions },
+        })
+
         revalidatePath('/', 'layout')
-        redirect('/admin')
+        redirect(targetRoute)
       } else {
         return { error: 'Contraseña incorrecta. Inténtalo de nuevo.' }
       }
@@ -91,6 +100,7 @@ export async function login(formData: FormData) {
     return { error: error.message || 'Credenciales inválidas.' }
   }
 
+  let targetRoute = '/admin'
   // Si se autenticó por Supabase Auth, sincronizar la sesión RBAC de AdminUser si existe
   try {
     const adminUser = await prisma.adminUser.findUnique({
@@ -106,12 +116,21 @@ export async function login(formData: FormData) {
         roleId: adminUser.role.id,
         roleName: adminUser.role.name,
       })
+
+      const isSuperadmin = adminUser.role.name.toLowerCase() === 'superadmin'
+      const basePermissions = (adminUser.role.permissions as any) || {}
+      const customPermissions = (adminUser.customPermissions as any) || {}
+      targetRoute = getFirstAllowedRoute({
+        isSuperadmin,
+        roleName: adminUser.role.name,
+        permissions: { ...basePermissions, ...customPermissions },
+      })
     }
   } catch (e) {
     console.warn('[login] No se pudo sincronizar la sesión RBAC tras login con Supabase:', e)
   }
 
   revalidatePath('/', 'layout')
-  redirect('/admin')
+  redirect(targetRoute)
 }
 
