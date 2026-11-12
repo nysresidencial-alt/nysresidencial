@@ -1,6 +1,9 @@
 import { OfficeForm } from '../OfficeForm';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
-export default function NuevaOficinaPage() {
+export default async function NuevaOficinaPage() {
+  await requireAdminAuth('oficinas', 'create');
+
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>

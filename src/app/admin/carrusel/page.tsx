@@ -1,21 +1,9 @@
 import { HeroCarouselAdmin } from "@/components/admin/HeroCarouselAdmin";
 import prisma from "@/lib/db";
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { requireAdminAuth } from "@/lib/admin-auth";
 
 export default async function AdminCarouselPage() {
-  const supabase = await createClient();
-  const cookieStore = await cookies();
-  const hasMockSession = cookieStore.get("mock_admin_session")?.value === "true";
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user && !hasMockSession) {
-    redirect("/admin/login");
-  }
+  await requireAdminAuth('carrusel', 'view');
 
   const images = await prisma.heroImage.findMany({
     orderBy: { order: 'asc' },

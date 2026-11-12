@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import prisma from '@/lib/db'
 import crypto from 'crypto'
 import { PermissionsMatrix } from './permissions-config'
@@ -23,15 +24,20 @@ function sign(payload: string): string {
 }
 
 function verify(token: string): string | null {
-  const lastDot = token.lastIndexOf('.')
-  if (lastDot === -1) return null
-  const payload = token.substring(0, lastDot)
-  const signature = token.substring(lastDot + 1)
-  const expectedHmac = crypto.createHmac('sha256', SECRET_KEY).update(payload).digest('hex')
-  if (crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedHmac))) {
-    return payload
+  try {
+    const lastDot = token.lastIndexOf('.')
+    if (lastDot === -1) return null
+    const payload = token.substring(0, lastDot)
+    const signature = token.substring(lastDot + 1)
+    const expectedHmac = crypto.createHmac('sha256', SECRET_KEY).update(payload).digest('hex')
+    if (signature.length !== expectedHmac.length) return null
+    if (crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedHmac))) {
+      return payload
+    }
+    return null
+  } catch {
+    return null
   }
-  return null
 }
 
 export async function createAdminSession(user: {
@@ -59,6 +65,15 @@ export async function createAdminSession(user: {
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 7, // 7 días
+  })
+
+  // Sincronizar también cookie mock para compatibilidad total con vistas legacy
+  cookieStore.set('mock_admin_session', 'true', {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
   })
 }
 
@@ -109,6 +124,65 @@ export async function getAdminSession(): Promise<AdminUserSession | null> {
     console.error('Error fetching admin session:', e)
     return null
   }
+}
+
+/**
+ * Valida sesión administrativa universal (RBAC, mock legacy y Supabase).
+ * Redirige a /admin/login si no está autenticado.
+ * Redirige a /admin si no tiene permiso para el módulo requerido.
+ */
+export async function requireAdminAuth(
+  moduleKey?: string,
+  action: 'view' | 'create' | 'edit' | 'delete' = 'view'
+): Promise<AdminUserSession> {
+  // 1. Sesión RBAC actual
+  const session = await getAdminSession()
+  if (session) {
+    if (session.isSuperadmin) {
+      return session
+    }
+    if (moduleKey && !hasPermission(session, moduleKey, action)) {
+      redirect('/admin')
+    }
+    return session
+  }
+
+  // 2. Mock session de compatibilidad
+  const cookieStore = await cookies()
+  const hasMockSession = cookieStore.get('mock_admin_session')?.value === 'true'
+  if (hasMockSession) {
+    return {
+      id: 'mock-superadmin',
+      name: 'Superadministrador NYS',
+      email: 'informatica@nys.cl',
+      roleId: 'superadmin',
+      roleName: 'Superadmin',
+      isSuperadmin: true,
+      permissions: {} as PermissionsMatrix,
+    }
+  }
+
+  // 3. Supabase Auth fallback
+  try {
+    const { createClient } = await import('@/utils/supabase/server')
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      return {
+        id: user.id,
+        name: user.email?.split('@')[0] || 'Superadmin',
+        email: user.email || 'informatica@nys.cl',
+        roleId: 'superadmin',
+        roleName: 'Superadmin',
+        isSuperadmin: true,
+        permissions: {} as PermissionsMatrix,
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  redirect('/admin/login')
 }
 
 export async function clearAdminSession() {

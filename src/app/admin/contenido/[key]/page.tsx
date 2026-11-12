@@ -1,8 +1,6 @@
 import prisma from '@/lib/db'
-import { redirect } from 'next/navigation'
 import { ContentForm } from './ContentForm'
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
+import { requireAdminAuth } from '@/lib/admin-auth'
 
 const DEFAULT_TITLES: Record<string, string> = {
   'fonos_superior': 'Teléfonos y Correos de Cabecera (Navbar)',
@@ -20,17 +18,7 @@ export default async function EditarContenidoPage({
 }: {
   params: Promise<{ key: string }>
 }) {
-  const supabase = await createClient()
-  const cookieStore = await cookies()
-  const hasMockSession = cookieStore.get('mock_admin_session')?.value === 'true'
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user && !hasMockSession) {
-    redirect('/admin/login')
-  }
+  await requireAdminAuth('contenido', 'edit')
 
   const { key } = await params
   const defaultTitle = DEFAULT_TITLES[key] || key

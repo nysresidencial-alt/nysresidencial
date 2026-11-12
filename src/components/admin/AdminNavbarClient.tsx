@@ -37,6 +37,10 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
 
+  if (pathname?.startsWith('/admin/login')) {
+    return null;
+  }
+
   const allNavItems = [
     { key: 'propiedades', name: 'Propiedades', href: '/admin', icon: Building },
     { key: 'clientes', name: 'Clientes', href: '/admin/clientes', icon: Users },

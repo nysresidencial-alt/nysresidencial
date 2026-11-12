@@ -1,33 +1,21 @@
 import prisma from '@/lib/db'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Pencil, Plus, MapPin, Printer } from 'lucide-react'
-import { cookies } from 'next/headers'
-import { createClient } from '@/utils/supabase/server'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { AdminSearch } from '@/components/admin/AdminSearch'
 import { DeletePropertyModal } from '@/components/admin/DeletePropertyModal'
 import { PropertyAvailabilityToggle } from '@/components/admin/PropertyAvailabilityToggle'
+import { requireAdminAuth } from '@/lib/admin-auth'
 
 export default async function AdminDashboard({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>
 }) {
-  const supabase = await createClient()
-  const cookieStore = await cookies()
-  const hasMockSession = cookieStore.get('mock_admin_session')?.value === 'true'
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user && !hasMockSession) {
-    redirect('/admin/login')
-  }
+  await requireAdminAuth('propiedades', 'view')
 
   const { q } = await searchParams
   

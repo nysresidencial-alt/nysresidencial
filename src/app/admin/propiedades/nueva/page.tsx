@@ -1,21 +1,9 @@
-import { redirect } from 'next/navigation'
 import { PropertyForm } from '@/components/PropertyForm'
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import { createProperty } from './actions'
+import { requireAdminAuth } from '@/lib/admin-auth'
 
 export default async function NuevaPropiedadPage() {
-  const supabase = await createClient()
-  const cookieStore = await cookies()
-  const hasMockSession = cookieStore.get('mock_admin_session')?.value === 'true'
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user && !hasMockSession) {
-    redirect('/admin/login')
-  }
+  await requireAdminAuth('propiedades', 'create')
 
   return (
     <div className="max-w-5xl mx-auto">

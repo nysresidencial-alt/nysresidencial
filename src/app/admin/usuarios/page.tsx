@@ -1,6 +1,5 @@
 import prisma from '@/lib/db'
-import { redirect } from 'next/navigation'
-import { getAdminSession } from '@/lib/admin-auth'
+import { requireAdminAuth } from '@/lib/admin-auth'
 import { UsersAndRolesManager } from '@/components/admin/UsersAndRolesManager'
 import { ShieldCheck, Users } from 'lucide-react'
 import { PermissionsMatrix } from '@/lib/permissions-config'
@@ -11,19 +10,8 @@ export const metadata: Metadata = {
 }
 
 export default async function AdminUsersPage() {
-  const session = await getAdminSession()
-
-  // Solo Superadmin o usuarios con permiso explícito de 'usuarios'
-  if (!session) {
-    redirect('/admin/login')
-  }
-
+  const session = await requireAdminAuth('usuarios', 'view')
   const isSuperadmin = session.isSuperadmin
-  const hasUserAccess = isSuperadmin || Boolean(session.permissions['usuarios']?.view)
-
-  if (!hasUserAccess) {
-    redirect('/admin')
-  }
 
   // Cargar usuarios con su rol
   const users = await prisma.adminUser.findMany({

@@ -1,26 +1,15 @@
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import prisma from '@/lib/db'
 import { PropertyForm } from '@/components/PropertyForm'
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import { updateProperty } from './actions'
+import { requireAdminAuth } from '@/lib/admin-auth'
 
 export default async function EditarPropiedadPage({
   params
 }: {
   params: Promise<{ id: string }>
 }) {
-  const supabase = await createClient()
-  const cookieStore = await cookies()
-  const hasMockSession = cookieStore.get('mock_admin_session')?.value === 'true'
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user && !hasMockSession) {
-    redirect('/admin/login')
-  }
+  await requireAdminAuth('propiedades', 'edit')
 
   const { id } = await params
   

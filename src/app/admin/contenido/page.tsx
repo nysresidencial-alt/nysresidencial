@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Phone, Sparkles, BookOpen, Users, Building, Briefcase, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 interface ContentItemConfig {
   key: string;
@@ -13,6 +14,8 @@ interface ContentItemConfig {
 }
 
 export default async function ContenidoDashboard() {
+  await requireAdminAuth('contenido', 'view');
+
   const contents = await prisma.siteContent.findMany();
   const contentMap = new Map(contents.map((c) => [c.key, c.content]));
 

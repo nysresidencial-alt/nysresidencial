@@ -1,27 +1,16 @@
 import prisma from '@/lib/db';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { OfficeForm } from '../../OfficeForm';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 export default async function EditarOficinaPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const supabase = await createClient();
-  const cookieStore = await cookies();
-  const hasMockSession = cookieStore.get('mock_admin_session')?.value === 'true';
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user && !hasMockSession) {
-    redirect('/admin/login');
-  }
+  await requireAdminAuth('oficinas', 'edit');
 
   const { id } = await params;
 

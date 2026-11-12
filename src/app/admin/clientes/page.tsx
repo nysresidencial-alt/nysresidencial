@@ -1,30 +1,18 @@
 import prisma from '@/lib/db'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { cookies } from 'next/headers'
-import { createClient } from '@/utils/supabase/server'
 import { Users, Search, FolderOpen, Mail, Phone, FileText, ArrowRight, ShieldCheck, Key } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CreateClientModal } from '@/components/admin/CreateClientModal'
 import { ImportClientsModal } from '@/components/admin/ImportClientsModal'
 import { DeleteClientModal } from '@/components/admin/DeleteClientModal'
+import { requireAdminAuth } from '@/lib/admin-auth'
 
 export default async function AdminClientsPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>
 }) {
-  const supabase = await createClient()
-  const cookieStore = await cookies()
-  const hasMockSession = cookieStore.get('mock_admin_session')?.value === 'true'
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user && !hasMockSession) {
-    redirect('/admin/login')
-  }
+  await requireAdminAuth('clientes', 'view')
 
   const { q } = await searchParams
 

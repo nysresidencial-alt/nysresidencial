@@ -1,15 +1,18 @@
 import prisma from '@/lib/db';
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { ClientDocumentManager } from '@/components/admin/ClientDocumentManager';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 export default async function AdminClientDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminAuth('clientes', 'view');
+
   const { id } = await params;
   if (!id) {
     notFound();

@@ -1,24 +1,12 @@
 import prisma from '@/lib/db';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Mail, Phone, Trash2, CheckCircle2, Clock, MessageSquare, Briefcase, Home } from 'lucide-react';
 import { updateRequestStatus, deleteRequest } from './actions';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 export default async function SolicitudesPage() {
-  const supabase = await createClient();
-  const cookieStore = await cookies();
-  const hasMockSession = cookieStore.get('mock_admin_session')?.value === 'true';
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user && !hasMockSession) {
-    redirect('/admin/login');
-  }
+  await requireAdminAuth('solicitudes', 'view');
 
   const solicitudes = await prisma.publicationRequest.findMany({
     orderBy: { createdAt: 'desc' }

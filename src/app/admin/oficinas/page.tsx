@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Plus, Trash2, Edit } from 'lucide-react';
 import { deleteOffice, toggleOfficeStatus } from './actions';
 import { revalidatePath } from 'next/cache';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 export default async function OficinasAdminPage() {
+  await requireAdminAuth('oficinas', 'view');
+
   const offices = await prisma.office.findMany({
     orderBy: { order: 'asc' }
   });

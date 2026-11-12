@@ -25,7 +25,7 @@ export default async function AdminLayout({
       />
 
       {/* Admin Content */}
-      <main className="flex-1 container mx-auto px-4 py-8">{children}</main>
+      <main className="flex-1">{children}</main>
     </div>
   )
 }
