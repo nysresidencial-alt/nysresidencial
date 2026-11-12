@@ -4,10 +4,18 @@ import { getAdminSession } from '@/lib/admin-auth'
 import * as XLSX from 'xlsx'
 
 export async function GET(request: NextRequest) {
-  // 1. Proteger ruta: solo administradores autenticados
+  // 1. Proteger ruta: solo administradores autenticados con rol Contabilidad o Superadmin
   const session = await getAdminSession()
   if (!session) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  const isContabilidad = session.roleName?.toLowerCase().includes('contabilidad')
+  if (!session.isSuperadmin && !isContabilidad) {
+    return NextResponse.json(
+      { error: 'Acceso no autorizado: Solo el rol de Contabilidad puede exportar estos datos' },
+      { status: 403 }
+    )
   }
 
   const searchParams = request.nextUrl.searchParams

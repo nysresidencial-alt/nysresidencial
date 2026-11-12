@@ -5,6 +5,15 @@ import prisma from '@/lib/db'
 import { requireAdminAuth } from '@/lib/admin-auth'
 import { numberToWordsCLP } from '@/lib/number-to-words'
 
+async function checkAuth(action: 'view' | 'create' | 'edit' | 'delete') {
+  const session = await requireAdminAuth('vouchers', action)
+  const isContabilidad = session.roleName?.toLowerCase().includes('contabilidad')
+  if (!session.isSuperadmin && !isContabilidad) {
+    throw new Error('Acceso no autorizado: Módulo exclusivo para el rol de Contabilidad')
+  }
+  return session
+}
+
 /**
  * Actualiza los datos de un Voucher específico (monto, fecha pago, estado, comentarios, recibo, factura)
  */
@@ -29,7 +38,7 @@ export async function updateVoucher(
     paymentMethod?: string
   }
 ) {
-  await requireAdminAuth('vouchers', 'edit')
+  await checkAuth('edit')
 
   const existing = await prisma.leaseVoucher.findUnique({
     where: { id: voucherId },
@@ -119,7 +128,7 @@ export async function updateContract(
     companyId?: string
   }
 ) {
-  await requireAdminAuth('vouchers', 'edit')
+  await checkAuth('edit')
 
   try {
     const updated = await prisma.rentalContract.update({
@@ -163,7 +172,7 @@ export async function updateContract(
  * Genera automáticamente en lote los vouchers de un mes para todos los contratos activos
  */
 export async function generateMonthVouchers(month: string, year: number) {
-  await requireAdminAuth('vouchers', 'create')
+  await checkAuth('create')
 
   const upperMonth = month.trim().toUpperCase()
 
@@ -229,7 +238,7 @@ export async function generateMonthVouchers(month: string, year: number) {
  * Elimina un voucher
  */
 export async function deleteVoucher(voucherId: string) {
-  await requireAdminAuth('vouchers', 'delete')
+  await checkAuth('delete')
 
   try {
     await prisma.leaseVoucher.delete({

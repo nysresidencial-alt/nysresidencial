@@ -1,6 +1,7 @@
 import prisma from '@/lib/db'
 import { requireAdminAuth } from '@/lib/admin-auth'
 import { VouchersManager } from '@/components/admin/VouchersManager'
+import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -10,6 +11,12 @@ export const metadata: Metadata = {
 
 export default async function VouchersAdminPage() {
   const session = await requireAdminAuth('vouchers', 'view')
+
+  // Acceso exclusivo: solo rol Contabilidad (o Superadmin)
+  const isContabilidad = session.roleName?.toLowerCase().includes('contabilidad')
+  if (!session.isSuperadmin && !isContabilidad) {
+    redirect('/admin')
+  }
 
   // 1. Obtener todas las empresas propietarias
   const companies = await prisma.ownerCompany.findMany({

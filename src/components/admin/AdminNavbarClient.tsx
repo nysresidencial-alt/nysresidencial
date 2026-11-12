@@ -54,13 +54,18 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
 
   // Filtrar ítems de navegación según permisos del usuario conectado
   const visibleNavItems = allNavItems.filter((item) => {
-    // Si no hay sesión RBAC (ej: sesión mock histórica previa), mostrar ítems estándar
+    // Si no hay sesión RBAC (ej: sesión mock histórica previa), no mostrar módulos restringidos
     if (!currentUser) {
-      return item.key !== 'usuarios';
+      return item.key !== 'usuarios' && item.key !== 'vouchers';
     }
     // Superadmin ve todo
     if (currentUser.isSuperadmin) {
       return true;
+    }
+    // Vouchers: Exclusivo únicamente para el rol de Contabilidad
+    if (item.key === 'vouchers') {
+      const isContabilidad = currentUser.roleName?.toLowerCase().includes('contabilidad');
+      return Boolean(isContabilidad && currentUser.permissions?.vouchers?.view);
     }
     // Para roles con permisos específicos
     const modPerm = currentUser.permissions[item.key];
