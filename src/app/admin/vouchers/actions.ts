@@ -33,6 +33,8 @@ export async function updateVoucher(
     cashAmount?: number
     depositAmount?: number
     accountsReceivable?: number
+    collectedAmount?: number
+    pendingBalance?: number
     bank?: string
     comment?: string
     paymentMethod?: string
@@ -57,8 +59,8 @@ export async function updateVoucher(
   const transfer = data.transferAmount !== undefined ? Number(data.transferAmount) : existing.transferAmount
   const cash = data.cashAmount !== undefined ? Number(data.cashAmount) : existing.cashAmount
   const deposit = data.depositAmount !== undefined ? Number(data.depositAmount) : existing.depositAmount
-  const collected = transfer + cash + deposit
-  const pending = Math.max(0, totalMonth - collected)
+  const collected = data.collectedAmount !== undefined ? Number(data.collectedAmount) : (transfer + cash + deposit)
+  const pending = data.pendingBalance !== undefined ? Number(data.pendingBalance) : (totalMonth - collected)
 
   const amountInWords = numberToWordsCLP(totalMonth)
 

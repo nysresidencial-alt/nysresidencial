@@ -60,6 +60,75 @@ export function ArriendosManager({
     setTimeout(() => setMessage(null), 4000)
   }
 
+  // Opciones de filtro dependientes (en cascada)
+  const availableBuildings = useMemo(() => {
+    let pool = contracts
+    if (filterCompany !== 'TODAS') {
+      pool = pool.filter((c) => c.company?.code === filterCompany)
+    }
+    const bSet = new Set<string>()
+    pool.forEach((c) => {
+      if (c.building) bSet.add(c.building)
+    })
+    return Array.from(bSet).sort()
+  }, [contracts, filterCompany])
+
+  const availableTypes = useMemo(() => {
+    let pool = contracts
+    if (filterCompany !== 'TODAS') {
+      pool = pool.filter((c) => c.company?.code === filterCompany)
+    }
+    if (filterBuilding !== 'TODOS') {
+      pool = pool.filter((c) => c.building === filterBuilding)
+    }
+    const tSet = new Set<string>()
+    pool.forEach((c) => {
+      if (c.propertyType) tSet.add(c.propertyType)
+    })
+    return Array.from(tSet).sort()
+  }, [contracts, filterCompany, filterBuilding])
+
+  const availableStatuses = useMemo(() => {
+    let pool = contracts
+    if (filterCompany !== 'TODAS') {
+      pool = pool.filter((c) => c.company?.code === filterCompany)
+    }
+    if (filterBuilding !== 'TODOS') {
+      pool = pool.filter((c) => c.building === filterBuilding)
+    }
+    const sSet = new Set<string>()
+    pool.forEach((c) => {
+      if (c.status) sSet.add(c.status)
+    })
+    return Array.from(sSet).sort()
+  }, [contracts, filterCompany, filterBuilding])
+
+  function handleCompanyChange(newCompany: string) {
+    setFilterCompany(newCompany)
+    setCurrentPage(1)
+    if (newCompany !== 'TODAS') {
+      const validForNewCompany = new Set(
+        contracts.filter((c) => c.company?.code === newCompany).map((c) => c.building)
+      )
+      if (filterBuilding !== 'TODOS' && !validForNewCompany.has(filterBuilding)) {
+        setFilterBuilding('TODOS')
+      }
+    }
+  }
+
+  function handleBuildingChange(newBuilding: string) {
+    setFilterBuilding(newBuilding)
+    setCurrentPage(1)
+    if (newBuilding !== 'TODOS') {
+      const validTypes = new Set(
+        contracts.filter((c) => c.building === newBuilding).map((c) => c.propertyType)
+      )
+      if (filterType !== 'TODOS' && !validTypes.has(filterType)) {
+        setFilterType('TODOS')
+      }
+    }
+  }
+
   // Comprobar si un contrato tiene campos vacíos / incompletos
   function isContractIncomplete(c: ContractItem): boolean {
     if (c.status === 'Disponible' || c.status === 'Vendido') return false
@@ -290,10 +359,7 @@ export function ArriendosManager({
             <label className="text-[11px] font-bold text-muted-foreground block mb-1">Empresa</label>
             <select
               value={filterCompany}
-              onChange={(e) => {
-                setFilterCompany(e.target.value)
-                setCurrentPage(1)
-              }}
+              onChange={(e) => handleCompanyChange(e.target.value)}
               className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20"
             >
               <option value="TODAS">Todas las Empresas</option>
@@ -305,19 +371,20 @@ export function ArriendosManager({
             </select>
           </div>
 
-          {/* Edificio */}
+          {/* Edificio dependiente */}
           <div>
             <label className="text-[11px] font-bold text-muted-foreground block mb-1">Edificio</label>
             <select
               value={filterBuilding}
-              onChange={(e) => {
-                setFilterBuilding(e.target.value)
-                setCurrentPage(1)
-              }}
+              onChange={(e) => handleBuildingChange(e.target.value)}
               className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20"
             >
-              <option value="TODOS">Todos los Edificios</option>
-              {buildings.map((b) => (
+              <option value="TODOS">
+                {filterCompany === 'TODAS'
+                  ? 'Todos los Edificios'
+                  : `Edificios de ${filterCompany} (${availableBuildings.length})`}
+              </option>
+              {availableBuildings.map((b) => (
                 <option key={b} value={b}>
                   {b}
                 </option>
@@ -325,7 +392,7 @@ export function ArriendosManager({
             </select>
           </div>
 
-          {/* Tipo Inmueble */}
+          {/* Tipo Inmueble dependiente */}
           <div>
             <label className="text-[11px] font-bold text-muted-foreground block mb-1">Tipo Inmueble</label>
             <select
@@ -336,17 +403,16 @@ export function ArriendosManager({
               }}
               className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20"
             >
-              <option value="TODOS">Todos los Tipos</option>
-              <option value="Departamento">Departamento</option>
-              <option value="Local Comercial">Local Comercial</option>
-              <option value="Oficina">Oficina</option>
-              <option value="Bodega">Bodega</option>
-              <option value="Estacionamiento">Estacionamiento</option>
-              <option value="Casas">Casas</option>
+              <option value="TODOS">Todos los Tipos ({availableTypes.length})</option>
+              {availableTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Estado */}
+          {/* Estado dependiente */}
           <div>
             <label className="text-[11px] font-bold text-muted-foreground block mb-1">Estado</label>
             <select
@@ -357,11 +423,12 @@ export function ArriendosManager({
               }}
               className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20"
             >
-              <option value="TODOS">Todos los Estados</option>
-              <option value="Ocupado">Ocupado</option>
-              <option value="Disponible">Disponible</option>
-              <option value="Vendido">Vendido</option>
-              <option value="En Retiro">En Retiro</option>
+              <option value="TODOS">Todos los Estados ({availableStatuses.length})</option>
+              {availableStatuses.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -516,19 +583,23 @@ export function ArriendosManager({
 
                       {/* Estado */}
                       <td className="py-3 px-3 text-center">
-                        <span
-                          className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase ${
+                        <button
+                          type="button"
+                          onClick={() => setEditingContract(c)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase transition-all hover:scale-105 cursor-pointer shadow-xs ${
                             c.status === 'Ocupado'
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
                               : c.status === 'Disponible'
-                              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20'
                               : c.status === 'Vendido'
-                              ? 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20'
-                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              ? 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20 hover:bg-zinc-500/20'
+                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
                           }`}
+                          title="Haz clic para modificar el estado o ficha de la propiedad"
                         >
-                          {c.status}
-                        </span>
+                          <span>{c.status}</span>
+                          <Edit className="w-2.5 h-2.5 opacity-60" />
+                        </button>
                       </td>
 
                       {/* Acciones */}

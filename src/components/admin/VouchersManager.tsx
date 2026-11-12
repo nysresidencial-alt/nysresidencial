@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { VoucherDetail, VoucherPrintModal } from './VoucherPrintModal'
 import { VoucherEditModal } from './VoucherEditModal'
+import { VoucherStatusModal } from './VoucherStatusModal'
 import { generateMonthVouchers } from '@/app/admin/vouchers/actions'
 
 interface VouchersManagerProps {
@@ -71,8 +72,59 @@ export function VouchersManager({
   // Modales
   const [printingVoucher, setPrintingVoucher] = useState<VoucherDetail | null>(null)
   const [editingVoucher, setEditingVoucher] = useState<VoucherDetail | null>(null)
+  const [statusChangingVoucher, setStatusChangingVoucher] = useState<VoucherDetail | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+
+  // Opciones de filtro dependientes (en cascada)
+  const availableBuildings = useMemo(() => {
+    let pool = vouchers
+    if (filterCompany !== 'TODAS') {
+      pool = pool.filter((v) => (v.company || v.contract.company)?.code === filterCompany)
+    }
+    const bSet = new Set<string>()
+    pool.forEach((v) => {
+      if (v.contract.building) bSet.add(v.contract.building)
+    })
+    return Array.from(bSet).sort()
+  }, [vouchers, filterCompany])
+
+  const availableStatuses = useMemo(() => {
+    let pool = vouchers
+    if (filterCompany !== 'TODAS') {
+      pool = pool.filter((v) => (v.company || v.contract.company)?.code === filterCompany)
+    }
+    if (filterBuilding !== 'TODOS') {
+      pool = pool.filter((v) => v.contract.building === filterBuilding)
+    }
+    const sSet = new Set<string>()
+    pool.forEach((v) => {
+      if (v.paymentStatus) sSet.add(v.paymentStatus)
+    })
+    return Array.from(sSet).sort()
+  }, [vouchers, filterCompany, filterBuilding])
+
+  function handleCompanyChange(newCompany: string) {
+    setFilterCompany(newCompany)
+    if (newCompany !== 'TODAS') {
+      const validForNewCompany = new Set(
+        vouchers
+          .filter((v) => (v.company || v.contract.company)?.code === newCompany)
+          .map((v) => v.contract.building)
+      )
+      if (filterBuilding !== 'TODOS' && !validForNewCompany.has(filterBuilding)) {
+        setFilterBuilding('TODOS')
+      }
+    }
+  }
+
+  function handleVoucherStatusUpdated(updated: VoucherDetail) {
+    setVouchers((prev) => prev.map((v) => (v.id === updated.id ? updated : v)))
+    setMessage({
+      text: `Estado del voucher #${updated.receiptNumber || 'S/N'} actualizado a "${updated.paymentStatus}" con éxito`,
+      type: 'success',
+    })
+  }
 
   // Filtrado reactivo en cliente
   const filteredVouchers = useMemo(() => {
@@ -323,7 +375,7 @@ export function VouchersManager({
             </label>
             <select
               value={filterCompany}
-              onChange={(e) => setFilterCompany(e.target.value)}
+              onChange={(e) => handleCompanyChange(e.target.value)}
               className="w-full px-3 py-2 text-xs font-semibold bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
             >
               <option value="TODAS">Todas las empresas</option>
@@ -335,7 +387,7 @@ export function VouchersManager({
             </select>
           </div>
 
-          {/* Edificio */}
+          {/* Edificio dependiente */}
           <div>
             <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
               Edificio / Inmueble
@@ -345,8 +397,12 @@ export function VouchersManager({
               onChange={(e) => setFilterBuilding(e.target.value)}
               className="w-full px-3 py-2 text-xs font-semibold bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
             >
-              <option value="TODOS">Todos los edificios</option>
-              {buildings.map((b) => (
+              <option value="TODOS">
+                {filterCompany === 'TODAS'
+                  ? 'Todos los edificios'
+                  : `Edificios de ${filterCompany} (${availableBuildings.length})`}
+              </option>
+              {availableBuildings.map((b) => (
                 <option key={b} value={b}>
                   {b}
                 </option>
@@ -354,7 +410,7 @@ export function VouchersManager({
             </select>
           </div>
 
-          {/* Estado de Pago */}
+          {/* Estado de Pago dependiente */}
           <div>
             <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
               Estado de Pago
@@ -365,9 +421,11 @@ export function VouchersManager({
               className="w-full px-3 py-2 text-xs font-semibold bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
             >
               <option value="TODOS">Todos los estados</option>
-              <option value="Pagado">Pagado</option>
-              <option value="Pendiente">Pendiente</option>
-              <option value="Saldo a Favor">Saldo a Favor</option>
+              {availableStatuses.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -471,15 +529,28 @@ export function VouchersManager({
                         </td>
 
                         <td className="py-3 px-3.5 text-center">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              isPaid
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setStatusChangingVoucher(v)
+                            }}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all hover:scale-105 cursor-pointer shadow-xs ${
+                              v.paymentStatus === 'Pagado'
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                                : v.paymentStatus === 'Pendiente'
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+                                : v.paymentStatus === 'Saldo a Favor'
+                                ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20'
+                                : v.paymentStatus === 'Disponible'
+                                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20'
+                                : 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20 hover:bg-zinc-500/20'
                             }`}
+                            title="Haz clic para modificar el estado del voucher"
                           >
-                            {v.paymentStatus}
-                          </span>
+                            <span>{v.paymentStatus}</span>
+                            <Edit className="w-2.5 h-2.5 opacity-60" />
+                          </button>
                         </td>
 
                         <td className="py-3 px-3.5 text-center">
@@ -530,15 +601,31 @@ export function VouchersManager({
                   </p>
                 </div>
 
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    selectedVoucher.paymentStatus === 'Pagado'
-                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                      : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                  }`}
-                >
-                  {selectedVoucher.paymentStatus}
-                </span>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      selectedVoucher.paymentStatus === 'Pagado'
+                        ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                        : selectedVoucher.paymentStatus === 'Pendiente'
+                        ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                        : selectedVoucher.paymentStatus === 'Saldo a Favor'
+                        ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
+                        : selectedVoucher.paymentStatus === 'Disponible'
+                        ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+                        : 'bg-zinc-500/10 text-zinc-600 border border-zinc-500/20'
+                    }`}
+                  >
+                    {selectedVoucher.paymentStatus}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setStatusChangingVoucher(selectedVoucher)}
+                    className="text-[11px] font-bold text-primary hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <Edit className="w-3 h-3" />
+                    <span>Cambiar Estado</span>
+                  </button>
+                </div>
               </div>
 
               {/* Ficha del Arrendatario */}
@@ -647,6 +734,15 @@ export function VouchersManager({
         <VoucherPrintModal
           voucher={printingVoucher}
           onClose={() => setPrintingVoucher(null)}
+        />
+      )}
+
+      {/* MODAL DE CAMBIO DE ESTADO CON ADVERTENCIA */}
+      {statusChangingVoucher && (
+        <VoucherStatusModal
+          voucher={statusChangingVoucher}
+          onClose={() => setStatusChangingVoucher(null)}
+          onUpdated={handleVoucherStatusUpdated}
         />
       )}
 
