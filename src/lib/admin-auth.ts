@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { cache } from 'react'
 import prisma from '@/lib/db'
 import crypto from 'crypto'
 import { PermissionsMatrix } from './permissions-config'
@@ -77,7 +78,7 @@ export async function createAdminSession(user: {
   })
 }
 
-export async function getAdminSession(): Promise<AdminUserSession | null> {
+export const getAdminSession = cache(async (): Promise<AdminUserSession | null> => {
   const cookieStore = await cookies()
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value
   if (!token) return null
@@ -124,7 +125,7 @@ export async function getAdminSession(): Promise<AdminUserSession | null> {
     console.error('Error fetching admin session:', e)
     return null
   }
-}
+})
 
 /**
  * Valida sesión administrativa universal (RBAC, mock legacy y Supabase).

@@ -11,6 +11,7 @@ import { useTheme } from "@/components/ThemeProvider";
 interface NavbarProps {
   topPhone?: string;
   slogan?: string;
+  ufBadge?: React.ReactNode;
 }
 
 function parseTopContact(raw?: string) {
@@ -62,7 +63,7 @@ function parseTopContact(raw?: string) {
   };
 }
 
-export function Navbar({ topPhone, slogan }: NavbarProps) {
+export function Navbar({ topPhone, slogan, ufBadge }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
@@ -85,8 +86,8 @@ export function Navbar({ topPhone, slogan }: NavbarProps) {
       {/* Top Header Section */}
       <div className="max-w-[1500px] mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
         
-        {/* Logo y Eslogan */}
-        <div className="flex items-center gap-4">
+        {/* Logo, Eslogan y UF Badge */}
+        <div className="flex items-center gap-4 flex-wrap">
           <Link href="/" className="flex items-center gap-4 group">
             {/* Logo NYS Oficial */}
             <div className="relative h-14 w-20 shrink-0">
@@ -107,6 +108,7 @@ export function Navbar({ topPhone, slogan }: NavbarProps) {
               </span>
             </div>
           </Link>
+          {ufBadge}
         </div>
 
         {/* Contact Info Right (WhatsApp y Mail interactivos) */}

@@ -7,7 +7,6 @@ import {
   LogOut,
   Home,
   FileText,
-  DollarSign,
   Building,
   MessageSquare,
   Image as ImageIcon,
@@ -19,7 +18,6 @@ import {
   Moon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { UFWidget } from '@/components/UFWidget';
 import { useTheme } from '@/components/ThemeProvider';
 import { PermissionsMatrix } from '@/lib/permissions-config';
 
@@ -47,7 +45,6 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
     { key: 'portafolio', name: 'Portafolio PDF', href: '/admin/portafolio', icon: Printer },
     { key: 'carrusel', name: 'Carrusel', href: '/admin/carrusel', icon: ImageIcon },
     { key: 'contenido', name: 'Contenido', href: '/admin/contenido', icon: FileText },
-    { key: 'uf', name: 'UF', href: '/admin/uf', icon: DollarSign },
     { key: 'solicitudes', name: 'Solicitudes', href: '/admin/solicitudes', icon: MessageSquare },
     { key: 'oficinas', name: 'Oficinas', href: '/admin/oficinas', icon: MapPin },
     { key: 'usuarios', name: 'Usuarios y Roles', href: '/admin/usuarios', icon: Shield },
@@ -108,14 +105,10 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
 
         {/* Acciones Derecha */}
         <div className="flex items-center space-x-2 md:space-x-3 ml-2 shrink-0">
-          <div className="hidden lg:block">
-            <UFWidget />
-          </div>
-
           <Link
             href="/"
             target="_blank"
-            className="text-foreground/60 hover:text-foreground flex items-center gap-1.5 text-xs font-semibold transition-colors border-l pl-2 md:pl-3 border-border"
+            className="text-foreground/60 hover:text-foreground flex items-center gap-1.5 text-xs font-semibold transition-colors pl-2 border-l border-border"
           >
             <Home className="h-4 w-4 shrink-0" />
             <span className="hidden sm:inline">Ver Sitio</span>

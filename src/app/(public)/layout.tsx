@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/Navbar";
+import { PublicUFBadge } from "@/components/PublicUFBadge";
 import prisma from "@/lib/db";
 import Image from "next/image";
 
@@ -22,7 +23,7 @@ export default async function PublicLayout({
 
   return (
     <>
-      <Navbar topPhone={fonos?.content} slogan={sloganText} />
+      <Navbar topPhone={fonos?.content} slogan={sloganText} ufBadge={<PublicUFBadge />} />
       <main className="flex-1">
         {children}
       </main>
