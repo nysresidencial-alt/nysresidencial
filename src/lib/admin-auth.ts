@@ -141,14 +141,15 @@ export function getFirstAllowedRoute(session: {
 
   const roleName = session.roleName?.toLowerCase() || ''
   
-  // Para el rol de Contabilidad, priorizar vouchers
+  // Para el rol de Contabilidad, priorizar arriendos
   if (roleName.includes('contabilidad')) {
-    return '/admin/vouchers'
+    return '/admin/arriendos'
   }
 
   // Lista ordenada de módulos según la navegación
   const MODULE_ROUTES: { key: string; href: string }[] = [
     { key: 'propiedades', href: '/admin' },
+    { key: 'arriendos', href: '/admin/arriendos' },
     { key: 'vouchers', href: '/admin/vouchers' },
     { key: 'clientes', href: '/admin/clientes' },
     { key: 'solicitudes', href: '/admin/solicitudes' },

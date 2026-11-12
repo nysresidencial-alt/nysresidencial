@@ -15,6 +15,7 @@ import {
   Users,
   Shield,
   Receipt,
+  FileSpreadsheet,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -47,6 +48,7 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
     { key: 'carrusel', name: 'Carrusel', href: '/admin/carrusel', icon: ImageIcon },
     { key: 'contenido', name: 'Contenido', href: '/admin/contenido', icon: FileText },
     { key: 'solicitudes', name: 'Solicitudes', href: '/admin/solicitudes', icon: MessageSquare },
+    { key: 'arriendos', name: 'Arriendos', href: '/admin/arriendos', icon: FileSpreadsheet },
     { key: 'vouchers', name: 'Vouchers / Recibos', href: '/admin/vouchers', icon: Receipt },
     { key: 'oficinas', name: 'Oficinas', href: '/admin/oficinas', icon: MapPin },
     { key: 'usuarios', name: 'Usuarios y Roles', href: '/admin/usuarios', icon: Shield },
@@ -56,16 +58,16 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
   const visibleNavItems = allNavItems.filter((item) => {
     // Si no hay sesión RBAC (ej: sesión mock histórica previa), no mostrar módulos restringidos
     if (!currentUser) {
-      return item.key !== 'usuarios' && item.key !== 'vouchers';
+      return item.key !== 'usuarios' && item.key !== 'vouchers' && item.key !== 'arriendos';
     }
     // Superadmin ve todo
     if (currentUser.isSuperadmin) {
       return true;
     }
-    // Vouchers: Exclusivo únicamente para el rol de Contabilidad
-    if (item.key === 'vouchers') {
+    // Vouchers y Arriendos: Exclusivo únicamente para el rol de Contabilidad
+    if (item.key === 'vouchers' || item.key === 'arriendos') {
       const isContabilidad = currentUser.roleName?.toLowerCase().includes('contabilidad');
-      return Boolean(isContabilidad && currentUser.permissions?.vouchers?.view);
+      return Boolean(isContabilidad && (currentUser.permissions?.[item.key]?.view ?? true));
     }
     // Para roles con permisos específicos
     const modPerm = currentUser.permissions[item.key];

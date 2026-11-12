@@ -9,6 +9,7 @@ export type AdminModule =
   | 'oficinas'
   | 'usuarios'
   | 'vouchers'
+  | 'arriendos'
   | 'contabilidad' // Reservado para futura fase
 
 export type ActionType = 'view' | 'create' | 'edit' | 'delete'
@@ -93,6 +94,13 @@ export const ADMIN_MODULES: {
     hasCrud: true,
   },
   {
+    key: 'arriendos',
+    name: 'Arriendos / Inmuebles',
+    href: '/admin/arriendos',
+    description: 'Maestro de propiedades, contratos vigentes, arrendatarios y reajustes',
+    hasCrud: true,
+  },
+  {
     key: 'vouchers',
     name: 'Vouchers / Recibos',
     href: '/admin/vouchers',
@@ -122,6 +130,7 @@ export const DEFAULT_ROLES: AdminRoleConfig[] = [
       solicitudes: { view: true, create: true, edit: true, delete: true },
       oficinas: { view: true, create: true, edit: true, delete: true },
       usuarios: { view: true, create: true, edit: true, delete: true },
+      arriendos: { view: true, create: true, edit: true, delete: true },
       vouchers: { view: true, create: true, edit: true, delete: true },
       contabilidad: { view: true, create: true, edit: true, delete: true },
     },
@@ -139,6 +148,7 @@ export const DEFAULT_ROLES: AdminRoleConfig[] = [
       contenido: { view: false },
       oficinas: { view: false },
       usuarios: { view: false },
+      arriendos: { view: false },
       vouchers: { view: false },
       contabilidad: { view: false },
     },
@@ -148,6 +158,7 @@ export const DEFAULT_ROLES: AdminRoleConfig[] = [
     description: 'Gestión de finanzas, vouchers de arriendo y liquidaciones mensuales.',
     isSystem: true,
     permissions: {
+      arriendos: { view: true, create: true, edit: true, delete: true },
       vouchers: { view: true, create: true, edit: true, delete: true },
       contabilidad: { view: true, create: true, edit: true, delete: true },
       clientes: { view: true },

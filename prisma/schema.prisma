@@ -183,6 +183,10 @@ model RentalContract {
   adjustmentPercentage  Float         @default(0) // % reajuste (ej: 0.035)
   adjustmentAmount      Float         @default(0) // Monto reajuste $
   totalRent             Float         @default(0) // Valor T / Arriendo final calculado
+  guaranteeAmount       Float?        // Garantía contractual
+  expensesCharge        Float?        // Gastos Comunes Cargo
+  expensesPayment       Float?        // Gastos Comunes Abono
+  previousRent          Float?        // Arriendo anterior
   
   vouchers              LeaseVoucher[]
   createdAt             DateTime      @default(now())
@@ -208,6 +212,9 @@ model LeaseVoucher {
   adjustmentAmount  Float          @default(0)
   totalRent         Float          @default(0) // Monto final arriendo del mes
   guaranteeAmount   Float?         // Monto garantía si se cobra este mes
+  expensesCharge    Float?         // Gastos Comunes Cargo
+  expensesPayment   Float?         // Gastos Comunes Abono
+  previousRent      Float?         // Arriendo anterior
   totalMonth        Float          @default(0) // Total liquidado (arriendo + garantía + extras)
   amountInWords     String?        // "DOSCIENTOS NOVENTA Y TRES MIL QUINIENTOS PESOS"
   

@@ -101,9 +101,9 @@ export default function LoginPage() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="admin@nys.cl o tu correo"
+                  placeholder="correo@ejemplo.cl"
                   required
-                  defaultValue="comercial@nys.cl"
+                  autoComplete="email"
                   className="w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>

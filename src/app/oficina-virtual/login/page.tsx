@@ -88,9 +88,8 @@ export default function ClientLoginPage() {
           {/* Formulario */}
           <form action={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                <span>RUT, Correo o Usuario</span>
-                <span className="text-[11px] text-muted-foreground font-normal">Ej: test</span>
+              <label className="text-xs font-semibold text-foreground">
+                RUT, Correo o Usuario
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-foreground">
@@ -100,17 +99,16 @@ export default function ClientLoginPage() {
                   type="text"
                   name="identifier"
                   required
-                  placeholder="Ej: test o 12.345.678-9"
-                  defaultValue="test"
+                  placeholder="Ingresa tu RUT o correo"
+                  autoComplete="username"
                   className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all placeholder:text-muted-foreground/50"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                <span>Contraseña</span>
-                <span className="text-[11px] text-muted-foreground font-normal">Ej: test</span>
+              <label className="text-xs font-semibold text-foreground">
+                Contraseña
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-foreground">
@@ -121,17 +119,9 @@ export default function ClientLoginPage() {
                   name="password"
                   required
                   placeholder="Tu contraseña"
-                  defaultValue="test"
+                  autoComplete="current-password"
                   className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all placeholder:text-muted-foreground/50"
                 />
-              </div>
-            </div>
-
-            {/* Hint para pruebas */}
-            <div className="bg-muted/60 border border-border/80 p-3 rounded-xl text-[11px] text-muted-foreground flex items-start gap-2">
-              <HelpCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <div>
-                <span className="font-semibold text-foreground">Acceso de prueba activado:</span> puedes ingresar directamente con usuario <strong>test</strong> y contraseña <strong>test</strong>.
               </div>
             </div>
 
