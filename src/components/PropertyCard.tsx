@@ -2,10 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { Property } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
 
+const FALLBACK_PROPERTY_IMAGE = "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800&auto=format&fit=crop";
+
 export function PropertyCard({ property }: { property: Property }) {
+  const [imgError, setImgError] = useState(false);
   const hasImages = property.images && property.images.length > 0;
   const isUnavailable = property.isAvailable === false;
   const statusLabel = (property.availabilityStatus || "No Disponible").toUpperCase();
@@ -15,6 +19,8 @@ export function PropertyCard({ property }: { property: Property }) {
     .replace('UF', '')
     .replace('CLP', '')
     .trim();
+
+  const displayImageSrc = imgError || !hasImages ? FALLBACK_PROPERTY_IMAGE : property.images[0];
 
   return (
     <Link href={`/propiedades/${property.id}`} className="block h-full group">
@@ -28,20 +34,16 @@ export function PropertyCard({ property }: { property: Property }) {
         
         {/* Sección de Imagen */}
         <div className="relative w-[130px] sm:w-[160px] xl:w-[180px] shrink-0 bg-muted overflow-hidden">
-          {hasImages ? (
-            <Image
-              src={property.images[0]}
-              alt={property.title}
-              fill
-              className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
-                isUnavailable ? 'grayscale-[35%]' : ''
-              }`}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-              Sin foto
-            </div>
-          )}
+          <Image
+            src={displayImageSrc}
+            alt={property.title}
+            fill
+            unoptimized
+            onError={() => setImgError(true)}
+            className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
+              isUnavailable ? 'grayscale-[35%]' : ''
+            }`}
+          />
 
           {/* Overlay translúcido oscuro si NO está disponible */}
           {isUnavailable ? (

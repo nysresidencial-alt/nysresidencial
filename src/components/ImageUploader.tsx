@@ -58,7 +58,7 @@ function SortableImage({ url, index, onRemove }: SortableImageProps) {
         className="absolute inset-0 z-10 cursor-grab active:cursor-grabbing hover:bg-black/10 transition-colors"
       />
       
-      <Image src={url} alt="Vista previa" fill className="object-cover" />
+      <Image src={url} alt="Vista previa" fill unoptimized className="object-cover" />
       
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 

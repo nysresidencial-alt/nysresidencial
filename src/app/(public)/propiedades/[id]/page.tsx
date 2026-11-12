@@ -148,6 +148,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               src={property.images[0]}
               alt={property.title}
               fill
+              unoptimized
               className={`object-cover ${isUnavailable ? 'grayscale-[20%]' : ''}`}
             />
           ) : (

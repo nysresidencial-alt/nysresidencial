@@ -104,6 +104,7 @@ export default async function AdminDashboard({
                       src={prop.images[0]}
                       alt={prop.title}
                       fill
+                      unoptimized
                       className={`object-cover group-hover:scale-105 transition-transform duration-500 ${
                         isUnavailable ? 'grayscale-[25%]' : ''
                       }`}

@@ -19,7 +19,12 @@ export function Hero({ images = [] }: HeroProps) {
   const [priceLimit, setPriceLimit] = useState("");
   
   const defaultImage = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075&auto=format&fit=crop";
-  const displayImages = images.length > 0 ? images : [defaultImage];
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
+  
+  const validImages = (images.length > 0 ? images : [defaultImage]).filter(
+    (url) => !failedUrls.has(url)
+  );
+  const displayImages = validImages.length > 0 ? validImages : [defaultImage];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
@@ -57,8 +62,12 @@ export function Hero({ images = [] }: HeroProps) {
             src={url}
             alt="Hero Background"
             fill
+            unoptimized
             className="object-cover"
             priority={index === 0}
+            onError={() => {
+              setFailedUrls((prev) => new Set(prev).add(url));
+            }}
           />
         </div>
       ))}
