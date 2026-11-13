@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -13,15 +13,16 @@ import {
   Check,
   AlertCircle,
   ExternalLink,
-  ChevronUp,
-  ChevronDown,
   Sparkles,
-  Building,
-  Save,
   Loader2,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  Layers,
+  LayoutGrid,
 } from 'lucide-react'
 import { LinkedinIcon } from '@/components/icons/LinkedinIcon'
-import { TeamMember, TeamCompany } from '@/lib/team-types'
+import { TeamMember, TeamCompany, TEAM_LEVELS } from '@/lib/team-types'
 import { TeamMemberModal } from './TeamMemberModal'
 import {
   saveTeamMember,
@@ -29,6 +30,7 @@ import {
   addTeamCompany,
   deleteTeamCompany,
   saveCorporateText,
+  saveAllTeamMembers,
 } from '@/app/admin/contenido/equipo-actions'
 
 interface TeamManagerProps {
@@ -43,6 +45,7 @@ export function TeamManager({
   initialCorporateText,
 }: TeamManagerProps) {
   const [activeTab, setActiveTab] = useState<'team' | 'text'>('team')
+  const [layoutView, setLayoutView] = useState<'pyramid' | 'grid'>('pyramid')
 
   // Datos
   const [members, setMembers] = useState<TeamMember[]>(initialMembers)
@@ -54,12 +57,150 @@ export function TeamManager({
   const [isCreatingMember, setIsCreatingMember] = useState(false)
   const [newCompanyName, setNewCompanyName] = useState('')
   const [isAddingCompany, setIsAddingCompany] = useState(false)
+  const [isSavingOrder, setIsSavingOrder] = useState(false)
   const [isSavingText, setIsSavingText] = useState(false)
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+
+  // Drag and drop state
+  const [draggedMemberId, setDraggedMemberId] = useState<string | null>(null)
+  const [dragOverLevel, setDragOverLevel] = useState<number | null>(null)
+  const [dragOverMemberId, setDragOverMemberId] = useState<string | null>(null)
 
   function showFeedback(text: string, type: 'success' | 'error') {
     setFeedback({ text, type })
     setTimeout(() => setFeedback(null), 4000)
+  }
+
+  // Agrupación por nivel para la pirámide
+  const membersByLevel = useMemo(() => {
+    const map: Record<number, TeamMember[]> = { 1: [], 2: [], 3: [], 4: [] }
+    members.forEach((m) => {
+      const lvl = m.level || 3
+      if (!map[lvl]) map[lvl] = []
+      map[lvl].push(m)
+    })
+    Object.keys(map).forEach((lvlStr) => {
+      const lvl = Number(lvlStr)
+      map[lvl].sort((a, b) => (a.order || 0) - (b.order || 0))
+    })
+    return map
+  }, [members])
+
+  // Persistir orden completo a la BD
+  async function persistMembersOrder(rawList: TeamMember[]) {
+    // Normalizar orden secuencial por nivel
+    const byLvl: Record<number, TeamMember[]> = { 1: [], 2: [], 3: [], 4: [] }
+    rawList.forEach((m) => {
+      const lvl = m.level || 3
+      if (!byLvl[lvl]) byLvl[lvl] = []
+      byLvl[lvl].push(m)
+    })
+
+    const finalList: TeamMember[] = []
+    ;[1, 2, 3, 4].forEach((lvl) => {
+      if (byLvl[lvl]) {
+        byLvl[lvl].forEach((item, idx) => {
+          finalList.push({
+            ...item,
+            level: lvl,
+            order: idx + 1,
+          })
+        })
+      }
+    })
+
+    setMembers(finalList)
+    setIsSavingOrder(true)
+    const res = await saveAllTeamMembers(finalList)
+    setIsSavingOrder(false)
+    if (res.error) {
+      showFeedback(res.error, 'error')
+    } else {
+      showFeedback('Estructura piramidal y orden actualizados', 'success')
+    }
+  }
+
+  // Drag and Drop Handlers
+  function handleDragStart(e: React.DragEvent, memberId: string) {
+    e.dataTransfer.setData('text/plain', memberId)
+    e.dataTransfer.effectAllowed = 'move'
+    setDraggedMemberId(memberId)
+  }
+
+  function handleDragEnd() {
+    setDraggedMemberId(null)
+    setDragOverLevel(null)
+    setDragOverMemberId(null)
+  }
+
+  function handleDragOverLevel(e: React.DragEvent, levelNum: number) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOverLevel !== levelNum) {
+      setDragOverLevel(levelNum)
+    }
+  }
+
+  function handleDragOverMember(e: React.DragEvent, memberId: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOverMemberId !== memberId) {
+      setDragOverMemberId(memberId)
+    }
+  }
+
+  async function handleDropOnLevel(targetLevel: number) {
+    if (!draggedMemberId) return
+    const dragged = members.find((m) => m.id === draggedMemberId)
+    if (!dragged) return
+
+    setDragOverLevel(null)
+    setDragOverMemberId(null)
+
+    // Si ya está en ese nivel y se soltó sobre el contenedor vacío
+    if (dragged.level === targetLevel) return
+
+    const remaining = members.filter((m) => m.id !== draggedMemberId)
+    const updatedDragged = { ...dragged, level: targetLevel }
+    const newList = [...remaining, updatedDragged]
+
+    await persistMembersOrder(newList)
+    setDraggedMemberId(null)
+  }
+
+  async function handleDropOnMember(targetMemberId: string, targetLevel: number) {
+    if (!draggedMemberId || draggedMemberId === targetMemberId) {
+      setDragOverLevel(null)
+      setDragOverMemberId(null)
+      return
+    }
+
+    const dragged = members.find((m) => m.id === draggedMemberId)
+    if (!dragged) return
+
+    setDragOverLevel(null)
+    setDragOverMemberId(null)
+
+    const updatedDragged = { ...dragged, level: targetLevel }
+    const remaining = members.filter((m) => m.id !== draggedMemberId)
+    const targetIdx = remaining.findIndex((m) => m.id === targetMemberId)
+
+    if (targetIdx >= 0) {
+      remaining.splice(targetIdx, 0, updatedDragged)
+    } else {
+      remaining.push(updatedDragged)
+    }
+
+    await persistMembersOrder(remaining)
+    setDraggedMemberId(null)
+  }
+
+  // Mover nivel con botones de accesibilidad (Subir/Bajar)
+  async function handleChangeLevel(member: TeamMember, newLevel: number) {
+    if (newLevel < 1 || newLevel > 4 || member.level === newLevel) return
+    const updated = members.map((m) => (m.id === member.id ? { ...m, level: newLevel } : m))
+    await persistMembersOrder(updated)
   }
 
   // Handlers Integrantes
@@ -87,26 +228,6 @@ export function TeamManager({
       setMembers((prev) => prev.filter((m) => m.id !== member.id))
       showFeedback('Integrante eliminado del equipo', 'success')
     }
-  }
-
-  async function handleMoveOrder(idx: number, direction: 'up' | 'down') {
-    const targetIdx = direction === 'up' ? idx - 1 : idx + 1
-    if (targetIdx < 0 || targetIdx >= members.length) return
-
-    const copy = [...members]
-    const temp = copy[idx]
-    copy[idx] = copy[targetIdx]
-    copy[targetIdx] = temp
-
-    // Actualizar orden numérico
-    copy.forEach((m, i) => (m.order = i + 1))
-    setMembers(copy)
-
-    // Guardar en backend
-    await Promise.all([
-      saveTeamMember(copy[idx]),
-      saveTeamMember(copy[targetIdx]),
-    ])
   }
 
   // Handlers Empresas
@@ -140,7 +261,6 @@ export function TeamManager({
       showFeedback(res.error, 'error')
     } else if (res.companies) {
       setCompanies(res.companies)
-      // Remover tag de estado local de miembros
       setMembers((prev) =>
         prev.map((m) => ({
           ...m,
@@ -191,7 +311,7 @@ export function TeamManager({
             <span>Quiénes Somos y Nuestro Equipo</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Administra a las personas con fotos circulares elegantes, cargos, enlaces de LinkedIn y las empresas del grupo como tags.
+            Estructura piramidal organizable arrastrando integrantes, fotos circulares elegantes y empresas asociadas.
           </p>
         </div>
 
@@ -284,149 +404,323 @@ export function TeamManager({
             </form>
           </div>
 
-          {/* SECCIÓN 2: INTEGRANTES DEL EQUIPO */}
+          {/* SECCIÓN 2: INTEGRANTES DEL EQUIPO & ORGANIGRAMA PIRAMIDAL */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                  <span>Integrantes del Equipo</span>
+                  <span>Organización Jerárquica del Equipo</span>
                   <span className="px-2 py-0.5 rounded-full bg-muted text-[11px] font-bold text-muted-foreground">
                     {members.length} personas
                   </span>
+                  {isSavingOrder && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-primary animate-pulse font-semibold">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Guardando orden...</span>
+                    </span>
+                  )}
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Se exhiben en las secciones públicas de <Link href="/nosotros" target="_blank" className="text-primary underline">/nosotros</Link> y <Link href="/equipo" target="_blank" className="text-primary underline">/equipo</Link>.
+                  Se visualiza como pirámide en <Link href="/nosotros" target="_blank" className="text-primary underline">/nosotros</Link> y <Link href="/equipo" target="_blank" className="text-primary underline">/equipo</Link>.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsCreatingMember(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Agregar Persona al Equipo</span>
-              </button>
-            </div>
-
-            {/* Grid de Personas con Fotografía Circular Elegante */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {members.length === 0 ? (
-                <div className="col-span-full py-16 text-center bg-card border border-border rounded-2xl p-6">
-                  <Users className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground font-medium">
-                    Aún no hay integrantes registrados en el equipo.
-                  </p>
+              <div className="flex items-center gap-2">
+                {/* Switcher Vista Pirámide vs Mosaico */}
+                <div className="flex items-center p-0.5 bg-muted rounded-xl border border-border">
                   <button
                     type="button"
-                    onClick={() => setIsCreatingMember(true)}
-                    className="mt-3 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold"
+                    onClick={() => setLayoutView('pyramid')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      layoutView === 'pyramid'
+                        ? 'bg-card text-foreground shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   >
-                    + Agregar el primer integrante
+                    <Layers className="w-3.5 h-3.5 text-primary" />
+                    <span>Pirámide (Arrastrar)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLayoutView('grid')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      layoutView === 'grid'
+                        ? 'bg-card text-foreground shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5 text-primary" />
+                    <span>Mosaico</span>
                   </button>
                 </div>
-              ) : (
-                members.map((member, idx) => (
+
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingMember(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Agregar Persona</span>
+                </button>
+              </div>
+            </div>
+
+            {/* BANNER GUÍA DE ARRASTRAR Y SOLTAR */}
+            {layoutView === 'pyramid' && (
+              <div className="p-3.5 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <GripVertical className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-foreground">
+                      Organización por Pirámide: Arrastra y suelta libremente
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Toma una persona con el cursor y arrástrala entre pisos de la pirámide o sobre otra persona para reordenarla.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md bg-background border border-border text-muted-foreground hidden sm:inline-block">
+                  Auto-guardado activo
+                </span>
+              </div>
+            )}
+
+            {/* VISTA 1: ORGANIGRAMA PIRAMIDAL CON ARRASTRAR Y SOLTAR */}
+            {layoutView === 'pyramid' ? (
+              <div className="space-y-6">
+                {TEAM_LEVELS.map((tier, tierIdx) => {
+                  const tierMembers = membersByLevel[tier.level] || []
+                  const isDropActive = dragOverLevel === tier.level
+                  const hasNextTier = tierIdx < TEAM_LEVELS.length - 1
+
+                  return (
+                    <div key={tier.level} className="relative">
+                      {/* Contenedor del Nivel */}
+                      <div
+                        onDragOver={(e) => handleDragOverLevel(e, tier.level)}
+                        onDrop={() => handleDropOnLevel(tier.level)}
+                        className={`rounded-3xl p-5 border transition-all duration-200 ${
+                          isDropActive
+                            ? 'bg-primary/10 border-primary ring-2 ring-primary/30 shadow-md'
+                            : 'bg-card/70 border-border'
+                        }`}
+                      >
+                        {/* Cabecera del Nivel */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 mb-4 border-b border-border/70">
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                                tier.level === 1
+                                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                                  : tier.level === 2
+                                  ? 'bg-primary/15 text-primary border border-primary/30'
+                                  : 'bg-muted text-muted-foreground border border-border'
+                              }`}
+                            >
+                              {tier.level === 1 && <span>👑</span>}
+                              {tier.badge}
+                            </span>
+                            <h3 className="text-sm font-bold text-foreground">
+                              {tier.title}
+                            </h3>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {tierMembers.length} {tierMembers.length === 1 ? 'persona' : 'personas'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Área de tarjetas / Drop zone */}
+                        {tierMembers.length === 0 ? (
+                          <div
+                            onDragOver={(e) => handleDragOverLevel(e, tier.level)}
+                            onDrop={() => handleDropOnLevel(tier.level)}
+                            className="py-8 text-center border-2 border-dashed border-border/80 rounded-2xl bg-muted/20"
+                          >
+                            <p className="text-xs text-muted-foreground font-medium">
+                              Arrastra personas aquí para ubicarlas en {tier.title}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap justify-center gap-4">
+                            {tierMembers.map((member) => {
+                              const isDragging = draggedMemberId === member.id
+                              const isHoveredTarget = dragOverMemberId === member.id
+
+                              return (
+                                <div
+                                  key={member.id}
+                                  draggable
+                                  onDragStart={(e) => handleDragStart(e, member.id)}
+                                  onDragEnd={handleDragEnd}
+                                  onDragOver={(e) => handleDragOverMember(e, member.id)}
+                                  onDrop={(e) => {
+                                    e.stopPropagation()
+                                    handleDropOnMember(member.id, tier.level)
+                                  }}
+                                  className={`w-full sm:w-64 bg-background border rounded-2xl p-4 shadow-xs transition-all flex flex-col items-center text-center relative group cursor-grab active:cursor-grabbing select-none ${
+                                    isDragging
+                                      ? 'opacity-40 scale-95 border-primary border-dashed'
+                                      : isHoveredTarget
+                                      ? 'border-primary ring-2 ring-primary/40 scale-102 bg-primary/5'
+                                      : 'border-border hover:border-primary/40 hover:shadow-md'
+                                  }`}
+                                >
+                                  {/* Barra superior de la tarjeta con Grip y cambio rápido de nivel */}
+                                  <div className="w-full flex items-center justify-between pb-2 mb-2 border-b border-border/50 text-muted-foreground">
+                                    <div className="flex items-center gap-1 text-[11px] font-semibold text-primary/80">
+                                      <GripVertical className="w-3.5 h-3.5" />
+                                      <span>Nivel {tier.level}</span>
+                                    </div>
+                                    <div className="flex items-center gap-0.5">
+                                      <button
+                                        type="button"
+                                        disabled={tier.level <= 1}
+                                        onClick={() => handleChangeLevel(member, tier.level - 1)}
+                                        title="Subir de nivel en la pirámide"
+                                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                                      >
+                                        <ArrowUp className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={tier.level >= 4}
+                                        onClick={() => handleChangeLevel(member, tier.level + 1)}
+                                        title="Bajar de nivel en la pirámide"
+                                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                                      >
+                                        <ArrowDown className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* FOTO CIRCULAR ELEGANTE */}
+                                  <div className="relative mb-3">
+                                    <div className="w-20 h-20 rounded-full ring-3 ring-primary/25 p-1 bg-background shadow-sm overflow-hidden relative group-hover:ring-primary/50 transition-all duration-300">
+                                      {member.photoUrl ? (
+                                        <Image
+                                          src={member.photoUrl}
+                                          alt={member.name}
+                                          fill
+                                          unoptimized
+                                          className="rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                                          <Users className="w-8 h-8" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    {!member.isActive && (
+                                      <span className="absolute bottom-0 right-0 px-1.5 py-0.2 rounded-full text-[8px] font-black uppercase bg-muted text-muted-foreground border border-border">
+                                        Oculto
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* NOMBRE Y CARGO */}
+                                  <h4 className="text-sm font-extrabold text-foreground tracking-tight leading-snug line-clamp-1">
+                                    {member.name}
+                                  </h4>
+                                  <p className="text-[11px] font-semibold text-primary mt-0.5 line-clamp-1">
+                                    {member.role}
+                                  </p>
+
+                                  {/* EMPRESAS ASOCIADAS */}
+                                  <div className="flex flex-wrap items-center justify-center gap-1 mt-2 w-full">
+                                    {member.companies && member.companies.length > 0 ? (
+                                      member.companies.slice(0, 2).map((compName) => (
+                                        <span
+                                          key={compName}
+                                          className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-muted text-foreground border border-border"
+                                        >
+                                          {compName}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-[9px] text-muted-foreground/60 italic">
+                                        Sin empresa asignada
+                                      </span>
+                                    )}
+                                    {member.companies && member.companies.length > 2 && (
+                                      <span className="text-[9px] font-bold text-muted-foreground">
+                                        +{member.companies.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* BOTONES DE ACCIÓN */}
+                                  <div className="flex items-center justify-center gap-2 mt-3 pt-2.5 border-t border-border/60 w-full">
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingMember(member)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-primary/10 hover:bg-primary/20 text-primary transition-colors cursor-pointer"
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                      <span>Editar</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteMember(member)}
+                                      className="p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                                      title="Eliminar del equipo"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* CONECTOR VISUAL ENTRE NIVELES DE LA PIRÁMIDE */}
+                      {hasNextTier && (
+                        <div className="w-full flex flex-col items-center my-3 pointer-events-none">
+                          <div className="w-0.5 h-6 bg-gradient-to-b from-primary/50 to-primary/20" />
+                          <div className="w-2 h-2 rounded-full bg-primary/70 ring-4 ring-primary/15 -my-1 z-10" />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              /* VISTA 2: MOSAICO CLÁSICO */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {members.map((member) => (
                   <div
                     key={member.id}
                     className="bg-card border border-border rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col items-center text-center relative group"
                   >
-                    {/* Botones de orden y visibilidad */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={() => handleMoveOrder(idx, 'up')}
-                        title="Mover antes"
-                        className="p-1 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground disabled:opacity-20 cursor-pointer"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={idx === members.length - 1}
-                        onClick={() => handleMoveOrder(idx, 'down')}
-                        title="Mover después"
-                        className="p-1 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground disabled:opacity-20 cursor-pointer"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    {/* FOTO CIRCULAR ELEGANTE */}
-                    <div className="relative mt-2 mb-4">
-                      <div className="w-28 h-28 rounded-full ring-4 ring-primary/20 p-1 bg-background shadow-md overflow-hidden relative group-hover:ring-primary/40 transition-all duration-300">
-                        {member.photoUrl ? (
-                          <Image
-                            src={member.photoUrl}
-                            alt={member.name}
-                            fill
-                            unoptimized
-                            className="rounded-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                            <Users className="w-10 h-10" />
-                          </div>
-                        )}
-                      </div>
-                      {!member.isActive && (
-                        <span className="absolute bottom-0 right-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-muted text-muted-foreground border border-border">
-                          Oculto
-                        </span>
+                    <div className="w-24 h-24 rounded-full ring-3 ring-primary/20 p-1 bg-background shadow-md overflow-hidden relative mb-3">
+                      {member.photoUrl ? (
+                        <Image
+                          src={member.photoUrl}
+                          alt={member.name}
+                          fill
+                          unoptimized
+                          className="rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                          <Users className="w-10 h-10" />
+                        </div>
                       )}
                     </div>
-
-                    {/* NOMBRE Y CARGO */}
+                    <span className="text-[10px] font-bold text-primary px-2 py-0.5 rounded-full bg-primary/10 mb-1">
+                      Nivel {member.level || 3}
+                    </span>
                     <h3 className="text-base font-extrabold text-foreground tracking-tight leading-snug">
                       {member.name}
                     </h3>
                     <p className="text-xs font-semibold text-primary mt-1 line-clamp-2">
                       {member.role}
                     </p>
-
-                    {/* BIO SI TIENE */}
-                    {member.bio && (
-                      <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2 italic">
-                        "{member.bio}"
-                      </p>
-                    )}
-
-                    {/* EMPRESAS ASOCIADAS (TAGS) */}
-                    <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3 w-full">
-                      {member.companies && member.companies.length > 0 ? (
-                        member.companies.map((compName) => (
-                          <span
-                            key={compName}
-                            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-muted text-foreground border border-border"
-                          >
-                            {compName}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground/60 italic">
-                          Sin empresas asignadas
-                        </span>
-                      )}
-                    </div>
-
-                    {/* LINKEDIN */}
-                    {member.linkedinUrl && (
-                      <div className="mt-3">
-                        <a
-                          href={member.linkedinUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2]/20 transition-colors"
-                        >
-                          <LinkedinIcon className="w-3.5 h-3.5" />
-                          <span>LinkedIn</span>
-                          <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-                        </a>
-                      </div>
-                    )}
-
-                    {/* BOTONES DE ACCIÓN */}
                     <div className="flex items-center justify-center gap-2 mt-4 pt-3 border-t border-border w-full">
                       <button
                         type="button"
@@ -440,15 +734,15 @@ export function TeamManager({
                         type="button"
                         onClick={() => handleDeleteMember(member)}
                         className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                        title="Eliminar del equipo"
+                        title="Eliminar"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -458,53 +752,35 @@ export function TeamManager({
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4 max-w-4xl">
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-primary" />
-            <div>
-              <h2 className="text-base font-bold text-foreground">
-                Texto Corporativo "Quiénes Somos"
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Historia, valores y misión institucional que encabeza la página /nosotros.
-              </p>
-            </div>
+            <h2 className="text-base font-bold text-foreground">
+              Texto Institucional "Quiénes Somos"
+            </h2>
           </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Este texto se presenta en la sección superior de la página pública <Link href="/nosotros" target="_blank" className="text-primary underline">/nosotros</Link>, antecediendo a la pirámide del equipo.
+          </p>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-foreground">
-              Contenido (admite texto plano o formato HTML)
-            </label>
-            <textarea
-              rows={10}
-              value={corporateText}
-              onChange={(e) => setCorporateText(e.target.value)}
-              placeholder="Escribe la historia y propuesta de valor de la empresa..."
-              className="w-full p-4 text-xs font-mono bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 leading-relaxed"
-            />
-          </div>
+          <textarea
+            rows={8}
+            value={corporateText}
+            onChange={(e) => setCorporateText(e.target.value)}
+            placeholder="Escribe la historia, valores y misión de NyS Residencial..."
+            className="w-full p-4 text-xs bg-background border border-border rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 leading-relaxed font-sans"
+          />
 
-          {/* Vista previa rápida */}
-          <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-2">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
-              Vista Previa en Vivo:
-            </span>
-            <div
-              className="prose prose-zinc dark:prose-invert max-w-none text-xs leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: corporateText || '<em>(Sin texto)</em>' }}
-            />
-          </div>
-
-          <div className="pt-2 flex justify-end">
+          <div className="flex justify-end pt-2">
             <button
               type="button"
-              disabled={isSavingText}
               onClick={handleSaveCorporateText}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs shadow-md cursor-pointer transition-all"
+              disabled={isSavingText}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl shadow-md cursor-pointer disabled:opacity-40 transition-all"
             >
               {isSavingText ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Save className="w-4 h-4" />
+                <Check className="w-3.5 h-3.5" />
               )}
-              <span>{isSavingText ? 'Guardando...' : 'Guardar Texto Corporativo'}</span>
+              <span>{isSavingText ? 'Guardando en BD...' : 'Guardar Texto Institucional'}</span>
             </button>
           </div>
         </div>
@@ -519,8 +795,12 @@ export function TeamManager({
             setEditingMember(null)
             setIsCreatingMember(false)
           }}
-          onSaved={handleMemberSaved}
-          onCompanyAdded={(newComps) => setCompanies(newComps)}
+          onSaved={(saved) => {
+            handleMemberSaved(saved)
+            setEditingMember(null)
+            setIsCreatingMember(false)
+          }}
+          onCompanyAdded={(updatedCompanies) => setCompanies(updatedCompanies)}
         />
       )}
     </div>

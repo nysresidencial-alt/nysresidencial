@@ -27,6 +27,7 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     linkedinUrl: 'https://www.linkedin.com',
     bio: 'Más de 25 años liderando el desarrollo inmobiliario e inversiones residenciales en la región.',
     order: 1,
+    level: 1,
     isActive: true,
   },
   {
@@ -38,6 +39,7 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     linkedinUrl: 'https://www.linkedin.com',
     bio: 'Especialista en administración de arriendos, cartera de propiedades y atención personalizada.',
     order: 2,
+    level: 2,
     isActive: true,
   },
   {
@@ -49,6 +51,7 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     linkedinUrl: 'https://www.linkedin.com',
     bio: 'Gestión de captación de inmuebles residenciales y comerciales en Talca y Santiago.',
     order: 3,
+    level: 3,
     isActive: true,
   },
   {
@@ -60,6 +63,7 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     linkedinUrl: 'https://www.linkedin.com',
     bio: 'Revisión rigurosa de títulos, contratos notariales e inscripciones en el Conservador de Bienes Raíces.',
     order: 4,
+    level: 3,
     isActive: true,
   },
 ]
@@ -77,7 +81,24 @@ export async function getTeamData() {
       try {
         const parsed = JSON.parse(membersRec.content)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          members = parsed
+          members = parsed.map((m: any, idx: number) => {
+            let lvl = m.level
+            if (!lvl) {
+              const r = (m.role || '').toLowerCase()
+              if (r.includes('gerente general') || r.includes('socio') || r.includes('fundador')) {
+                lvl = 1
+              } else if (r.includes('directora') || r.includes('director') || r.includes('jefe') || r.includes('jefa')) {
+                lvl = 2
+              } else {
+                lvl = 3
+              }
+            }
+            return {
+              ...m,
+              level: Number(lvl) || 3,
+              order: m.order !== undefined ? Number(m.order) : idx + 1,
+            }
+          })
         }
       } catch {
         // Fallback to defaults
@@ -99,7 +120,11 @@ export async function getTeamData() {
     const corporateText = quienesSomosRec?.content || ''
 
     return {
-      members: members.sort((a, b) => (a.order || 0) - (b.order || 0)),
+      members: members.sort((a, b) => {
+        const lvlDiff = (a.level || 3) - (b.level || 3)
+        if (lvlDiff !== 0) return lvlDiff
+        return (a.order || 0) - (b.order || 0)
+      }),
       companies,
       corporateText,
     }
@@ -113,19 +138,55 @@ export async function getTeamData() {
   }
 }
 
+export async function saveAllTeamMembers(members: TeamMember[]): Promise<{ success?: boolean; error?: string }> {
+  try {
+    const normalized = members.map((m, idx) => ({
+      ...m,
+      level: Number(m.level) || 3,
+      order: m.order !== undefined ? Number(m.order) : idx + 1,
+    }))
+
+    await prisma.siteContent.upsert({
+      where: { key: KEY_MEMBERS },
+      update: {
+        content: JSON.stringify(normalized),
+      },
+      create: {
+        key: KEY_MEMBERS,
+        title: 'Equipo - Integrantes',
+        content: JSON.stringify(normalized),
+      },
+    })
+
+    revalidatePath('/nosotros')
+    revalidatePath('/equipo')
+    revalidatePath('/admin/contenido')
+    revalidatePath('/admin/contenido/quienes_somos')
+    revalidatePath('/admin/contenido/equipo')
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error saving all team members:', error)
+    return { error: error.message || 'Error al guardar el orden del equipo' }
+  }
+}
+
 export async function saveTeamMember(member: TeamMember): Promise<{ success?: boolean; member?: TeamMember; error?: string }> {
   try {
     const currentData = await getTeamData()
     let members = currentData.members
 
-    const existingIdx = members.findIndex((m) => m.id === member.id)
+    const cleanMember: TeamMember = {
+      ...member,
+      level: Number(member.level) || 3,
+      order: member.order !== undefined ? Number(member.order) : members.length + 1,
+    }
+
+    const existingIdx = members.findIndex((m) => m.id === cleanMember.id)
     if (existingIdx >= 0) {
-      members[existingIdx] = member
+      members[existingIdx] = cleanMember
     } else {
-      members.push({
-        ...member,
-        order: member.order || members.length + 1,
-      })
+      members.push(cleanMember)
     }
 
     await prisma.siteContent.upsert({

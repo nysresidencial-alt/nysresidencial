@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { LinkedinIcon } from '@/components/icons/LinkedinIcon'
 import Image from 'next/image'
-import { TeamMember, TeamCompany } from '@/lib/team-types'
+import { TeamMember, TeamCompany, TEAM_LEVELS } from '@/lib/team-types'
 import { saveTeamMember, addTeamCompany } from '@/app/admin/contenido/equipo-actions'
 import { ImageCropperModal } from './ImageCropperModal'
 
@@ -47,6 +47,7 @@ export function TeamMemberModal({
     linkedinUrl: member?.linkedinUrl || '',
     bio: member?.bio || '',
     order: member?.order || 1,
+    level: member?.level || 3,
     isActive: member?.isActive !== undefined ? member.isActive : true,
   })
 
@@ -386,6 +387,27 @@ export function TeamMemberModal({
                   />
                   <LinkedinIcon className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                 </div>
+              </div>
+
+              {/* Nivel Jerárquico en la Pirámide */}
+              <div>
+                <label className="text-xs font-bold text-foreground block mb-1">
+                  Nivel Jerárquico en la Pirámide / Organigrama
+                </label>
+                <select
+                  value={formData.level || 3}
+                  onChange={(e) => setFormData({ ...formData, level: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  {TEAM_LEVELS.map((lvl) => (
+                    <option key={lvl.level} value={lvl.level}>
+                      {lvl.badge} — {lvl.title}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Define en qué piso de la pirámide se mostrará (también puedes arrastrarlo libremente en el panel).
+                </p>
               </div>
 
               <div>
