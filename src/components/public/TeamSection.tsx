@@ -1,8 +1,16 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import Image from 'next/image'
-import { Users, ExternalLink, Briefcase } from 'lucide-react'
+import {
+  Users,
+  ExternalLink,
+  Briefcase,
+  X,
+  Sparkles,
+  Info,
+  ChevronRight,
+} from 'lucide-react'
 import { LinkedinIcon } from '@/components/icons/LinkedinIcon'
 import { TeamMember, TeamCompany } from '@/lib/team-types'
 
@@ -22,6 +30,28 @@ export function TeamSection({
   subtitle = 'Profesionales comprometidos con brindarte la mejor asesoría, transparencia y respaldo en cada operación inmobiliaria.',
 }: TeamSectionProps) {
   const [selectedCompany, setSelectedCompany] = useState<string>('TODAS')
+  const [selectedMemberModal, setSelectedMemberModal] = useState<TeamMember | null>(null)
+
+  // Cerrar modal con tecla Escape y bloquear scroll del body
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setSelectedMemberModal(null)
+      }
+    }
+
+    if (selectedMemberModal) {
+      window.addEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [selectedMemberModal])
 
   // Filtrar solo miembros activos
   const activeMembers = useMemo(() => {
@@ -110,14 +140,16 @@ export function TeamSection({
           {filteredMembers.map((member) => (
             <div
               key={member.id}
-              className="group bg-card border border-border hover:border-primary/40 rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden"
+              onClick={() => setSelectedMemberModal(member)}
+              className="group bg-card border border-border hover:border-primary/50 rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden cursor-pointer hover:-translate-y-1"
+              title="Haz clic para ver el perfil completo"
             >
               {/* Resplandor decorativo de fondo al hacer hover */}
               <div className="absolute -top-16 -left-16 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
 
               {/* FOTOGRAFÍA CON BORDE CIRCULAR ELEGANTE */}
               <div className="relative mb-4">
-                <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full ring-4 ring-primary/20 group-hover:ring-primary/50 p-1.5 bg-background shadow-lg overflow-hidden relative group-hover:scale-105 transition-all duration-300">
+                <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full ring-4 ring-primary/20 group-hover:ring-primary/60 p-1.5 bg-background shadow-lg overflow-hidden relative group-hover:scale-105 transition-all duration-300">
                   {member.photoUrl ? (
                     <Image
                       src={member.photoUrl}
@@ -144,10 +176,10 @@ export function TeamSection({
                 {member.role}
               </p>
 
-              {/* BIO / RESEÑA (OPCIONAL) */}
+              {/* RESEÑA CORTA PREVIA */}
               {member.bio && (
-                <p className="text-xs text-muted-foreground mt-3 line-clamp-3 leading-relaxed">
-                  {member.bio}
+                <p className="text-xs text-muted-foreground mt-3 line-clamp-2 leading-relaxed italic">
+                  "{member.bio}"
                 </p>
               )}
 
@@ -169,24 +201,135 @@ export function TeamSection({
                 )}
               </div>
 
-              {/* LINKEDIN */}
-              {member.linkedinUrl && (
-                <div className="mt-4 pt-3 border-t border-border/60 w-full flex justify-center">
+              {/* BOTÓN VER PERFIL & LINKEDIN */}
+              <div className="mt-4 pt-3 border-t border-border/60 w-full flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-primary group-hover:underline flex items-center gap-0.5">
+                  <span>Ver perfil</span>
+                  <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+
+                {member.linkedinUrl && (
                   <a
                     href={member.linkedinUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#0A66C2]/10 hover:bg-[#0A66C2] text-[#0A66C2] hover:text-white transition-all shadow-xs group/btn cursor-pointer"
-                    title={`Ver perfil de LinkedIn de ${member.name}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#0A66C2]/10 hover:bg-[#0A66C2] text-[#0A66C2] hover:text-white transition-all shadow-xs cursor-pointer"
+                    title={`Abrir perfil de LinkedIn de ${member.name}`}
                   >
-                    <LinkedinIcon className="w-3.5 h-3.5" />
+                    <LinkedinIcon className="w-3 h-3" />
                     <span>LinkedIn</span>
-                    <ExternalLink className="w-3 h-3 opacity-60 group-hover/btn:opacity-100" />
                   </a>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* MODAL DE PERFIL COMPLETO DEL INTEGRANTE */}
+      {selectedMemberModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setSelectedMemberModal(null)}
+        >
+          <div
+            className="bg-card border border-border w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Banner de Cabecera con Degradado Corporativo */}
+            <div className="h-28 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10 relative border-b border-border">
+              <button
+                type="button"
+                onClick={() => setSelectedMemberModal(null)}
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-background/80 hover:bg-background text-foreground transition-all shadow-sm cursor-pointer z-10"
+                title="Cerrar ventana"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenido del Perfil */}
+            <div className="px-6 pb-6 pt-0 text-center relative -mt-16 sm:-mt-20">
+              {/* Fotografía Circular Grande con Borde Elegante */}
+              <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full ring-4 ring-primary/30 p-1.5 bg-background shadow-xl overflow-hidden relative mx-auto mb-4">
+                {selectedMemberModal.photoUrl ? (
+                  <Image
+                    src={selectedMemberModal.photoUrl}
+                    alt={selectedMemberModal.name}
+                    fill
+                    unoptimized
+                    className="rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                    <Users className="w-12 h-12" />
+                  </div>
+                )}
+              </div>
+
+              {/* Nombre y Cargo */}
+              <h3 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight leading-tight">
+                {selectedMemberModal.name}
+              </h3>
+              <p className="text-sm font-semibold text-primary mt-1">
+                {selectedMemberModal.role}
+              </p>
+
+              {/* Tags de Empresas Asociadas */}
+              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
+                {selectedMemberModal.companies && selectedMemberModal.companies.length > 0 ? (
+                  selectedMemberModal.companies.map((compName) => (
+                    <span
+                      key={compName}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20"
+                    >
+                      <Briefcase className="w-3 h-3" />
+                      <span>{compName}</span>
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground">NyS Residencial</span>
+                )}
+              </div>
+
+              {/* Descripción / Biografía Completa */}
+              <div className="mt-6 p-4 rounded-2xl bg-muted/30 border border-border text-left space-y-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-primary" />
+                  <span>Trayectoria y Perfil</span>
+                </span>
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                  {selectedMemberModal.bio ||
+                    'Profesional comprometido con la excelencia, transparencia y acompañamiento integral en operaciones inmobiliarias y administración de activos para NyS Residencial y sus empresas colaboradoras.'}
+                </p>
+              </div>
+
+              {/* Botón de LinkedIn o Acción */}
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                {selectedMemberModal.linkedinUrl && (
+                  <a
+                    href={selectedMemberModal.linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#0A66C2] hover:bg-[#0A66C2]/90 text-white transition-all shadow-md cursor-pointer"
+                  >
+                    <LinkedinIcon className="w-4 h-4" />
+                    <span>Conectar en LinkedIn</span>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedMemberModal(null)}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-border bg-background hover:bg-muted text-foreground text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
