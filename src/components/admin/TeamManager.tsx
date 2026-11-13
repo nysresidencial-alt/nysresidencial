@@ -465,31 +465,31 @@ export function TeamManager({
               </div>
             </div>
 
-            {/* BANNER GUÍA DE ARRASTRAR Y SOLTAR */}
+            {/* BANNER GUÍA DE ARRASTRAR Y SOLTAR COMPACTO */}
             {layoutView === 'pyramid' && (
-              <div className="p-3.5 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                    <GripVertical className="w-4 h-4" />
+              <div className="p-2.5 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <GripVertical className="w-3.5 h-3.5" />
                   </div>
                   <div>
                     <p className="text-xs font-bold text-foreground">
                       Organización por Pirámide: Arrastra y suelta libremente
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Toma una persona con el cursor y arrástrala entre pisos de la pirámide o sobre otra persona para reordenarla.
+                    <p className="text-[10px] text-muted-foreground">
+                      Toma una persona y arrástrala entre pisos de la pirámide para moverla de nivel o sobre otra para reordenarla.
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md bg-background border border-border text-muted-foreground hidden sm:inline-block">
+                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-background border border-border text-muted-foreground hidden sm:inline-block">
                   Auto-guardado activo
                 </span>
               </div>
             )}
 
-            {/* VISTA 1: ORGANIGRAMA PIRAMIDAL CON ARRASTRAR Y SOLTAR */}
+            {/* VISTA 1: ORGANIGRAMA PIRAMIDAL CON ARRASTRAR Y SOLTAR (COMPACTO) */}
             {layoutView === 'pyramid' ? (
-              <div className="space-y-6">
+              <div className="space-y-3">
                 {TEAM_LEVELS.map((tier, tierIdx) => {
                   const tierMembers = membersByLevel[tier.level] || []
                   const isDropActive = dragOverLevel === tier.level
@@ -501,17 +501,17 @@ export function TeamManager({
                       <div
                         onDragOver={(e) => handleDragOverLevel(e, tier.level)}
                         onDrop={() => handleDropOnLevel(tier.level)}
-                        className={`rounded-3xl p-5 border transition-all duration-200 ${
+                        className={`rounded-2xl p-3.5 border transition-all duration-200 ${
                           isDropActive
                             ? 'bg-primary/10 border-primary ring-2 ring-primary/30 shadow-md'
                             : 'bg-card/70 border-border'
                         }`}
                       >
                         {/* Cabecera del Nivel */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 mb-4 border-b border-border/70">
-                          <div className="flex items-center gap-2.5">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1.5 pb-2 mb-2.5 border-b border-border/70">
+                          <div className="flex items-center gap-2">
                             <span
-                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                                 tier.level === 1
                                   ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                                   : tier.level === 2
@@ -522,12 +522,12 @@ export function TeamManager({
                               {tier.level === 1 && <span>👑</span>}
                               {tier.badge}
                             </span>
-                            <h3 className="text-sm font-bold text-foreground">
+                            <h3 className="text-xs sm:text-sm font-bold text-foreground">
                               {tier.title}
                             </h3>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-[11px] text-muted-foreground">
                               {tierMembers.length} {tierMembers.length === 1 ? 'persona' : 'personas'}
                             </span>
                           </div>
@@ -538,14 +538,14 @@ export function TeamManager({
                           <div
                             onDragOver={(e) => handleDragOverLevel(e, tier.level)}
                             onDrop={() => handleDropOnLevel(tier.level)}
-                            className="py-8 text-center border-2 border-dashed border-border/80 rounded-2xl bg-muted/20"
+                            className="py-5 text-center border-2 border-dashed border-border/80 rounded-xl bg-muted/20"
                           >
-                            <p className="text-xs text-muted-foreground font-medium">
+                            <p className="text-[11px] text-muted-foreground font-medium">
                               Arrastra personas aquí para ubicarlas en {tier.title}
                             </p>
                           </div>
                         ) : (
-                          <div className="flex flex-wrap justify-center gap-4">
+                          <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3">
                             {tierMembers.map((member) => {
                               const isDragging = draggedMemberId === member.id
                               const isHoveredTarget = dragOverMemberId === member.id
@@ -561,18 +561,18 @@ export function TeamManager({
                                     e.stopPropagation()
                                     handleDropOnMember(member.id, tier.level)
                                   }}
-                                  className={`w-full sm:w-64 bg-background border rounded-2xl p-4 shadow-xs transition-all flex flex-col items-center text-center relative group cursor-grab active:cursor-grabbing select-none ${
+                                  className={`w-full sm:w-52 bg-background border rounded-xl p-3 shadow-2xs transition-all flex flex-col items-center text-center relative group cursor-grab active:cursor-grabbing select-none ${
                                     isDragging
                                       ? 'opacity-40 scale-95 border-primary border-dashed'
                                       : isHoveredTarget
                                       ? 'border-primary ring-2 ring-primary/40 scale-102 bg-primary/5'
-                                      : 'border-border hover:border-primary/40 hover:shadow-md'
+                                      : 'border-border hover:border-primary/40 hover:shadow-xs'
                                   }`}
                                 >
                                   {/* Barra superior de la tarjeta con Grip y cambio rápido de nivel */}
-                                  <div className="w-full flex items-center justify-between pb-2 mb-2 border-b border-border/50 text-muted-foreground">
-                                    <div className="flex items-center gap-1 text-[11px] font-semibold text-primary/80">
-                                      <GripVertical className="w-3.5 h-3.5" />
+                                  <div className="w-full flex items-center justify-between pb-1.5 mb-1.5 border-b border-border/50 text-muted-foreground">
+                                    <div className="flex items-center gap-1 text-[10px] font-semibold text-primary/80">
+                                      <GripVertical className="w-3 h-3" />
                                       <span>Nivel {tier.level}</span>
                                     </div>
                                     <div className="flex items-center gap-0.5">
@@ -581,25 +581,25 @@ export function TeamManager({
                                         disabled={tier.level <= 1}
                                         onClick={() => handleChangeLevel(member, tier.level - 1)}
                                         title="Subir de nivel en la pirámide"
-                                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                                        className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
                                       >
-                                        <ArrowUp className="w-3 h-3" />
+                                        <ArrowUp className="w-2.5 h-2.5" />
                                       </button>
                                       <button
                                         type="button"
                                         disabled={tier.level >= 4}
                                         onClick={() => handleChangeLevel(member, tier.level + 1)}
                                         title="Bajar de nivel en la pirámide"
-                                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                                        className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
                                       >
-                                        <ArrowDown className="w-3 h-3" />
+                                        <ArrowDown className="w-2.5 h-2.5" />
                                       </button>
                                     </div>
                                   </div>
 
-                                  {/* FOTO CIRCULAR ELEGANTE */}
-                                  <div className="relative mb-3">
-                                    <div className="w-20 h-20 rounded-full ring-3 ring-primary/25 p-1 bg-background shadow-sm overflow-hidden relative group-hover:ring-primary/50 transition-all duration-300">
+                                  {/* FOTO CIRCULAR COMPACTA */}
+                                  <div className="relative mb-2">
+                                    <div className="w-14 h-14 rounded-full ring-2 ring-primary/25 p-0.5 bg-background shadow-2xs overflow-hidden relative group-hover:ring-primary/50 transition-all duration-300">
                                       {member.photoUrl ? (
                                         <Image
                                           src={member.photoUrl}
@@ -610,65 +610,65 @@ export function TeamManager({
                                         />
                                       ) : (
                                         <div className="w-full h-full rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                                          <Users className="w-8 h-8" />
+                                          <Users className="w-6 h-6" />
                                         </div>
                                       )}
                                     </div>
                                     {!member.isActive && (
-                                      <span className="absolute bottom-0 right-0 px-1.5 py-0.2 rounded-full text-[8px] font-black uppercase bg-muted text-muted-foreground border border-border">
+                                      <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded-full text-[7px] font-black uppercase bg-muted text-muted-foreground border border-border">
                                         Oculto
                                       </span>
                                     )}
                                   </div>
 
                                   {/* NOMBRE Y CARGO */}
-                                  <h4 className="text-sm font-extrabold text-foreground tracking-tight leading-snug line-clamp-1">
+                                  <h4 className="text-xs font-extrabold text-foreground tracking-tight leading-snug line-clamp-1">
                                     {member.name}
                                   </h4>
-                                  <p className="text-[11px] font-semibold text-primary mt-0.5 line-clamp-1">
+                                  <p className="text-[10px] font-semibold text-primary mt-0.5 line-clamp-1">
                                     {member.role}
                                   </p>
 
                                   {/* EMPRESAS ASOCIADAS */}
-                                  <div className="flex flex-wrap items-center justify-center gap-1 mt-2 w-full">
+                                  <div className="flex flex-wrap items-center justify-center gap-1 mt-1.5 w-full">
                                     {member.companies && member.companies.length > 0 ? (
-                                      member.companies.slice(0, 2).map((compName) => (
+                                      member.companies.slice(0, 1).map((compName) => (
                                         <span
                                           key={compName}
-                                          className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-muted text-foreground border border-border"
+                                          className="px-1.5 py-0.2 rounded-full text-[8px] font-bold bg-muted text-foreground border border-border"
                                         >
                                           {compName}
                                         </span>
                                       ))
                                     ) : (
-                                      <span className="text-[9px] text-muted-foreground/60 italic">
-                                        Sin empresa asignada
+                                      <span className="text-[8px] text-muted-foreground/60 italic">
+                                        Sin empresa
                                       </span>
                                     )}
-                                    {member.companies && member.companies.length > 2 && (
-                                      <span className="text-[9px] font-bold text-muted-foreground">
-                                        +{member.companies.length - 2}
+                                    {member.companies && member.companies.length > 1 && (
+                                      <span className="text-[8px] font-bold text-muted-foreground">
+                                        +{member.companies.length - 1}
                                       </span>
                                     )}
                                   </div>
 
                                   {/* BOTONES DE ACCIÓN */}
-                                  <div className="flex items-center justify-center gap-2 mt-3 pt-2.5 border-t border-border/60 w-full">
+                                  <div className="flex items-center justify-center gap-1.5 mt-2 pt-1.5 border-t border-border/60 w-full">
                                     <button
                                       type="button"
                                       onClick={() => setEditingMember(member)}
-                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-primary/10 hover:bg-primary/20 text-primary transition-colors cursor-pointer"
+                                      className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-primary/10 hover:bg-primary/20 text-primary transition-colors cursor-pointer"
                                     >
-                                      <Edit className="w-3 h-3" />
+                                      <Edit className="w-2.5 h-2.5" />
                                       <span>Editar</span>
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => handleDeleteMember(member)}
-                                      className="p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                                      className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                                       title="Eliminar del equipo"
                                     >
-                                      <Trash2 className="w-3 h-3" />
+                                      <Trash2 className="w-2.5 h-2.5" />
                                     </button>
                                   </div>
                                 </div>
@@ -678,11 +678,11 @@ export function TeamManager({
                         )}
                       </div>
 
-                      {/* CONECTOR VISUAL ENTRE NIVELES DE LA PIRÁMIDE */}
+                      {/* CONECTOR VISUAL ENTRE NIVELES DE LA PIRÁMIDE (COMPACTO) */}
                       {hasNextTier && (
-                        <div className="w-full flex flex-col items-center my-3 pointer-events-none">
-                          <div className="w-0.5 h-6 bg-gradient-to-b from-primary/50 to-primary/20" />
-                          <div className="w-2 h-2 rounded-full bg-primary/70 ring-4 ring-primary/15 -my-1 z-10" />
+                        <div className="w-full flex flex-col items-center my-1.5 pointer-events-none">
+                          <div className="w-0.5 h-3.5 bg-gradient-to-b from-primary/50 to-primary/20" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary/70 ring-2 ring-primary/15 -my-0.5 z-10" />
                         </div>
                       )}
                     </div>
