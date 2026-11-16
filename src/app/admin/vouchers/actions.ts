@@ -92,6 +92,8 @@ export async function updateVoucher(
     })
 
     revalidatePath('/admin/vouchers')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/arriendos')
     return { success: true, voucher: updated }
   } catch (e: any) {
     console.error('Error updating voucher:', e)

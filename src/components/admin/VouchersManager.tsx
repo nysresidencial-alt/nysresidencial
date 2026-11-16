@@ -33,6 +33,7 @@ import {
 import { VoucherDetail, VoucherPrintModal } from './VoucherPrintModal'
 import { VoucherEditModal } from './VoucherEditModal'
 import { VoucherStatusModal } from './VoucherStatusModal'
+import { PaymentDateModal } from './PaymentDateModal'
 import { generateMonthVouchers } from '@/app/admin/vouchers/actions'
 
 interface VouchersManagerProps {
@@ -116,8 +117,32 @@ export function VouchersManager({
   const [printingVoucher, setPrintingVoucher] = useState<VoucherDetail | null>(null)
   const [editingVoucher, setEditingVoucher] = useState<VoucherDetail | null>(null)
   const [statusChangingVoucher, setStatusChangingVoucher] = useState<VoucherDetail | null>(null)
+  const [paymentDateVoucher, setPaymentDateVoucher] = useState<VoucherDetail | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+
+  function formatDisplayDate(dateStr: string | null | undefined) {
+    if (!dateStr) return '-'
+    if (dateStr.includes('/')) return dateStr
+    if (dateStr.includes('-')) {
+      const parts = dateStr.split('T')[0].split('-')
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`
+      }
+    }
+    return dateStr
+  }
+
+  function handlePaymentDateSaved(updated: VoucherDetail) {
+    setVouchers((prev) => prev.map((v) => (v.id === updated.id ? updated : v)))
+    setPaymentDateVoucher(null)
+    setMessage({
+      text: updated.paymentDate
+        ? `Fecha de pago (${formatDisplayDate(updated.paymentDate)}) registrada para ${updated.contract.tenantName}. Arriendo marcado como PAGADO.`
+        : `Fecha de pago eliminada para ${updated.contract.tenantName}. Arriendo marcado como pendiente.`,
+      type: 'success',
+    })
+  }
 
   // Opciones de filtro dependientes (en cascada)
   const availableBuildings = useMemo(() => {
@@ -610,9 +635,30 @@ export function VouchersManager({
                             {expirationDate}
                           </td>
 
-                          {/* Fecha de Pago */}
-                          <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono">
-                            {paymentDate}
+                          {/* Fecha de Pago con botón integrado + o fecha editable */}
+                          <td className="py-3.5 px-4 text-xs font-mono" onClick={(e) => e.stopPropagation()}>
+                            {v.paymentDate ? (
+                              <button
+                                type="button"
+                                onClick={() => setPaymentDateVoucher(v)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold transition-all cursor-pointer group shadow-2xs"
+                                title="Haga clic para modificar o quitar la fecha de pago"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <span>{formatDisplayDate(v.paymentDate)}</span>
+                                <Edit className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-600" />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setPaymentDateVoucher(v)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition-all hover:scale-[1.02] cursor-pointer shadow-2xs"
+                                title="Registrar fecha en que se acreditó en cartola"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>+ Agregar fecha de pago</span>
+                              </button>
+                            )}
                           </td>
 
                           {/* Monto */}
@@ -785,6 +831,15 @@ export function VouchersManager({
           voucher={editingVoucher}
           onClose={() => setEditingVoucher(null)}
           onSaved={() => window.location.reload()}
+        />
+      )}
+
+      {/* MODAL DE REGISTRO RÁPIDO DE FECHA DE PAGO (CARTOLA) */}
+      {paymentDateVoucher && (
+        <PaymentDateModal
+          voucher={paymentDateVoucher}
+          onClose={() => setPaymentDateVoucher(null)}
+          onSaved={handlePaymentDateSaved}
         />
       )}
     </div>

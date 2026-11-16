@@ -229,7 +229,7 @@ export function AccountingDashboard({ initialData }: AccountingDashboardProps) {
                             style={{ height: `${heightPercent}%` }}
                             className="w-full max-w-[32px] rounded-t-md overflow-hidden flex flex-col justify-end transition-all duration-300 group-hover:brightness-110 shadow-2xs"
                           >
-                            {/* Segmento Expirado (Rojo) */}
+                            {/* Segmento Expirado (Rojo / Rose) */}
                             {expiradoPct > 0 && (
                               <div
                                 style={{ height: `${expiradoPct}%` }}
@@ -237,7 +237,7 @@ export function AccountingDashboard({ initialData }: AccountingDashboardProps) {
                                 title={`Expirado: ${formatCLP(item.expirado)}`}
                               />
                             )}
-                            {/* Segmento Liquidado (Verde Teal) */}
+                            {/* Segmento Liquidado (Verde Esmeralda) */}
                             {liquidadoPct > 0 && (
                               <div
                                 style={{ height: `${liquidadoPct}%` }}
@@ -245,11 +245,11 @@ export function AccountingDashboard({ initialData }: AccountingDashboardProps) {
                                 title={`Liquidado: ${formatCLP(item.liquidado)}`}
                               />
                             )}
-                            {/* Segmento Pagado (Azul) */}
+                            {/* Segmento Pagado (NyS Magenta / Primario) */}
                             {pagadoPct > 0 && (
                               <div
                                 style={{ height: `${pagadoPct}%` }}
-                                className="w-full bg-[#3B82F6]"
+                                className="w-full bg-[#CE1156]"
                                 title={`Pagado: ${formatCLP(item.pagado)}`}
                               />
                             )}
@@ -268,30 +268,30 @@ export function AccountingDashboard({ initialData }: AccountingDashboardProps) {
                 </div>
               </div>
 
-              {/* Leyenda de Colores */}
+              {/* Leyenda de Colores (Paleta Oficial NyS) */}
               <div className="flex flex-wrap items-center justify-center gap-4 pt-3 text-[11px] font-semibold text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-xs bg-[#10B981]" />
                   <span>Liquidado</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-xs bg-[#3B82F6]" />
-                  <span>Pagado</span>
+                  <span className="w-3 h-3 rounded-xs bg-[#CE1156]" />
+                  <span className="font-bold text-foreground">Pagado</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-xs bg-[#EF4444]" />
                   <span>Expirado</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-xs bg-[#F59E0B]" />
+                  <span className="w-3 h-3 rounded-xs bg-[#26C6DA]" />
                   <span>Enviado</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-xs bg-[#94A3B8]" />
+                  <span className="w-3 h-3 rounded-xs bg-[#F59E0B]" />
                   <span>Generado</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-xs bg-[#F472B6]" />
+                  <span className="w-3 h-3 rounded-xs bg-[#94A3B8]" />
                   <span>Anulado</span>
                 </span>
               </div>
@@ -301,21 +301,21 @@ export function AccountingDashboard({ initialData }: AccountingDashboardProps) {
           {/* SUB-GRID: RESUMEN VOUCHERS + RESUMEN GENERAL */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             
-            {/* CARD 2: RESUMEN VOUCHERS (DONUT GAUGE) */}
+            {/* CARD 2: RESUMEN VOUCHERS (DONUT GAUGE NYS) */}
             <div className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                   RESUMEN VOUCHERS
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-muted text-foreground border border-border">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
                   Nov. 2026
                 </span>
               </div>
 
-              {/* Gráfico Donut semicircular / circular SVG */}
+              {/* Gráfico Donut circular SVG con colores NyS */}
               <div className="relative flex items-center justify-center py-4">
                 <svg className="w-36 h-36 transform -rotate-90" viewBox="0 0 100 100">
-                  {/* Círculo de fondo */}
+                  {/* Círculo de fondo sutil */}
                   <circle
                     cx="50"
                     cy="50"
@@ -323,15 +323,15 @@ export function AccountingDashboard({ initialData }: AccountingDashboardProps) {
                     fill="transparent"
                     stroke="currentColor"
                     strokeWidth="10"
-                    className="text-muted/40"
+                    className="text-muted/30"
                   />
-                  {/* Círculo de progreso azul */}
+                  {/* Círculo de progreso en Magenta NyS (#CE1156) */}
                   <circle
                     cx="50"
                     cy="50"
                     r="40"
                     fill="transparent"
-                    stroke="#3B82F6"
+                    stroke="#CE1156"
                     strokeWidth="10"
                     strokeDasharray="251.2"
                     strokeDashoffset="30"
@@ -371,9 +371,9 @@ export function AccountingDashboard({ initialData }: AccountingDashboardProps) {
                   El mes anterior generaste{' '}
                   <strong className="text-foreground font-black">{data.totalVouchersPeriod}</strong>{' '}
                   vouchers, de los cuales{' '}
-                  <strong className="text-foreground font-black">{data.paidVouchers}</strong> se
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-black">{data.paidVouchers}</strong> se
                   pagaron y{' '}
-                  <strong className="text-foreground font-black">{data.pendingVouchers}</strong> están
+                  <strong className="text-rose-600 dark:text-rose-400 font-black">{data.pendingVouchers}</strong> están
                   pendientes.
                 </p>
               </div>
@@ -397,9 +397,9 @@ export function AccountingDashboard({ initialData }: AccountingDashboardProps) {
                   </div>
                 </div>
 
-                {/* Barra de progreso */}
-                <div className="w-full bg-muted h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div className="bg-[#3B82F6] h-full rounded-full w-full" />
+                {/* Barra de progreso en color Magenta NyS */}
+                <div className="w-full bg-muted h-2 rounded-full mt-3 overflow-hidden">
+                  <div className="bg-primary h-full rounded-full w-full shadow-2xs" />
                 </div>
               </div>
             </div>
@@ -490,8 +490,8 @@ export function AccountingDashboard({ initialData }: AccountingDashboardProps) {
                     key={evt.id}
                     className="p-3.5 rounded-xl border border-border bg-background hover:bg-muted/40 transition-colors flex items-start gap-3 relative group"
                   >
-                    {/* Icono Casita en caja amarilla suave */}
-                    <div className="w-9 h-9 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                    {/* Icono Inmueble con estilo de marca NyS */}
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                       <Home className="w-4 h-4" />
                     </div>
 
