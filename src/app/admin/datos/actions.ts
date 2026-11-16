@@ -304,10 +304,21 @@ export async function executeExcelImport(
       contractCache.set(key, c.id)
     }
 
+    // Mapa de vouchers existentes en BD para el año detectado (evita miles de consultas findFirst)
+    const existingVouchersList = mode === 'replace' ? [] : await prisma.leaseVoucher.findMany({
+      select: { id: true, contractId: true, month: true, year: true, receiptNumber: true, invoiceNumber: true, paymentDate: true, bank: true, comment: true }
+    })
+    const voucherCache = new Map<string, typeof existingVouchersList[0]>()
+    for (const v of existingVouchersList) {
+      voucherCache.set(`${v.contractId}|${v.month.toUpperCase()}|${v.year}`, v)
+    }
+
     let createdContracts = 0
     let updatedContracts = 0
     let createdVouchers = 0
     let updatedVouchers = 0
+
+    const newVouchersToBatch: any[] = []
 
     for (let idx = 0; idx < rows.length; idx++) {
       const r = rows[idx]
@@ -397,8 +408,8 @@ export async function executeExcelImport(
         contractId = created.id
         contractCache.set(lookupKey, contractId)
         createdContracts++
-      } else {
-        // Actualizar contrato existente
+      } else if (mode === 'merge') {
+        // Actualizar contrato existente sólo en modo merge
         await prisma.rentalContract.update({
           where: { id: contractId },
           data: {
@@ -447,7 +458,7 @@ export async function executeExcelImport(
 
       let paymentStatus = String(r['ESTADO PAGO'] || '').trim()
       if (!paymentStatus) {
-        if (paymentDate) {
+        if (paymentDate || transferAmount > 0 || cashAmount > 0 || depositAmount > 0 || (collectedAmount >= totalMonth && totalMonth > 0)) {
           paymentStatus = 'Pagado'
         } else if (status === 'Disponible' || (totalMonth === 0 && !tenantName)) {
           paymentStatus = 'Disponible'
@@ -456,14 +467,8 @@ export async function executeExcelImport(
         }
       }
 
-      // Verificar si ya existe voucher para este contrato y mes
-      const existingVoucher = await prisma.leaseVoucher.findFirst({
-        where: {
-          contractId,
-          month,
-          year,
-        },
-      })
+      const voucherKey = `${contractId}|${month}|${year}`
+      const existingVoucher = voucherCache.get(voucherKey)
 
       if (existingVoucher) {
         await prisma.leaseVoucher.update({
@@ -491,34 +496,41 @@ export async function executeExcelImport(
         })
         updatedVouchers++
       } else {
-        await prisma.leaseVoucher.create({
-          data: {
-            contractId,
-            companyId,
-            month,
-            year,
-            receiptNumber: receiptNumber || null,
-            invoiceNumber: invoiceNumber || null,
-            baseRent,
-            adjustmentPercent: adjustmentPercentage,
-            adjustmentAmount,
-            totalRent: valorT,
-            guaranteeAmount: guaranteeAmount || null,
-            totalMonth,
-            paymentStatus,
-            paymentDate: paymentDate || null,
-            transferAmount,
-            cashAmount,
-            depositAmount,
-            accountsReceivable,
-            collectedAmount: paymentDate && collectedAmount === 0 ? totalMonth : collectedAmount,
-            pendingBalance: paymentDate ? 0 : (totalMonth - collectedAmount),
-            bank: bank || null,
-            comment: comment || null,
-          },
+        newVouchersToBatch.push({
+          contractId,
+          companyId,
+          month,
+          year,
+          receiptNumber: receiptNumber || null,
+          invoiceNumber: invoiceNumber || null,
+          baseRent,
+          adjustmentPercent: adjustmentPercentage,
+          adjustmentAmount,
+          totalRent: valorT,
+          guaranteeAmount: guaranteeAmount || null,
+          totalMonth,
+          paymentStatus,
+          paymentDate: paymentDate || null,
+          transferAmount,
+          cashAmount,
+          depositAmount,
+          accountsReceivable,
+          collectedAmount: paymentDate && collectedAmount === 0 ? totalMonth : collectedAmount,
+          pendingBalance: paymentDate ? 0 : (totalMonth - collectedAmount),
+          bank: bank || null,
+          comment: comment || null,
         })
-        createdVouchers++
       }
+    }
+
+    // Inserción en lotes de todos los vouchers nuevos (extremadamente veloz)
+    const BATCH_SIZE = 350
+    for (let b = 0; b < newVouchersToBatch.length; b += BATCH_SIZE) {
+      const slice = newVouchersToBatch.slice(b, b + BATCH_SIZE)
+      const res = await prisma.leaseVoucher.createMany({
+        data: slice,
+      })
+      createdVouchers += res.count
     }
 
     revalidatePath('/admin/dashboard')
