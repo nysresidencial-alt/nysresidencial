@@ -19,9 +19,5 @@ export default async function DashboardPage() {
 
   const data = await getAccountingDashboardData()
 
-  return (
-    <div className="space-y-6">
-      <AccountingDashboard initialData={data} />
-    </div>
-  )
+  return <AccountingDashboard initialData={data} />
 }
