@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Edit,
   Eye,
+  ChevronLeft,
   ChevronRight,
   TrendingUp,
   Receipt,
@@ -30,6 +31,10 @@ import {
   Check,
   Home,
   Tag,
+  Filter,
+  X,
+  Building2,
+  Briefcase,
 } from 'lucide-react'
 import { VoucherDetail, VoucherPrintModal } from './VoucherPrintModal'
 import { VoucherEditModal } from './VoucherEditModal'
@@ -146,10 +151,35 @@ export function VouchersManager({
   }
 
   // Opciones de filtro dependientes (en cascada)
+  const availableCompanies = useMemo(() => {
+    const map = new Map<string, { id: string; code: string; name: string }>()
+    companies.forEach((c) => {
+      map.set(c.code.toUpperCase(), c)
+    })
+    vouchers.forEach((v) => {
+      const comp = v.company || v.contract.company
+      if (comp && comp.code && !map.has(comp.code.toUpperCase())) {
+        map.set(comp.code.toUpperCase(), {
+          id: comp.id,
+          code: comp.code,
+          name: comp.name || comp.code,
+        })
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code))
+  }, [companies, vouchers])
+
   const availableBuildings = useMemo(() => {
     let pool = vouchers
     if (filterCompany !== 'TODAS') {
-      pool = pool.filter((v) => (v.company || v.contract.company)?.code === filterCompany)
+      pool = pool.filter((v) => {
+        const comp = v.company || v.contract.company
+        return (
+          comp?.code?.toUpperCase() === filterCompany.toUpperCase() ||
+          comp?.id === filterCompany ||
+          comp?.name?.toLowerCase().includes(filterCompany.toLowerCase())
+        )
+      })
     }
     const bSet = new Set<string>()
     pool.forEach((v) => {
@@ -161,7 +191,10 @@ export function VouchersManager({
   const availableStatuses = useMemo(() => {
     let pool = vouchers
     if (filterCompany !== 'TODAS') {
-      pool = pool.filter((v) => (v.company || v.contract.company)?.code === filterCompany)
+      pool = pool.filter((v) => {
+        const comp = v.company || v.contract.company
+        return comp?.code?.toUpperCase() === filterCompany.toUpperCase()
+      })
     }
     if (filterBuilding !== 'TODOS') {
       pool = pool.filter((v) => v.contract.building === filterBuilding)
@@ -175,10 +208,18 @@ export function VouchersManager({
 
   function handleCompanyChange(newCompany: string) {
     setFilterCompany(newCompany)
+    setCurrentPage(1)
     if (newCompany !== 'TODAS') {
       const validForNewCompany = new Set(
         vouchers
-          .filter((v) => (v.company || v.contract.company)?.code === newCompany)
+          .filter((v) => {
+            const comp = v.company || v.contract.company
+            return (
+              comp?.code?.toUpperCase() === newCompany.toUpperCase() ||
+              comp?.id === newCompany ||
+              comp?.name?.toLowerCase().includes(newCompany.toLowerCase())
+            )
+          })
           .map((v) => v.contract.building)
       )
       if (filterBuilding !== 'TODOS' && !validForNewCompany.has(filterBuilding)) {
@@ -186,6 +227,38 @@ export function VouchersManager({
       }
     }
   }
+
+  function handleBuildingChange(newBuilding: string) {
+    setFilterBuilding(newBuilding)
+    setCurrentPage(1)
+  }
+
+  function handleMonthChange(newMonth: string) {
+    setFilterMonth(newMonth)
+    setCurrentPage(1)
+  }
+
+  function handleStatusChange(newStatus: string) {
+    setFilterStatus(newStatus)
+    setCurrentPage(1)
+  }
+
+  function resetFilters() {
+    setFilterCompany('TODAS')
+    setFilterBuilding('TODOS')
+    setFilterMonth('TODOS')
+    setFilterStatus('TODOS')
+    setFilterYear(2026)
+    setSearchTerm('')
+    setCurrentPage(1)
+  }
+
+  const isFiltered =
+    filterCompany !== 'TODAS' ||
+    filterBuilding !== 'TODOS' ||
+    filterMonth !== 'TODOS' ||
+    filterStatus !== 'TODOS' ||
+    searchTerm.trim() !== ''
 
   function handleVoucherStatusUpdated(updated: VoucherDetail) {
     setVouchers((prev) => prev.map((v) => (v.id === updated.id ? updated : v)))
@@ -201,24 +274,43 @@ export function VouchersManager({
       const c = v.contract
       const comp = v.company || c.company
 
-      if (filterCompany !== 'TODAS' && comp?.code !== filterCompany) return false
-      if (filterBuilding !== 'TODOS' && c.building !== filterBuilding) return false
-      if (filterMonth !== 'TODOS' && v.month !== filterMonth) return false
-      if (v.year !== filterYear) return false
-      if (filterStatus !== 'TODOS' && v.paymentStatus !== filterStatus) return false
+      if (filterCompany !== 'TODAS') {
+        const matchesCode = comp?.code?.toUpperCase() === filterCompany.toUpperCase()
+        const matchesId = comp?.id === filterCompany
+        const matchesName = comp?.name?.toLowerCase().includes(filterCompany.toLowerCase())
+        if (!matchesCode && !matchesId && !matchesName) return false
+      }
+      if (filterBuilding !== 'TODOS' && c.building?.toUpperCase() !== filterBuilding.toUpperCase()) return false
+      if (filterMonth !== 'TODOS' && v.month?.toUpperCase() !== filterMonth.toUpperCase()) return false
+      if (filterYear && v.year !== filterYear) return false
+      if (filterStatus !== 'TODOS' && v.paymentStatus?.toLowerCase() !== filterStatus.toLowerCase()) return false
 
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase().trim()
-        const matchName = c.tenantName.toLowerCase().includes(query)
+        const matchName = c.tenantName?.toLowerCase().includes(query)
         const matchRut = c.tenantRut?.toLowerCase().includes(query)
         const matchUnit = `${c.building} ${c.unitNumber}`.toLowerCase().includes(query)
         const matchReceipt = v.receiptNumber?.toLowerCase().includes(query)
-        if (!matchName && !matchRut && !matchUnit && !matchReceipt) return false
+        const matchInvoice = v.invoiceNumber?.toLowerCase().includes(query)
+        const matchBuilding = c.building?.toLowerCase().includes(query)
+        const matchCompany = (comp?.name || comp?.code)?.toLowerCase().includes(query)
+        if (!matchName && !matchRut && !matchUnit && !matchReceipt && !matchInvoice && !matchBuilding && !matchCompany) return false
       }
 
       return true
     })
   }, [vouchers, filterCompany, filterBuilding, filterMonth, filterYear, filterStatus, searchTerm])
+
+  // Paginación
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(25)
+
+  const totalPages = pageSize === -1 ? 1 : Math.ceil(filteredVouchers.length / pageSize) || 1
+  const paginatedVouchers = useMemo(() => {
+    if (pageSize === -1) return filteredVouchers
+    const start = (currentPage - 1) * pageSize
+    return filteredVouchers.slice(start, start + pageSize)
+  }, [filteredVouchers, currentPage, pageSize])
 
   const selectedVoucher = useMemo(() => {
     return (
@@ -230,10 +322,10 @@ export function VouchersManager({
 
   // Selección múltiple
   function toggleSelectAll() {
-    if (selectedIds.size === filteredVouchers.length) {
+    if (selectedIds.size === paginatedVouchers.length) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(filteredVouchers.map((v) => v.id)))
+      setSelectedIds(new Set(paginatedVouchers.map((v) => v.id)))
     }
   }
 
@@ -408,28 +500,6 @@ export function VouchersManager({
         </div>
       </div>
 
-      {/* RANGO DE PERIODOS (ESTILO IMAGEN 3) */}
-      <div className="flex items-center gap-2 text-xs text-foreground font-semibold">
-        <span className="text-muted-foreground">Vouchers desde</span>
-        <button
-          type="button"
-          onClick={() => setFilterMonth('OCTUBRE')}
-          className="text-primary hover:underline font-bold inline-flex items-center gap-1"
-        >
-          <span>octubre {filterYear}</span>
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-        <span className="text-muted-foreground">hasta</span>
-        <button
-          type="button"
-          onClick={() => setFilterMonth('DICIEMBRE')}
-          className="text-primary hover:underline font-bold inline-flex items-center gap-1"
-        >
-          <span>diciembre {filterYear}</span>
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-      </div>
-
       {message && (
         <div
           className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center justify-between ${
@@ -445,16 +515,243 @@ export function VouchersManager({
         </div>
       )}
 
-      {/* BUSCADOR FULL WIDTH */}
-      <div className="relative">
-        <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Buscar"
-          className="w-full pl-10 pr-4 py-2.5 text-xs bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs"
-        />
+      {/* PANEL DE FILTROS Y SEGMENTACIÓN (ESTILO EXCEL SLICERS & PROPIEDADES) */}
+      <div className="bg-card border border-border p-4 rounded-2xl shadow-xs space-y-3.5">
+        {/* Encabezado del panel de filtros */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-primary" />
+            <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+              Segmentación y Filtros
+            </span>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+              {stats.totalCount} vouchers encontrados
+            </span>
+          </div>
+
+          {isFiltered && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Limpiar filtros</span>
+            </button>
+          )}
+        </div>
+
+        {/* BUSCADOR FULL WIDTH */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value)
+              setCurrentPage(1)
+            }}
+            placeholder="Buscar por arrendatario, RUT, edificio, N° unidad, N° recibo o empresa..."
+            className="w-full pl-10 pr-10 py-2.5 text-xs bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('')
+                setCurrentPage(1)
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* 1. SLICER MES (SEGMENTADOR VISUAL ESTILO EXCEL) */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+              <Calendar className="w-3.5 h-3.5 text-primary" />
+              <span>Mes</span>
+            </span>
+            {filterMonth !== 'TODOS' && (
+              <button
+                type="button"
+                onClick={() => handleMonthChange('TODOS')}
+                className="text-[10px] text-primary hover:underline font-semibold cursor-pointer"
+              >
+                Ver todos los meses
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+            <button
+              type="button"
+              onClick={() => handleMonthChange('TODOS')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                filterMonth === 'TODOS'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'
+              }`}
+            >
+              TODOS
+            </button>
+            {MONTHS.map((m) => {
+              const isSelected = filterMonth === m
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => handleMonthChange(m)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground shadow-xs scale-102'
+                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'
+                  }`}
+                >
+                  {m}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 2. SLICER EMPRESA (SEGMENTADOR VISUAL ESTILO EXCEL) */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+              <Briefcase className="w-3.5 h-3.5 text-primary" />
+              <span>Nombre Empresa</span>
+            </span>
+            {filterCompany !== 'TODAS' && (
+              <button
+                type="button"
+                onClick={() => handleCompanyChange('TODAS')}
+                className="text-[10px] text-primary hover:underline font-semibold cursor-pointer"
+              >
+                Ver todas las empresas
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+            <button
+              type="button"
+              onClick={() => handleCompanyChange('TODAS')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                filterCompany === 'TODAS'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'
+              }`}
+            >
+              TODAS
+            </button>
+            {availableCompanies.map((c) => {
+              const isSelected = filterCompany === c.code || filterCompany === c.id
+              return (
+                <button
+                  key={c.id || c.code}
+                  type="button"
+                  onClick={() => handleCompanyChange(c.code)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground shadow-xs scale-102'
+                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'
+                  }`}
+                >
+                  {c.name || c.code}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 3. SELECTORES EN CUADRÍCULA (CASCADA COMO EN PROPIEDADES) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2.5 pt-2.5 border-t border-border">
+          {/* Empresa Select */}
+          <div>
+            <label className="text-[11px] font-bold text-muted-foreground block mb-1">Empresa</label>
+            <select
+              value={filterCompany}
+              onChange={(e) => handleCompanyChange(e.target.value)}
+              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
+            >
+              <option value="TODAS">Todas las Empresas</option>
+              {availableCompanies.map((c) => (
+                <option key={c.id || c.code} value={c.code}>
+                  {c.code} - {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Edificio Select (en cascada) */}
+          <div>
+            <label className="text-[11px] font-bold text-muted-foreground block mb-1">
+              Edificio {availableBuildings.length > 0 && `(${availableBuildings.length})`}
+            </label>
+            <select
+              value={filterBuilding}
+              onChange={(e) => handleBuildingChange(e.target.value)}
+              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
+            >
+              <option value="TODOS">Todos los Edificios</option>
+              {availableBuildings.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Mes Select */}
+          <div>
+            <label className="text-[11px] font-bold text-muted-foreground block mb-1">Mes</label>
+            <select
+              value={filterMonth}
+              onChange={(e) => handleMonthChange(e.target.value)}
+              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
+            >
+              <option value="TODOS">Todos los Meses</option>
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {MONTH_NAMES_TITLE[m] || m}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Estado de Pago Select */}
+          <div>
+            <label className="text-[11px] font-bold text-muted-foreground block mb-1">Estado de Pago</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
+            >
+              <option value="TODOS">Todos los Estados</option>
+              <option value="Pagado">Pagado</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Disponible">Disponible</option>
+            </select>
+          </div>
+
+          {/* Año Select */}
+          <div className="col-span-2 sm:col-span-1">
+            <label className="text-[11px] font-bold text-muted-foreground block mb-1">Año</label>
+            <select
+              value={filterYear}
+              onChange={(e) => {
+                setFilterYear(Number(e.target.value))
+                setCurrentPage(1)
+              }}
+              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
+            >
+              <option value={2026}>2026</option>
+              <option value={2025}>2025</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* SUB-BARRA DE METADATOS Y FORMATO */}
@@ -475,23 +772,6 @@ export function VouchersManager({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Selector de Mes Rápido */}
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] text-muted-foreground">Mes:</span>
-            <select
-              value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              className="py-1 px-2 text-xs bg-card border border-border rounded-lg text-foreground font-semibold"
-            >
-              <option value="TODOS">Todos</option>
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>
-                  {MONTH_NAMES_TITLE[m] || m}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Toggle Vista Ejecutiva vs Split */}
           <div className="flex items-center p-0.5 bg-muted rounded-lg border border-border">
             <button
@@ -533,8 +813,8 @@ export function VouchersManager({
                       <input
                         type="checkbox"
                         checked={
-                          filteredVouchers.length > 0 &&
-                          filteredVouchers.every((v) => selectedIds.has(v.id))
+                          paginatedVouchers.length > 0 &&
+                          paginatedVouchers.every((v) => selectedIds.has(v.id))
                         }
                         onChange={toggleSelectAll}
                         className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer"
@@ -551,14 +831,14 @@ export function VouchersManager({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filteredVouchers.length === 0 ? (
+                  {paginatedVouchers.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-12 text-center text-muted-foreground">
                         No se encontraron vouchers que coincidan con los filtros aplicados.
                       </td>
                     </tr>
                   ) : (
-                    filteredVouchers.map((v) => {
+                    paginatedVouchers.map((v) => {
                       const c = v.contract
                       const isSelected = selectedIds.has(v.id)
                       const isRowActive = selectedVoucherId === v.id
@@ -712,6 +992,58 @@ export function VouchersManager({
                 </tbody>
               </table>
             </div>
+
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <div className="px-5 py-3 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 bg-muted/10 text-xs">
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground">
+                    Página <span className="font-bold text-foreground">{currentPage}</span> de <span className="font-bold text-foreground">{totalPages}</span>
+                    {' '}({filteredVouchers.length} vouchers en total)
+                  </span>
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <span className="text-[11px]">Por página:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value))
+                        setCurrentPage(1)
+                      }}
+                      className="py-1 px-2 text-xs bg-card border border-border rounded-lg text-foreground font-semibold"
+                    >
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                      <option value={-1}>Todos</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="p-1.5 rounded-lg border border-border text-foreground hover:bg-muted disabled:opacity-40 transition-colors cursor-pointer"
+                    title="Página anterior"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <div className="px-2 font-bold text-foreground">{currentPage}</div>
+
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="p-1.5 rounded-lg border border-border text-foreground hover:bg-muted disabled:opacity-40 transition-colors cursor-pointer"
+                    title="Página siguiente"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
