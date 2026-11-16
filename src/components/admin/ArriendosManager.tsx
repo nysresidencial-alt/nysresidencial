@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
+import Link from 'next/link'
 import {
   Search,
   Building,
@@ -494,6 +495,13 @@ export function ArriendosManager({
                   <Download className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Exportar Excel</span>
                 </button>
+                <Link
+                  href="/admin/datos"
+                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-muted text-foreground flex items-center gap-2 cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-primary" />
+                  <span>Carga / Migración Excel</span>
+                </Link>
                 <button
                   type="button"
                   onClick={() => {

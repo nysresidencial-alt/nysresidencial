@@ -87,8 +87,8 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
     }
     if (currentUser.isSuperadmin) return true;
 
-    // Dashboard, Vouchers y Arriendos exclusivo para Contabilidad (o quien tenga permiso explícito)
-    if (key === 'dashboard' || key === 'vouchers' || key === 'arriendos') {
+    // Dashboard, Vouchers, Arriendos y Carga de Datos exclusivo para Contabilidad (o quien tenga permiso explícito)
+    if (key === 'dashboard' || key === 'vouchers' || key === 'arriendos' || key === 'datos') {
       const isContabilidad = currentUser.roleName?.toLowerCase().includes('contabilidad');
       return Boolean(isContabilidad || (currentUser.permissions?.[key]?.view ?? false));
     }
@@ -138,6 +138,13 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
           href: '/admin/vouchers',
           icon: Receipt,
           description: 'Liquidaciones mensuales, control de recaudación y pagos',
+        },
+        {
+          key: 'datos',
+          name: 'Carga de Datos (Excel)',
+          href: '/admin/datos',
+          icon: FileSpreadsheet,
+          description: 'Exportar base de datos e importar propiedades y vouchers masivos',
         },
       ],
     },
@@ -273,12 +280,13 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
 
         {/* NAVEGACIÓN DESKTOP COMPACTA & ORGANIZADA (PANTALLAS >= LG) */}
         <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-          {/* Si es rol Contabilidad, mostrar sus 3 módulos directamente como pestañas ejecutivas */}
+          {/* Si es rol Contabilidad, mostrar sus 4 módulos directamente como pestañas ejecutivas */}
           {currentUser?.roleName?.toLowerCase().includes('contabilidad') ? (
             [
               { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
               { name: 'Propiedades', href: '/admin/arriendos', icon: Building },
               { name: 'Vouchers', href: '/admin/vouchers', icon: Receipt },
+              { name: 'Carga de Datos', href: '/admin/datos', icon: FileSpreadsheet },
             ].map((tab) => {
               const isActive = pathname.startsWith(tab.href);
               const Icon = tab.icon;
@@ -523,6 +531,7 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
                 { name: 'Propiedades', href: '/admin/arriendos', icon: Building },
                 { name: 'Vouchers', href: '/admin/vouchers', icon: Receipt },
+                { name: 'Carga de Datos', href: '/admin/datos', icon: FileSpreadsheet },
               ].map((tab) => {
                 const isActive = pathname.startsWith(tab.href);
                 const Icon = tab.icon;

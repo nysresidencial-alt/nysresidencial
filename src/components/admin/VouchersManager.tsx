@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import Link from 'next/link'
 import {
   FileText,
   Printer,
@@ -394,6 +395,13 @@ export function VouchersManager({
                   <Check className="w-3.5 h-3.5 text-primary" />
                   <span>Seleccionar todos</span>
                 </button>
+                <Link
+                  href="/admin/datos"
+                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-muted text-foreground flex items-center gap-2 cursor-pointer border-t border-border/60 pt-2"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Carga / Migración Excel</span>
+                </Link>
               </div>
             )}
           </div>
