@@ -26,6 +26,7 @@ import {
   Sparkles,
   Layers,
   Globe,
+  LayoutDashboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/ThemeProvider';
@@ -86,10 +87,10 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
     }
     if (currentUser.isSuperadmin) return true;
 
-    // Vouchers y Arriendos exclusivo para Contabilidad (o quien tenga permiso explícito)
-    if (key === 'vouchers' || key === 'arriendos') {
+    // Dashboard, Vouchers y Arriendos exclusivo para Contabilidad (o quien tenga permiso explícito)
+    if (key === 'dashboard' || key === 'vouchers' || key === 'arriendos') {
       const isContabilidad = currentUser.roleName?.toLowerCase().includes('contabilidad');
-      return Boolean(isContabilidad && (currentUser.permissions?.[key]?.view ?? true));
+      return Boolean(isContabilidad || (currentUser.permissions?.[key]?.view ?? false));
     }
 
     const modPerm = currentUser.permissions?.[key];
@@ -118,11 +119,18 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
       icon: Receipt,
       items: [
         {
+          key: 'dashboard',
+          name: 'Dashboard Contable',
+          href: '/admin/dashboard',
+          icon: LayoutDashboard,
+          description: 'Métricas mensuales, recaudación y próximos eventos',
+        },
+        {
           key: 'arriendos',
-          name: 'Maestro de Arriendos',
+          name: 'Propiedades y Arriendos',
           href: '/admin/arriendos',
-          icon: FileSpreadsheet,
-          description: 'Contratos, valores base, reajustes y fechas de arriendos',
+          icon: Building,
+          description: 'Contratos, valores base, reajustes y cartera activa',
         },
         {
           key: 'vouchers',
@@ -265,7 +273,33 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
 
         {/* NAVEGACIÓN DESKTOP COMPACTA & ORGANIZADA (PANTALLAS >= LG) */}
         <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-          {visibleGroups.map((group) => {
+          {/* Si es rol Contabilidad, mostrar sus 3 módulos directamente como pestañas ejecutivas */}
+          {currentUser?.roleName?.toLowerCase().includes('contabilidad') ? (
+            [
+              { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+              { name: 'Propiedades', href: '/admin/arriendos', icon: Building },
+              { name: 'Vouchers', href: '/admin/vouchers', icon: Receipt },
+            ].map((tab) => {
+              const isActive = pathname.startsWith(tab.href);
+              const Icon = tab.icon;
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={cn(
+                    'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all',
+                    isActive
+                      ? 'bg-primary/10 text-primary shadow-2xs ring-1 ring-primary/30'
+                      : 'text-foreground/70 hover:text-foreground hover:bg-muted/60'
+                  )}
+                >
+                  <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+                  <span>{tab.name}</span>
+                </Link>
+              );
+            })
+          ) : (
+            visibleGroups.map((group) => {
             // Si el grupo tiene solo 1 ítem accesible (como "Propiedades" o "Seguridad"), se muestra como botón directo
             if (group.items.length === 1) {
               const item = group.items[0];
@@ -395,7 +429,8 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
                 )}
               </div>
             );
-          })}
+          })
+        )}
         </nav>
 
         {/* ACCIONES LATERALES: SITIO WEB, TEMA, USUARIO Y SALIR */}
@@ -483,7 +518,33 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
 
           {/* Lista de grupos de navegación */}
           <div className="space-y-2">
-            {visibleGroups.map((group) => {
+            {currentUser?.roleName?.toLowerCase().includes('contabilidad') ? (
+              [
+                { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+                { name: 'Propiedades', href: '/admin/arriendos', icon: Building },
+                { name: 'Vouchers', href: '/admin/vouchers', icon: Receipt },
+              ].map((tab) => {
+                const isActive = pathname.startsWith(tab.href);
+                const Icon = tab.icon;
+                return (
+                  <Link
+                    key={tab.href}
+                    href={tab.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 p-3 rounded-xl text-xs font-bold transition-all',
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-muted/30 hover:bg-muted text-foreground'
+                    )}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{tab.name}</span>
+                  </Link>
+                );
+              })
+            ) : (
+              visibleGroups.map((group) => {
               if (group.items.length === 1) {
                 const item = group.items[0];
                 const isActive =
@@ -569,7 +630,8 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
                   )}
                 </div>
               );
-            })}
+            })
+          )}
           </div>
 
           {/* Enlace ver sitio en móvil */}

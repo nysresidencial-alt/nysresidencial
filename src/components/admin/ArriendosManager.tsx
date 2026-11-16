@@ -25,6 +25,16 @@ import {
   Download,
   DollarSign,
   ShieldAlert,
+  Tag,
+  Copy,
+  MoreVertical,
+  HelpCircle,
+  Archive,
+  Building2,
+  Warehouse,
+  Car,
+  ChevronDown,
+  Info,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { ContractEditModal, ContractItem } from './ContractEditModal'
@@ -100,6 +110,27 @@ export function ArriendosManager({
   const [contracts, setContracts] = useState<ContractItem[]>(initialContracts)
   const [editingContract, setEditingContract] = useState<ContractItem | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [viewFormat, setViewFormat] = useState<'properties' | 'detailed'>('properties')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isActionsOpen, setIsActionsOpen] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
+
+  function toggleSelectAll() {
+    if (selectedIds.size === paginatedContracts.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(paginatedContracts.map((c) => c.id)))
+    }
+  }
+
+  function toggleSelectId(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   // Columnas visibles personalizables
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(getDefaultVisibleColumns)
@@ -428,151 +459,165 @@ export function ArriendosManager({
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* Header Estilo Propiedades (Leasity / NyS) */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-            Maestro de Arriendos e Inmuebles
+            Propiedades
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Visualiza y administra de forma personalizada los contratos, arrendatarios, valores consolidados, Valor T y totales a pagar.
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Tienes <span className="text-rose-600 dark:text-rose-400 font-bold">{stats.total}</span> propiedades, de las cuales <span className="text-emerald-600 dark:text-emerald-400 font-bold">{stats.occupied}</span> tienen contratos activos
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Botón Personalizar Columnas */}
-          <button
-            type="button"
-            onClick={() => setShowColumnModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-card border border-border hover:bg-muted/60 text-foreground font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer"
-            title="Seleccionar y personalizar columnas visibles"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-primary" />
-            <span>Columnas Visibles</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-primary/10 text-primary">
-              {activeColumnsCount}
-            </span>
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Dropdown Acciones */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsActionsOpen(!isActionsOpen)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-bold transition-all shadow-2xs cursor-pointer"
+            >
+              <span>Acciones</span>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+            {isActionsOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-48 p-1.5 rounded-xl bg-card border border-border shadow-xl z-30 space-y-1 animate-in fade-in-50 zoom-in-95 duration-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportToExcel()
+                    setIsActionsOpen(false)
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-muted text-foreground flex items-center gap-2 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Exportar Excel</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleSelectAll()
+                    setIsActionsOpen(false)
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-muted text-foreground flex items-center gap-2 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                  <span>Seleccionar todos</span>
+                </button>
+              </div>
+            )}
+          </div>
 
-          {/* Botón Exportar Excel */}
+          {/* Botón Descargar */}
           <button
             type="button"
             onClick={exportToExcel}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer"
-            title="Descargar tabla en formato Excel"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-bold transition-all shadow-2xs cursor-pointer"
+            title="Descargar propiedades en Excel"
           >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Exportar Excel</span>
+            <Download className="w-3.5 h-3.5 text-muted-foreground" />
+            <span>Descargar</span>
           </button>
 
-          {/* Botón Nueva Propiedad */}
+          {/* Botón Etiquetas */}
+          <button
+            type="button"
+            onClick={() => showMessage('Filtro por etiquetas de propiedades disponible', 'success')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-bold transition-all shadow-2xs cursor-pointer"
+          >
+            <Tag className="w-3.5 h-3.5 text-primary" />
+            <span>Etiquetas</span>
+          </button>
+
+          {/* Botón Crear Propiedad */}
           <button
             type="button"
             onClick={() => setIsCreating(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm rounded-xl transition-all shadow-md cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-all shadow-md cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Nueva Propiedad</span>
+            <span>Crear propiedad</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        <div className="bg-card border border-border p-4 rounded-2xl shadow-sm flex items-center gap-3.5">
-          <div className="p-3 bg-primary/10 rounded-xl text-primary shrink-0">
-            <Building className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xl sm:text-2xl font-black text-foreground">{stats.total}</div>
-            <div className="text-xs text-muted-foreground font-medium">Total Inmuebles</div>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border p-4 rounded-2xl shadow-sm flex items-center gap-3.5">
-          <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xl sm:text-2xl font-black text-foreground">{stats.occupied}</div>
-            <div className="text-xs text-muted-foreground font-medium">Ocupados</div>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border p-4 rounded-2xl shadow-sm flex items-center gap-3.5">
-          <div className="p-3 bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-400 shrink-0">
-            <Home className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xl sm:text-2xl font-black text-foreground">{stats.available}</div>
-            <div className="text-xs text-muted-foreground font-medium">Disponibles</div>
-          </div>
-        </div>
-
-        <div
-          onClick={() => setFilterIncompleteOnly(!filterIncompleteOnly)}
-          className={`bg-card border p-4 rounded-2xl shadow-sm flex items-center gap-3.5 cursor-pointer transition-all ${
-            filterIncompleteOnly ? 'border-amber-500 bg-amber-500/5 ring-2 ring-amber-500/20' : 'border-border hover:border-amber-500/50'
-          }`}
-          title="Haz clic para filtrar solo registros incompletos"
-        >
-          <div className="p-3 bg-amber-500/10 rounded-xl text-amber-600 dark:text-amber-400 shrink-0">
-            <AlertCircle className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400">{stats.incomplete}</div>
-            <div className="text-xs text-muted-foreground font-medium">Con Datos Faltantes</div>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border p-4 rounded-2xl shadow-sm flex items-center gap-3.5 col-span-2 sm:col-span-1">
-          <div className="p-3 bg-primary/10 rounded-xl text-primary shrink-0">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-base sm:text-lg font-black text-foreground">
-              ${stats.totalMonthlyIncome.toLocaleString('es-CL')}
-            </div>
-            <div className="text-xs text-muted-foreground font-medium">Renta Mensual Total</div>
-          </div>
-        </div>
+      {/* Buscador Full Width */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value)
+            setCurrentPage(1)
+          }}
+          placeholder="Buscar"
+          className="w-full pl-10 pr-4 py-2.5 text-xs bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs"
+        />
       </div>
 
       {/* Barra de Filtros y Búsqueda */}
-      <div className="bg-card border border-border p-4 rounded-2xl shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Buscador reactivo */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value)
-                setCurrentPage(1)
-              }}
-              placeholder="Buscar por arrendatario, RUT, depto, edificio, rol, fono, correo..."
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-            />
-          </div>
-
-          {/* Toggle Solo Incompletos */}
+      <div className="bg-card border border-border p-3.5 rounded-2xl shadow-2xs space-y-3">
+      {/* Sub-barra de Metadatos y Formato */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-1 text-xs text-muted-foreground">
+        <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => {
-              setFilterIncompleteOnly(!filterIncompleteOnly)
-              setCurrentPage(1)
-            }}
-            className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
-              filterIncompleteOnly
-                ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-                : 'bg-background border-border text-muted-foreground hover:text-foreground'
-            }`}
+            title="Ayuda sobre propiedades"
+            className="hover:text-foreground cursor-pointer"
           >
-            <AlertCircle className="w-4 h-4" />
-            <span>Faltan Datos ({stats.incomplete})</span>
+            <HelpCircle className="w-4 h-4" />
+          </button>
+
+          {/* Selector de Columnas */}
+          <button
+            type="button"
+            onClick={() => setShowColumnModal(true)}
+            className="inline-flex items-center gap-1.5 hover:text-foreground font-semibold cursor-pointer"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+            <span>{activeColumnsCount} / {ALL_COLUMNS.length} columnas</span>
+          </button>
+
+          {/* Ver Archivadas */}
+          <button
+            type="button"
+            onClick={() => setShowArchived(!showArchived)}
+            className="inline-flex items-center gap-1.5 hover:text-foreground font-semibold cursor-pointer"
+          >
+            <Archive className="w-3.5 h-3.5 text-muted-foreground" />
+            <span>{showArchived ? 'Ver activas' : 'Ver archivadas'}</span>
           </button>
         </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center p-0.5 bg-muted rounded-lg border border-border">
+            <button
+              type="button"
+              onClick={() => setViewFormat('properties')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                viewFormat === 'properties'
+                  ? 'bg-card text-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Vista Propiedades
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewFormat('detailed')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                viewFormat === 'detailed'
+                  ? 'bg-card text-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Vista Matriz ({ALL_COLUMNS.length} col)
+            </button>
+          </div>
+        </div>
+      </div>
 
         {/* Selectores de Filtro en Cascada */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-border">
@@ -717,6 +762,188 @@ export function ArriendosManager({
           </div>
         </div>
 
+        {viewFormat === 'properties' ? (
+          /* VISTA PROPIEDADES (ESTILO EJECUTIVO LEASITY / NYS RESIDENCIAL - IMAGEN 2) */
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-muted/40 text-muted-foreground uppercase tracking-wider font-semibold border-b border-border text-[11px]">
+                <tr>
+                  <th className="py-3 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={
+                        paginatedContracts.length > 0 &&
+                        paginatedContracts.every((c) => selectedIds.has(c.id))
+                      }
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer"
+                    />
+                  </th>
+                  <th className="py-3 px-3 w-12 text-center">
+                    <Info className="w-4 h-4 mx-auto text-muted-foreground" />
+                  </th>
+                  <th className="py-3 px-4">Dirección</th>
+                  <th className="py-3 px-3 w-10 text-center">
+                    <span className="sr-only">Contrato</span>
+                  </th>
+                  <th className="py-3 px-4">Dueño</th>
+                  <th className="py-3 px-4">Arrendatario</th>
+                  <th className="py-3 px-4 text-right">Monto</th>
+                  <th className="py-3 px-4 text-center">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {paginatedContracts.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                      No se encontraron propiedades que coincidan con los filtros aplicados.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedContracts.map((c) => {
+                    const isSelected = selectedIds.has(c.id)
+                    const isVacant =
+                      c.status === 'Disponible' ||
+                      !c.tenantName ||
+                      c.tenantName.toLowerCase().includes('sin arrendatario')
+                    const paymentStatus = (c.latestVoucher?.paymentStatus || '').toLowerCase()
+                    const isExpired =
+                      paymentStatus.includes('expirado') ||
+                      paymentStatus.includes('atrasado') ||
+                      paymentStatus.includes('mora')
+                    const propertyTypeLower = (c.propertyType || '').toLowerCase()
+                    const isParking =
+                      propertyTypeLower.includes('estacion') || propertyTypeLower.includes('parking')
+                    const isWarehouse =
+                      propertyTypeLower.includes('bodega') || propertyTypeLower.includes('almacen')
+                    const isOffice =
+                      propertyTypeLower.includes('oficina') || propertyTypeLower.includes('edificio')
+
+                    return (
+                      <tr
+                        key={c.id}
+                        onClick={() => toggleSelectId(c.id)}
+                        className={`hover:bg-muted/30 transition-colors cursor-pointer group ${
+                          isSelected ? 'bg-primary/5' : ''
+                        }`}
+                      >
+                        {/* Checkbox */}
+                        <td
+                          className="py-3.5 px-4 text-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectId(c.id)}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer"
+                          />
+                        </td>
+
+                        {/* Icono de Tipo */}
+                        <td className="py-3.5 px-3 text-center">
+                          <div className="w-8 h-8 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-100 dark:border-sky-900/50 mx-auto shadow-2xs">
+                            {isWarehouse ? (
+                              <Warehouse className="w-4 h-4" />
+                            ) : isParking ? (
+                              <Car className="w-4 h-4" />
+                            ) : isOffice ? (
+                              <Building2 className="w-4 h-4" />
+                            ) : (
+                              <Home className="w-4 h-4" />
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Dirección */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-foreground text-xs leading-snug">
+                            {c.building}
+                            {c.unitNumber ? `, ${c.unitNumber}` : ''}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            Talca, Maule
+                          </div>
+                          {!isVacant && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white mt-1.5 shadow-2xs">
+                              Propiedad OK
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Copia / Ver Ficha */}
+                        <td
+                          className="py-3.5 px-3 text-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setEditingContract(c)}
+                            title="Ver / Editar contrato"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </td>
+
+                        {/* Dueño */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-medium text-foreground text-xs line-clamp-1">
+                            {c.company?.name || 'Inversiones NyS'}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+                            {c.company?.code || '79.815.650-0'}
+                          </div>
+                        </td>
+
+                        {/* Arrendatario */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-medium text-foreground text-xs line-clamp-1">
+                            {isVacant ? 'Sin arrendatario' : c.tenantName}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+                            {isVacant ? '' : c.tenantRut || 'Sin RUT'}
+                          </div>
+                        </td>
+
+                        {/* Monto */}
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="font-semibold text-foreground text-xs">
+                            {isVacant
+                              ? 'Sin monto'
+                              : c.totalRent
+                              ? `$${c.totalRent.toLocaleString('es-CL')}`
+                              : '$0'}
+                          </div>
+                        </td>
+
+                        {/* Estado Badge */}
+                        <td className="py-3.5 px-4 text-center">
+                          {isVacant ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                              <Home className="w-3 h-3 text-slate-400" />
+                              <span>VACANTE</span>
+                            </span>
+                          ) : isExpired ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shadow-2xs">
+                              <Home className="w-3 h-3 text-rose-500" />
+                              <span>PAGO EXPIRADO</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+                              <Check className="w-3 h-3 text-emerald-500" />
+                              <span>AL DÍA</span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-muted/40 text-muted-foreground uppercase tracking-wider font-semibold border-b border-border text-[11px]">
@@ -1080,6 +1307,7 @@ export function ArriendosManager({
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Paginación */}
         {totalPages > 1 && (
