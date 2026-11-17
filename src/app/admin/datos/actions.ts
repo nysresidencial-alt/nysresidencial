@@ -456,15 +456,16 @@ export async function executeExcelImport(
       const bank = String(r['BANCO'] || '').trim()
       const comment = String(r['COMENTARIO'] || r['COMENTARIOS'] || '').trim()
 
-      let paymentStatus = String(r['ESTADO PAGO'] || '').trim()
-      if (!paymentStatus) {
-        if (paymentDate || transferAmount > 0 || cashAmount > 0 || depositAmount > 0 || (collectedAmount >= totalMonth && totalMonth > 0)) {
-          paymentStatus = 'Pagado'
-        } else if (status === 'Disponible' || (totalMonth === 0 && !tenantName)) {
-          paymentStatus = 'Disponible'
-        } else {
-          paymentStatus = 'Pendiente'
-        }
+      const rawPaymentStatus = String(r['ESTADO PAGO'] || '').trim().toLowerCase()
+      let paymentStatus = 'Pendiente'
+      if (rawPaymentStatus.includes('pag')) {
+        paymentStatus = 'Pagado'
+      } else if (rawPaymentStatus.includes('pend')) {
+        paymentStatus = 'Pendiente'
+      } else if (paymentDate || transferAmount > 0 || cashAmount > 0 || depositAmount > 0 || (collectedAmount >= totalMonth && totalMonth > 0)) {
+        paymentStatus = 'Pagado'
+      } else {
+        paymentStatus = 'Pendiente'
       }
 
       const voucherKey = `${contractId}|${month}|${year}`

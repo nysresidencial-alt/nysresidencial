@@ -381,7 +381,7 @@ export function VouchersManager({
   // Helper para estado estilo pill con punto (Imagen 3)
   function renderPaymentBadge(status: string) {
     const s = (status || '').toLowerCase()
-    if (s.includes('manual') || s.includes('pagado')) {
+    if (s.includes('manual') || s.includes('pagado') || s.includes('pag')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200 dark:border-sky-800 shadow-2xs">
           <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />
@@ -389,26 +389,10 @@ export function VouchersManager({
         </span>
       )
     }
-    if (s.includes('expirado') || s.includes('atrasado') || s.includes('mora')) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shadow-2xs">
-          <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0" />
-          <span>PAGO EXPIRADO</span>
-        </span>
-      )
-    }
-    if (s.includes('pendiente')) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs">
-          <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" />
-          <span>PENDIENTE</span>
-        </span>
-      )
-    }
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs">
-        <span className="w-2 h-2 rounded-full bg-slate-500 shrink-0" />
-        <span>{status}</span>
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs">
+        <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" />
+        <span>PENDIENTE</span>
       </span>
     )
   }
@@ -732,7 +716,6 @@ export function VouchersManager({
               <option value="TODOS">Todos los Estados</option>
               <option value="Pagado">Pagado</option>
               <option value="Pendiente">Pendiente</option>
-              <option value="Disponible">Disponible</option>
             </select>
           </div>
 

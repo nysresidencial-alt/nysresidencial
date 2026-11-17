@@ -299,14 +299,16 @@ async function run() {
       comment = comment ? `${rawEmp} - ${comment}` : rawEmp
     }
 
-    const rawPaymentStatus = String(r['ESTADO PAGO'] || '').trim()
+    const rawPaymentStatus = String(r['ESTADO PAGO'] || '').trim().toLowerCase()
     let paymentStatus = 'Pendiente'
-    if (paymentDate || transferAmount > 0 || cashAmount > 0 || depositAmount > 0 || collectedAmount >= totalMonth && totalMonth > 0) {
+    if (rawPaymentStatus.includes('pag')) {
       paymentStatus = 'Pagado'
-    } else if (rawPaymentStatus) {
-      paymentStatus = rawPaymentStatus
-    } else if (String(r['ESTADO'] || '').toLowerCase() === 'disponible') {
-      paymentStatus = 'Disponible'
+    } else if (rawPaymentStatus.includes('pend')) {
+      paymentStatus = 'Pendiente'
+    } else if (paymentDate || transferAmount > 0 || cashAmount > 0 || depositAmount > 0 || (collectedAmount >= totalMonth && totalMonth > 0)) {
+      paymentStatus = 'Pagado'
+    } else {
+      paymentStatus = 'Pendiente'
     }
 
     let paymentMethod = 'Transferencia'
