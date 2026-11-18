@@ -40,6 +40,7 @@ import { VoucherDetail, VoucherPrintModal } from './VoucherPrintModal'
 import { VoucherEditModal } from './VoucherEditModal'
 import { VoucherStatusModal } from './VoucherStatusModal'
 import { PaymentDateModal } from './PaymentDateModal'
+import { InvoiceEditModal } from './InvoiceEditModal'
 import { generateMonthVouchers } from '@/app/admin/vouchers/actions'
 
 interface VouchersManagerProps {
@@ -124,6 +125,7 @@ export function VouchersManager({
   const [editingVoucher, setEditingVoucher] = useState<VoucherDetail | null>(null)
   const [statusChangingVoucher, setStatusChangingVoucher] = useState<VoucherDetail | null>(null)
   const [paymentDateVoucher, setPaymentDateVoucher] = useState<VoucherDetail | null>(null)
+  const [invoiceEditingVoucher, setInvoiceEditingVoucher] = useState<VoucherDetail | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
@@ -144,8 +146,21 @@ export function VouchersManager({
     setPaymentDateVoucher(null)
     setMessage({
       text: updated.paymentDate
-        ? `Fecha de pago (${formatDisplayDate(updated.paymentDate)}) registrada para ${updated.contract.tenantName}. Arriendo marcado como PAGADO.`
-        : `Fecha de pago eliminada para ${updated.contract.tenantName}. Arriendo marcado como pendiente.`,
+        ? `Pago de $${Math.round(updated.collectedAmount || updated.totalMonth).toLocaleString('es-CL')} registrado exitosamente para ${updated.contract.tenantName} (${formatDisplayDate(updated.paymentDate)}). Estado: PAGADO.`
+        : `Pago anulado para ${updated.contract.tenantName}. Arriendo marcado nuevamente como PENDIENTE.`,
+      type: 'success',
+    })
+  }
+
+  function handleInvoiceSaved(voucherId: string, newInvoiceNumber: string | null) {
+    setVouchers((prev) =>
+      prev.map((v) => (v.id === voucherId ? { ...v, invoiceNumber: newInvoiceNumber } : v))
+    )
+    setInvoiceEditingVoucher(null)
+    setMessage({
+      text: newInvoiceNumber
+        ? `N° de Factura #${newInvoiceNumber} registrado exitosamente.`
+        : 'N° de Factura eliminado.',
       type: 'success',
     })
   }
@@ -268,9 +283,9 @@ export function VouchersManager({
     })
   }
 
-  // Filtrado reactivo en cliente
+  // Filtrado reactivo en cliente con orden prioritario: PENDIENTES PRIMERO
   const filteredVouchers = useMemo(() => {
-    return vouchers.filter((v) => {
+    const list = vouchers.filter((v) => {
       const c = v.contract
       const comp = v.company || c.company
 
@@ -298,6 +313,18 @@ export function VouchersManager({
       }
 
       return true
+    })
+
+    // Ordenar: PENDIENTES de pago primero para agilizar el registro diario de contabilidad
+    return [...list].sort((a, b) => {
+      const aIsPending = (a.paymentStatus || '').toLowerCase() === 'pendiente' ? 0 : 1
+      const bIsPending = (b.paymentStatus || '').toLowerCase() === 'pendiente' ? 0 : 1
+      if (aIsPending !== bIsPending) {
+        return aIsPending - bIsPending
+      }
+      const bComp = (a.contract.building || '').localeCompare(b.contract.building || '')
+      if (bComp !== 0) return bComp
+      return (a.contract.unitNumber || '').localeCompare(b.contract.unitNumber || '')
     })
   }, [vouchers, filterCompany, filterBuilding, filterMonth, filterYear, filterStatus, searchTerm])
 
@@ -792,7 +819,7 @@ export function VouchersManager({
               <table className="w-full text-left text-xs">
                 <thead className="bg-muted/40 text-muted-foreground uppercase tracking-wider font-semibold border-b border-border text-[11px]">
                   <tr>
-                    <th className="py-3 px-4 w-10 text-center">
+                    <th className="py-3 px-3 w-10 text-center">
                       <input
                         type="checkbox"
                         checked={
@@ -803,12 +830,12 @@ export function VouchersManager({
                         className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer"
                       />
                     </th>
-                    <th className="py-3 px-4">Periodo</th>
-                    <th className="py-3 px-4">Propiedad</th>
+                    <th className="py-3 px-3">Periodo</th>
+                    <th className="py-3 px-4">Propiedad / Unidad</th>
                     <th className="py-3 px-4">Arrendatario</th>
-                    <th className="py-3 px-4">Fecha de Expiración</th>
-                    <th className="py-3 px-4">Fecha de Pago</th>
-                    <th className="py-3 px-4 text-right">Monto</th>
+                    <th className="py-3 px-4 text-right">Valor Arriendo</th>
+                    <th className="py-3 px-4 text-center">Fecha Pago</th>
+                    <th className="py-3 px-4 text-center">N° Factura</th>
                     <th className="py-3 px-4 text-center">Estado</th>
                     <th className="py-3 px-3 text-center">Acciones</th>
                   </tr>
@@ -817,7 +844,7 @@ export function VouchersManager({
                   {paginatedVouchers.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-12 text-center text-muted-foreground">
-                        No se encontraron vouchers que coincidan con los filtros aplicados.
+                        No se encontraron arriendos o vouchers que coincidan con los filtros aplicados.
                       </td>
                     </tr>
                   ) : (
@@ -827,16 +854,14 @@ export function VouchersManager({
                       const isRowActive = selectedVoucherId === v.id
                       const hasAdjustment = (v.adjustmentPercent && v.adjustmentPercent > 0) || (v.adjustmentAmount && v.adjustmentAmount > 0)
                       const monthFormatted = MONTH_NAMES_TITLE[v.month] || v.month
-                      const monthNum = MONTH_NUMBER[v.month] || '11'
-                      const expirationDate = `05/${monthNum}/${v.year}`
-                      const paymentDate = v.paymentStatus === 'Pagado' ? `27/${monthNum === '01' ? '12' : String(Number(monthNum) - 1).padStart(2, '0')}/${v.year}` : '-'
+                      const isPaid = (v.paymentStatus || '').toLowerCase() === 'pagado'
+                      const rentAmount = Math.round(v.totalRent || v.totalMonth || c.totalRent || v.baseRent || 0)
 
                       return (
                         <tr
                           key={v.id}
                           onClick={() => {
                             setSelectedVoucherId(v.id)
-                            toggleSelectId(v.id)
                           }}
                           className={`hover:bg-muted/30 transition-colors cursor-pointer group ${
                             isSelected ? 'bg-primary/5' : ''
@@ -844,7 +869,7 @@ export function VouchersManager({
                         >
                           {/* Checkbox */}
                           <td
-                            className="py-3.5 px-4 text-center"
+                            className="py-3.5 px-3 text-center"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <input
@@ -856,29 +881,33 @@ export function VouchersManager({
                           </td>
 
                           {/* Periodo */}
-                          <td className="py-3.5 px-4">
-                            <span className="font-semibold text-foreground text-xs">
-                              {monthFormatted} {v.year}
+                          <td className="py-3.5 px-3 whitespace-nowrap">
+                            <span className="font-bold text-foreground text-xs block">
+                              {monthFormatted}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground font-mono">
+                              {v.year}
                             </span>
                           </td>
 
-                          {/* Propiedad */}
+                          {/* Propiedad / Unidad */}
                           <td className="py-3.5 px-4">
-                            <div className="font-semibold text-foreground text-xs leading-snug line-clamp-1">
-                              {c.building}
-                              {c.unitNumber ? `, ${c.propertyType} ${c.unitNumber}` : ''}
+                            <div className="font-bold text-foreground text-xs leading-snug">
+                              {c.building} · {c.unitNumber ? `${c.propertyType} ${c.unitNumber}` : c.propertyType}
                             </div>
-                            <div className="text-[11px] text-muted-foreground mt-0.5">
-                              Talca, Maule
+                            <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-2">
+                              {c.storageNumber && <span>Bodega {c.storageNumber}</span>}
+                              {c.parkingNumber && <span>Estac {c.parkingNumber}</span>}
+                              {!c.storageNumber && !c.parkingNumber && <span>Talca, Maule</span>}
                             </div>
-                            <div className="mt-1.5">
+                            <div className="mt-1">
                               {hasAdjustment ? (
-                                <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white shadow-2xs">
-                                  Reajuste {v.adjustmentPercent || 3}%
+                                <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                                  Reajuste {v.adjustmentPercent > 1 ? `${v.adjustmentPercent}%` : `${(v.adjustmentPercent * 100).toFixed(1)}%`}
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-2xs">
-                                  Propiedad OK
+                                <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                  Arriendo Base
                                 </span>
                               )}
                             </div>
@@ -887,11 +916,11 @@ export function VouchersManager({
                           {/* Arrendatario */}
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full border-2 border-teal-400/80 bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-300 flex items-center justify-center shrink-0 shadow-2xs">
-                                <User className="w-4 h-4" />
+                              <div className="w-8 h-8 rounded-full border border-primary/20 bg-primary/5 text-primary flex items-center justify-center shrink-0 shadow-2xs font-bold text-xs">
+                                {c.tenantName ? c.tenantName.charAt(0).toUpperCase() : 'A'}
                               </div>
                               <div>
-                                <div className="font-semibold text-foreground text-xs line-clamp-1">
+                                <div className="font-bold text-foreground text-xs line-clamp-1">
                                   {c.tenantName}
                                 </div>
                                 <div className="text-[11px] text-muted-foreground font-mono">
@@ -901,55 +930,99 @@ export function VouchersManager({
                             </div>
                           </td>
 
-                          {/* Fecha de Expiración */}
-                          <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono">
-                            {expirationDate}
+                          {/* Valor Arriendo (Monto esperado) */}
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div className="font-black text-foreground text-xs">
+                              ${rentAmount.toLocaleString('es-CL')}
+                            </div>
+                            {isPaid && v.collectedAmount > 0 && v.collectedAmount !== rentAmount && (
+                              <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                Pagado: ${Math.round(v.collectedAmount).toLocaleString('es-CL')}
+                              </div>
+                            )}
                           </td>
 
-                          {/* Fecha de Pago con botón integrado + o fecha editable */}
-                          <td className="py-3.5 px-4 text-xs font-mono" onClick={(e) => e.stopPropagation()}>
+                          {/* Fecha de Pago */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                             {v.paymentDate ? (
                               <button
                                 type="button"
                                 onClick={() => setPaymentDateVoucher(v)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold transition-all cursor-pointer group shadow-2xs"
-                                title="Haga clic para modificar o quitar la fecha de pago"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold text-xs transition-all cursor-pointer group shadow-2xs font-mono"
+                                title="Haga clic para ver o editar el registro de pago"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                 <span>{formatDisplayDate(v.paymentDate)}</span>
-                                <Edit className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-600" />
+                              </button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground font-mono">
+                                -
+                              </span>
+                            )}
+                          </td>
+
+                          {/* N° Factura (Editable en 1 clic) */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            {v.invoiceNumber ? (
+                              <button
+                                type="button"
+                                onClick={() => setInvoiceEditingVoucher(v)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 hover:bg-blue-500/20 font-bold text-xs transition-all cursor-pointer group font-mono shadow-2xs"
+                                title="Haga clic para editar el número de factura"
+                              >
+                                <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                <span>Fac #{v.invoiceNumber}</span>
+                                <Edit className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" />
                               </button>
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => setPaymentDateVoucher(v)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition-all hover:scale-[1.02] cursor-pointer shadow-2xs"
-                                title="Registrar fecha en que se acreditó en cartola"
+                                onClick={() => setInvoiceEditingVoucher(v)}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-foreground text-[11px] font-semibold transition-all hover:bg-muted/50 cursor-pointer"
+                                title="Agregar número de factura emitido posteriormente"
                               >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>+ Agregar fecha de pago</span>
+                                <Plus className="w-3 h-3" />
+                                <span>Factura</span>
                               </button>
                             )}
                           </td>
 
-                          {/* Monto */}
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="font-extrabold text-foreground text-xs">
-                              ${v.totalMonth.toLocaleString('es-CL')}
-                            </div>
-                          </td>
-
                           {/* Estado Pill */}
-                          <td className="py-3.5 px-4 text-center">
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
                             {renderPaymentBadge(v.paymentStatus)}
                           </td>
 
                           {/* Acciones */}
                           <td
-                            className="py-3.5 px-3 text-center"
+                            className="py-3.5 px-3 text-center whitespace-nowrap"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div className="inline-flex items-center gap-1">
+                            <div className="inline-flex items-center gap-1.5">
+                              {/* Botón Principal: Registrar Pago o Ver Detalle */}
+                              <button
+                                type="button"
+                                onClick={() => setPaymentDateVoucher(v)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs shadow-xs transition-all cursor-pointer ${
+                                  isPaid
+                                    ? 'bg-muted hover:bg-muted/80 text-foreground border border-border'
+                                    : 'bg-primary hover:bg-primary/90 text-primary-foreground hover:scale-102'
+                                }`}
+                                title={isPaid ? 'Ver y modificar pago registrado' : 'Registrar pago de arriendo en cartola'}
+                              >
+                                {isPaid ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Ver Pago</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>Registrar Pago</span>
+                                  </>
+                                )}
+                              </button>
+
+                              {/* Imprimir Recibo */}
                               <button
                                 type="button"
                                 onClick={() => setPrintingVoucher(v)}
@@ -958,11 +1031,13 @@ export function VouchersManager({
                               >
                                 <Printer className="w-4 h-4" />
                               </button>
+
+                              {/* Editar Liquidación */}
                               <button
                                 type="button"
                                 onClick={() => setEditingVoucher(v)}
                                 className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                                title="Editar liquidación"
+                                title="Editar liquidación completa"
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
@@ -1163,6 +1238,15 @@ export function VouchersManager({
           voucher={paymentDateVoucher}
           onClose={() => setPaymentDateVoucher(null)}
           onSaved={handlePaymentDateSaved}
+        />
+      )}
+
+      {/* MODAL DE EDICIÓN RÁPIDA DE FACTURA */}
+      {invoiceEditingVoucher && (
+        <InvoiceEditModal
+          voucher={invoiceEditingVoucher}
+          onClose={() => setInvoiceEditingVoucher(null)}
+          onSaved={handleInvoiceSaved}
         />
       )}
     </div>

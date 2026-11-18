@@ -43,6 +43,21 @@ export interface VoucherDetail {
     guarantorRelation: string | null
     guarantorPhone: string | null
     guarantorEmail: string | null
+    baseRent?: number
+    totalRent?: number
+    vouchersHistory?: Array<{
+      id: string
+      month: string
+      year: number
+      receiptNumber: string | null
+      invoiceNumber: string | null
+      paymentStatus: string
+      paymentDate: string | null
+      collectedAmount: number
+      totalMonth: number
+      bank: string | null
+      paymentMethod: string
+    }>
     company?: {
       id: string
       code: string

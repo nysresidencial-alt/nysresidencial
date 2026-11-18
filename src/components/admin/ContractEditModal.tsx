@@ -348,15 +348,19 @@ export function ContractEditModal({
                   Valor Arriendo Mensual (Valor T)
                 </span>
                 <div className="text-2xl sm:text-3xl font-black text-foreground mt-0.5">
-                  ${(contract.totalRent || 0).toLocaleString('es-CL')}
+                  ${Math.round(contract.totalRent || 0).toLocaleString('es-CL')}
                 </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                  <span>Base: ${contract.baseRent.toLocaleString('es-CL')}</span>
+                  <span>Base: ${Math.round(contract.baseRent || 0).toLocaleString('es-CL')}</span>
                   {contract.adjustmentAmount > 0 && (
                     <>
                       <span>•</span>
                       <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                        +${contract.adjustmentAmount.toLocaleString('es-CL')} ({(contract.adjustmentPercentage * 100).toFixed(1)}% reajuste)
+                        +${Math.round(contract.adjustmentAmount).toLocaleString('es-CL')} (
+                        {contract.adjustmentPercentage > 1
+                          ? `${contract.adjustmentPercentage.toLocaleString('es-CL', { maximumFractionDigits: 2 })}%`
+                          : `${(contract.adjustmentPercentage * 100).toLocaleString('es-CL', { maximumFractionDigits: 2 })}%`}{' '}
+                        reajuste)
                       </span>
                     </>
                   )}
@@ -483,15 +487,23 @@ export function ContractEditModal({
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-[11px]">% Reajuste:</span>
-                    <span className="text-foreground font-semibold">{(contract.adjustmentPercentage * 100).toFixed(1)}%</span>
+                    <span className="text-foreground font-semibold">
+                      {contract.adjustmentPercentage > 1
+                        ? `${contract.adjustmentPercentage.toLocaleString('es-CL', { maximumFractionDigits: 2 })}%`
+                        : `${(contract.adjustmentPercentage * 100).toLocaleString('es-CL', { maximumFractionDigits: 2 })}%`}
+                    </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Reajuste ($):</span>
-                    <span className="text-foreground font-semibold">${contract.adjustmentAmount.toLocaleString('es-CL')}</span>
+                    <span className="text-foreground font-semibold">
+                      ${Math.round(contract.adjustmentAmount || 0).toLocaleString('es-CL')}
+                    </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Valor T (Reajustado):</span>
-                    <span className="text-primary font-black text-sm">${contract.totalRent.toLocaleString('es-CL')}</span>
+                    <span className="text-primary font-black text-sm">
+                      ${Math.round(contract.totalRent || 0).toLocaleString('es-CL')}
+                    </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Arriendo 20252 (Anterior):</span>

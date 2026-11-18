@@ -55,6 +55,28 @@ export default async function VouchersAdminPage() {
           guarantorRelation: true,
           guarantorPhone: true,
           guarantorEmail: true,
+          baseRent: true,
+          totalRent: true,
+          vouchers: {
+            select: {
+              id: true,
+              month: true,
+              year: true,
+              receiptNumber: true,
+              invoiceNumber: true,
+              paymentStatus: true,
+              paymentDate: true,
+              collectedAmount: true,
+              totalMonth: true,
+              bank: true,
+              paymentMethod: true,
+            },
+            orderBy: [
+              { paymentDate: 'desc' },
+              { createdAt: 'desc' },
+            ],
+            take: 12,
+          },
           company: {
             select: {
               id: true,
@@ -129,6 +151,9 @@ export default async function VouchersAdminPage() {
       guarantorRelation: v.contract.guarantorRelation,
       guarantorPhone: v.contract.guarantorPhone,
       guarantorEmail: v.contract.guarantorEmail,
+      baseRent: v.contract.baseRent,
+      totalRent: v.contract.totalRent,
+      vouchersHistory: (v.contract as any).vouchers || [],
       company: v.contract.company || null,
     },
     company: v.company || v.contract.company || null,

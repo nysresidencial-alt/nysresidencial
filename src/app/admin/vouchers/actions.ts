@@ -239,6 +239,102 @@ export async function generateMonthVouchers(month: string, year: number) {
 }
 
 /**
+ * Registra el pago de un Voucher (Conciliación Bancaria)
+ * Permite registrar fecha real de pago, monto pagado, N° de factura (opcional), banco y método de pago
+ */
+export async function registerVoucherPayment(
+  voucherId: string,
+  data: {
+    paymentDate: string
+    collectedAmount: number
+    invoiceNumber?: string
+    bank?: string
+    paymentMethod?: string
+    comment?: string
+  }
+) {
+  await checkAuth('edit')
+
+  const existing = await prisma.leaseVoucher.findUnique({
+    where: { id: voucherId },
+  })
+
+  if (!existing) {
+    return { error: 'Voucher no encontrado' }
+  }
+
+  const collected = Number(data.collectedAmount) || 0
+  const total = existing.totalMonth || existing.totalRent || existing.baseRent
+  const pending = Math.max(0, total - collected)
+  const isPaid = collected > 0 && pending === 0
+
+  const paymentMethod = data.paymentMethod || 'Transferencia'
+  const transfer = paymentMethod === 'Transferencia' ? collected : 0
+  const cash = paymentMethod === 'Efectivo' ? collected : 0
+  const deposit = paymentMethod === 'Documento' ? collected : 0
+
+  try {
+    const updated = await prisma.leaseVoucher.update({
+      where: { id: voucherId },
+      data: {
+        paymentDate: data.paymentDate,
+        paymentStatus: isPaid ? 'Pagado' : collected > 0 ? 'Parcial' : 'Pendiente',
+        collectedAmount: collected,
+        pendingBalance: pending,
+        transferAmount: transfer,
+        cashAmount: cash,
+        depositAmount: deposit,
+        invoiceNumber: data.invoiceNumber !== undefined ? data.invoiceNumber.trim() : existing.invoiceNumber,
+        bank: data.bank ? data.bank.trim() : (existing.bank || 'SANTANDER'),
+        paymentMethod,
+        comment: data.comment !== undefined ? data.comment.trim() : existing.comment,
+      },
+      include: {
+        contract: {
+          select: {
+            id: true,
+            building: true,
+            unitNumber: true,
+            tenantName: true,
+          },
+        },
+      },
+    })
+
+    revalidatePath('/admin/vouchers')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/arriendos')
+    return { success: true, voucher: updated }
+  } catch (e: any) {
+    console.error('Error registering voucher payment:', e)
+    return { error: e.message || 'Error al registrar el pago' }
+  }
+}
+
+/**
+ * Actualiza rápidamente el N° de Factura de un Voucher
+ * (Para cuando las facturas de SII se emiten días después del pago)
+ */
+export async function updateVoucherInvoice(voucherId: string, invoiceNumber: string) {
+  await checkAuth('edit')
+
+  try {
+    const updated = await prisma.leaseVoucher.update({
+      where: { id: voucherId },
+      data: {
+        invoiceNumber: invoiceNumber ? invoiceNumber.trim() : null,
+      },
+    })
+
+    revalidatePath('/admin/vouchers')
+    return { success: true, voucher: updated }
+  } catch (e: any) {
+    console.error('Error updating voucher invoice:', e)
+    return { error: e.message || 'Error al actualizar el número de factura' }
+  }
+}
+
+/**
  * Elimina un voucher
  */
 export async function deleteVoucher(voucherId: string) {
