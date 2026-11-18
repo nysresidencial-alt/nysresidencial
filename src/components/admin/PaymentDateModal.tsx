@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   X,
   Calendar,
@@ -18,7 +18,9 @@ import {
   Mail,
   Receipt,
   ArrowRight,
-  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
 } from 'lucide-react'
 import { VoucherDetail } from './VoucherPrintModal'
 import { registerVoucherPayment, updateVoucher } from '@/app/admin/vouchers/actions'
@@ -59,17 +61,70 @@ const MONTH_NUMBERS: Record<string, string> = {
   DICIEMBRE: '12',
 }
 
+const SPANISH_MONTHS = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+]
+
+const DAYS_OF_WEEK = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
+
+function parseIsoToClDate(isoDate: string | null | undefined): string {
+  if (!isoDate) return ''
+  if (isoDate.includes('/')) return isoDate
+  if (isoDate.includes('-')) {
+    const parts = isoDate.split('T')[0].split('-')
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`
+    }
+  }
+  return isoDate
+}
+
+function parseClDateToIso(clDate: string): string | null {
+  const parts = clDate.trim().split('/')
+  if (parts.length !== 3) return null
+  const day = Number(parts[0])
+  const month = Number(parts[1])
+  const year = Number(parts[2])
+  if (isNaN(day) || isNaN(month) || isNaN(year)) return null
+  if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2000 || year > 2100) return null
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
 export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModalProps) {
-  const today = new Date().toISOString().split('T')[0]
   const c = voucher.contract
-
-  // Monto esperado de arriendo
+  const monthName = MONTH_NAMES_TITLE[voucher.month] || voucher.month
+  const monthNum = MONTH_NUMBERS[voucher.month] || '11'
   const expectedRent = Math.round(voucher.totalRent || voucher.totalMonth || c.totalRent || voucher.baseRent || 0)
-  const initialCollected = voucher.collectedAmount > 0 ? voucher.collectedAmount : expectedRent
 
-  // Estado del formulario
-  const [paymentDate, setPaymentDate] = useState<string>(voucher.paymentDate || today)
-  const [collectedAmount, setCollectedAmount] = useState<number>(initialCollected)
+  // 1. FECHA DE PAGO (Formato DD/MM/AAAA)
+  const initialDateStr = voucher.paymentDate ? parseIsoToClDate(voucher.paymentDate) : ''
+  const [dateInput, setDateInput] = useState<string>(initialDateStr)
+  const [showCalendar, setShowCalendar] = useState<boolean>(false)
+  const calendarRef = useRef<HTMLDivElement>(null)
+
+  // Calendario interactivo (mes y año que se está explorando)
+  const targetYear = voucher.year || new Date().getFullYear()
+  const targetMonthIndex = Number(monthNum) - 1 >= 0 && Number(monthNum) - 1 <= 11 ? Number(monthNum) - 1 : new Date().getMonth()
+  const [calendarYear, setCalendarYear] = useState<number>(targetYear)
+  const [calendarMonth, setCalendarMonth] = useState<number>(targetMonthIndex)
+
+  // 2. TOTAL PAGADO: No prellenado por solicitud del usuario (empieza vacío)
+  const [collectedAmount, setCollectedAmount] = useState<string>(
+    voucher.collectedAmount > 0 ? String(Math.round(voucher.collectedAmount)) : ''
+  )
+
+  // 3. FACTURA Y OTROS CAMPOS
   const [invoiceNumber, setInvoiceNumber] = useState<string>(voucher.invoiceNumber || '')
   const [bank, setBank] = useState<string>(voucher.bank || 'SANTANDER')
   const [paymentMethod, setPaymentMethod] = useState<string>(voucher.paymentMethod || 'Transferencia')
@@ -79,44 +134,113 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
   const [error, setError] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(true)
 
-  const monthName = MONTH_NAMES_TITLE[voucher.month] || voucher.month
-  const monthNum = MONTH_NUMBERS[voucher.month] || '11'
   const hasExistingPayment = Boolean(voucher.paymentDate)
 
-  // Acciones rápidas de fecha
-  function setQuickDate(type: 'today' | 'day5' | 'yesterday') {
-    if (type === 'today') {
-      setPaymentDate(today)
-    } else if (type === 'day5') {
-      setPaymentDate(`${voucher.year}-${monthNum}-05`)
-    } else if (type === 'yesterday') {
-      const d = new Date()
-      d.setDate(d.getDate() - 1)
-      setPaymentDate(d.toISOString().split('T')[0])
-    }
-  }
-
-  function formatDisplayDate(dateStr: string | null | undefined) {
-    if (!dateStr) return '-'
-    if (dateStr.includes('/')) return dateStr
-    if (dateStr.includes('-')) {
-      const parts = dateStr.split('T')[0].split('-')
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`
+  // Cerrar calendario si hace clic afuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+        setShowCalendar(false)
       }
     }
-    return dateStr
-  }
+    if (showCalendar) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showCalendar])
 
-  // Guardar pago y marcar como PAGADO
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    if (!paymentDate) {
-      setError('Debes seleccionar una fecha de pago válida.')
+  // Manejo de escritura manual con separadores automáticos
+  function handleDateInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value
+    // Si el usuario escribe directamente con barras
+    if (raw.includes('/')) {
+      const sanitized = raw.replace(/[^\d/]/g, '').slice(0, 10)
+      setDateInput(sanitized)
       return
     }
-    if (collectedAmount <= 0) {
-      setError('Debes ingresar un monto total pagado mayor a $0.')
+
+    // Si escribe números continuos sin barras, autoinsertar los separadores
+    const digits = raw.replace(/\D/g, '').slice(0, 8)
+    if (digits.length <= 2) {
+      setDateInput(digits)
+    } else if (digits.length <= 4) {
+      setDateInput(`${digits.slice(0, 2)}/${digits.slice(2)}`)
+    } else {
+      setDateInput(`${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`)
+    }
+  }
+
+  // Atajos rápidos de fecha
+  function setQuickDate(type: 'today' | 'day5' | 'yesterday') {
+    const now = new Date()
+    if (type === 'today') {
+      const d = String(now.getDate()).padStart(2, '0')
+      const m = String(now.getMonth() + 1).padStart(2, '0')
+      const y = String(now.getFullYear())
+      setDateInput(`${d}/${m}/${y}`)
+      setCalendarMonth(now.getMonth())
+      setCalendarYear(now.getFullYear())
+    } else if (type === 'day5') {
+      setDateInput(`05/${monthNum}/${voucher.year}`)
+      setCalendarMonth(Number(monthNum) - 1)
+      setCalendarYear(voucher.year)
+    } else if (type === 'yesterday') {
+      const yesterday = new Date(now)
+      yesterday.setDate(yesterday.getDate() - 1)
+      const d = String(yesterday.getDate()).padStart(2, '0')
+      const m = String(yesterday.getMonth() + 1).padStart(2, '0')
+      const y = String(yesterday.getFullYear())
+      setDateInput(`${d}/${m}/${y}`)
+      setCalendarMonth(yesterday.getMonth())
+      setCalendarYear(yesterday.getFullYear())
+    }
+    setShowCalendar(false)
+  }
+
+  // Navegación en el calendario
+  function prevMonth() {
+    if (calendarMonth === 0) {
+      setCalendarMonth(11)
+      setCalendarYear((y) => y - 1)
+    } else {
+      setCalendarMonth((m) => m - 1)
+    }
+  }
+
+  function nextMonth() {
+    if (calendarMonth === 11) {
+      setCalendarMonth(0)
+      setCalendarYear((y) => y + 1)
+    } else {
+      setCalendarMonth((m) => m + 1)
+    }
+  }
+
+  function selectCalendarDay(day: number) {
+    const dStr = String(day).padStart(2, '0')
+    const mStr = String(calendarMonth + 1).padStart(2, '0')
+    const yStr = String(calendarYear)
+    setDateInput(`${dStr}/${mStr}/${yStr}`)
+    setShowCalendar(false)
+  }
+
+  // Guardar pago
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+
+    // Validar fecha ingresada en DD/MM/AAAA
+    const isoDate = parseClDateToIso(dateInput)
+    if (!isoDate) {
+      setError('Debes ingresar una fecha de pago válida en formato DD/MM/AAAA (ej: 05/10/2026).')
+      return
+    }
+
+    // Validar monto pagado ingresado
+    const numCollected = Number(collectedAmount)
+    if (!collectedAmount || isNaN(numCollected) || numCollected <= 0) {
+      setError('Debes ingresar el monto total pagado por el cliente.')
       return
     }
 
@@ -125,8 +249,8 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
 
     try {
       const res = await registerVoucherPayment(voucher.id, {
-        paymentDate,
-        collectedAmount,
+        paymentDate: isoDate,
+        collectedAmount: numCollected,
         invoiceNumber: invoiceNumber.trim() || undefined,
         bank,
         paymentMethod,
@@ -142,10 +266,10 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
       if (res?.voucher) {
         onSaved({
           ...voucher,
-          paymentDate,
+          paymentDate: isoDate,
           paymentStatus: 'Pagado',
-          collectedAmount,
-          pendingBalance: Math.max(0, expectedRent - collectedAmount),
+          collectedAmount: numCollected,
+          pendingBalance: Math.max(0, expectedRent - numCollected),
           invoiceNumber: invoiceNumber.trim() || null,
           bank,
           paymentMethod,
@@ -192,12 +316,14 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
         pendingBalance: voucher.totalMonth,
       })
     } catch (err: any) {
-      setError(err?.message || 'Error al desmarcar el pago')
+      setError(err?.message || 'Error al anular el pago')
       setIsSubmitting(false)
     }
   }
 
-  // Historial de pagos pasados del contrato
+  // Cómputo de la grilla de días para el mini calendario
+  const firstDayOfMonth = (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7 // Lunes = 0
+  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate()
   const historyList = (c.vouchersHistory || []).filter((h) => h.id !== voucher.id)
 
   return (
@@ -365,7 +491,7 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
                               {MONTH_NAMES_TITLE[h.month] || h.month} {h.year}
                             </td>
                             <td className="py-2 font-mono text-muted-foreground">
-                              {formatDisplayDate(h.paymentDate)}
+                              {h.paymentDate ? parseIsoToClDate(h.paymentDate) : '-'}
                             </td>
                             <td className="py-2 text-right font-black text-foreground">
                               ${Math.round(h.collectedAmount || h.totalMonth).toLocaleString('es-CL')}
@@ -420,23 +546,124 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
               </span>
             </div>
 
-            {/* Fila 1: Fecha de Pago y Total Pagado */}
+            {/* Fila 1: Fecha de Pago (Manual o Calendario) y Total Pagado */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* Fecha de Pago */}
-              <div className="space-y-1.5">
+              
+              {/* CAMPO FECHA DE PAGO CON FORMATO VISIBLE Y POPUP DE CALENDARIO */}
+              <div className="space-y-1.5 relative" ref={calendarRef}>
                 <label className="text-xs font-bold text-foreground flex items-center justify-between">
                   <span>Fecha de Pago (Cartola) *</span>
-                  <span className="text-[10px] text-muted-foreground font-normal">
-                    Día real de abono
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-muted text-foreground font-bold border border-border">
+                    Formato: DD/MM/AAAA
                   </span>
                 </label>
-                <input
-                  type="date"
-                  required
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-bold bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs font-mono"
-                />
+
+                {/* Input con botón integrado para abrir calendario modal/popover */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    placeholder="DD/MM/AAAA (ej: 05/10/2026)"
+                    value={dateInput}
+                    onChange={handleDateInputChange}
+                    maxLength={10}
+                    className="w-full pl-3.5 pr-11 py-2.5 text-xs font-bold bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                    title="Abrir calendario interactivo"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* MODAL / POPOVER DEL CALENDARIO INTERACTIVO */}
+                {showCalendar && (
+                  <div className="absolute left-0 top-full z-40 mt-1.5 w-72 p-3 bg-card border border-border rounded-2xl shadow-2xl animate-in zoom-in-95 duration-100">
+                    {/* Header del Calendario */}
+                    <div className="flex items-center justify-between pb-2 border-b border-border">
+                      <button
+                        type="button"
+                        onClick={prevMonth}
+                        className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="text-xs font-black text-foreground uppercase tracking-wider">
+                        {SPANISH_MONTHS[calendarMonth]} {calendarYear}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={nextMonth}
+                        className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Días de la semana */}
+                    <div className="grid grid-cols-7 gap-1 pt-2 pb-1 text-center">
+                      {DAYS_OF_WEEK.map((day) => (
+                        <span key={day} className="text-[10px] font-bold text-muted-foreground uppercase">
+                          {day}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Grilla de Días */}
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                      {/* Espacios vacíos para el offset inicial */}
+                      {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+                        <div key={`empty-${i}`} className="h-7 w-7" />
+                      ))}
+
+                      {/* Días del mes */}
+                      {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const dayNum = i + 1
+                        const dStr = String(dayNum).padStart(2, '0')
+                        const mStr = String(calendarMonth + 1).padStart(2, '0')
+                        const formatted = `${dStr}/${mStr}/${calendarYear}`
+                        const isSelected = dateInput === formatted
+
+                        return (
+                          <button
+                            key={dayNum}
+                            type="button"
+                            onClick={() => selectCalendarDay(dayNum)}
+                            className={`h-7 w-7 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                              isSelected
+                                ? 'bg-primary text-primary-foreground font-black shadow-xs scale-105'
+                                : 'text-foreground hover:bg-primary/10 hover:text-primary'
+                            }`}
+                          >
+                            {dayNum}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Footer rápido dentro del calendario */}
+                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-border text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setQuickDate('today')}
+                        className="text-primary hover:underline font-bold cursor-pointer"
+                      >
+                        Hoy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCalendar(false)}
+                        className="text-muted-foreground hover:text-foreground cursor-pointer font-semibold"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Atajos de fecha */}
                 <div className="flex items-center gap-1.5 pt-0.5">
                   <span className="text-[10px] text-muted-foreground">Atajos:</span>
@@ -464,16 +691,18 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
                 </div>
               </div>
 
-              {/* Total Pagado */}
+              {/* CAMPO TOTAL PAGADO: SIN PRELLENADO POR SOLICITUD */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground flex items-center justify-between">
                   <span>Total Pagado por el Cliente *</span>
                   <button
                     type="button"
-                    onClick={() => setCollectedAmount(expectedRent)}
-                    className="text-[10px] text-primary hover:underline font-bold cursor-pointer"
+                    onClick={() => setCollectedAmount(String(expectedRent))}
+                    className="text-[10px] text-primary hover:underline font-bold cursor-pointer inline-flex items-center gap-1"
+                    title="Copiar exactamente el valor esperado del arriendo"
                   >
-                    Restablecer al total (${expectedRent.toLocaleString('es-CL')})
+                    <Copy className="w-3 h-3" />
+                    <span>Copiar valor arriendo (${expectedRent.toLocaleString('es-CL')})</span>
                   </button>
                 </label>
                 <div className="relative">
@@ -485,14 +714,19 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
                     required
                     min={1}
                     step={100}
-                    value={collectedAmount || ''}
-                    onChange={(e) => setCollectedAmount(Number(e.target.value))}
-                    className="w-full pl-7 pr-3.5 py-2.5 text-sm font-black bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs font-mono"
+                    placeholder={`Ej: ${expectedRent.toLocaleString('es-CL')}`}
+                    value={collectedAmount}
+                    onChange={(e) => setCollectedAmount(e.target.value)}
+                    className="w-full pl-7 pr-3.5 py-2.5 text-sm font-black bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs font-mono"
                   />
                 </div>
                 <div className="text-[11px] text-muted-foreground flex justify-between">
-                  <span>Monto registrado:</span>
-                  <strong className="text-foreground">${collectedAmount.toLocaleString('es-CL')} CLP</strong>
+                  <span>Monto a registrar:</span>
+                  {collectedAmount && Number(collectedAmount) > 0 ? (
+                    <strong className="text-foreground">${Number(collectedAmount).toLocaleString('es-CL')} CLP</strong>
+                  ) : (
+                    <span className="italic text-muted-foreground">Sin ingresar</span>
+                  )}
                 </div>
               </div>
             </div>
