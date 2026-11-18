@@ -1,10 +1,35 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Save, Building, User, DollarSign, Calendar, AlertCircle } from 'lucide-react'
+import {
+  X,
+  Save,
+  Building,
+  User,
+  DollarSign,
+  Calendar,
+  AlertCircle,
+  Pencil,
+  Phone,
+  Mail,
+  Home,
+  FileText,
+  CheckCircle2,
+  Tag,
+  Warehouse,
+  Car,
+  Receipt,
+  Users,
+  ShieldCheck,
+  ChevronRight,
+} from 'lucide-react'
 import { DatePickerField } from '@/components/ui/DatePickerField'
 import { ComboboxCustom } from '@/components/ui/ComboboxCustom'
-import { updateContractRecord, createContractRecord, ContractFormData } from '@/app/admin/arriendos/actions'
+import {
+  updateContractRecord,
+  createContractRecord,
+  ContractFormData,
+} from '@/app/admin/arriendos/actions'
 
 export interface ContractItem {
   id: string
@@ -42,6 +67,8 @@ export interface ContractItem {
     name: string
   } | null
   latestVoucher?: {
+    receiptNumber?: string | null
+    invoiceNumber?: string | null
     totalMonth: number
     pendingBalance: number
     paymentStatus: string
@@ -55,6 +82,7 @@ interface ContractEditModalProps {
   contract: ContractItem | null // null para crear nuevo
   companies: { id: string; code: string; name: string }[]
   buildings: string[]
+  initialMode?: 'view' | 'edit'
   onClose: () => void
   onSaved: (contract: any) => void
 }
@@ -89,10 +117,14 @@ export function ContractEditModal({
   contract,
   companies,
   buildings,
+  initialMode,
   onClose,
   onSaved,
 }: ContractEditModalProps) {
   const isEditing = Boolean(contract)
+  const [mode, setMode] = useState<'view' | 'edit'>(
+    initialMode || (isEditing ? 'view' : 'edit')
+  )
 
   // Inmueble
   const [companyId, setCompanyId] = useState(contract?.companyId || companies[0]?.id || '')
@@ -216,454 +248,797 @@ export function ContractEditModal({
       setError(res.error)
     } else {
       onSaved(res.contract)
-      onClose()
+      if (isEditing) {
+        setMode('view')
+      } else {
+        onClose()
+      }
     }
   }
 
+  const isVacant =
+    contract?.status === 'Disponible' ||
+    !contract?.tenantName ||
+    contract.tenantName.toLowerCase().includes('disponible') ||
+    contract.tenantName.toLowerCase().includes('sin arrendatario')
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-card border border-border w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30">
-          <div>
-            <h2 className="text-lg font-bold text-foreground">
-              {isEditing ? `Editar Propiedad: ${contract?.building} ${contract?.unitNumber}` : 'Nueva Propiedad / Contrato'}
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Administra los datos maestros del inmueble, arrendatario, contactos y valores contractuales.
-            </p>
+        {/* ======================================================== */}
+        {/* HEADER */}
+        {/* ======================================================== */}
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+              <Building className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-black text-foreground leading-tight">
+                  {contract
+                    ? `${contract.building} ${contract.unitNumber ? `— N° ${contract.unitNumber}` : ''}`
+                    : 'Nueva Propiedad / Contrato'}
+                </h2>
+                {contract && (
+                  <span
+                    className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                      isVacant
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    }`}
+                  >
+                    {contract.status || (isVacant ? 'Disponible' : 'Ocupado')}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {contract?.company?.name || 'Inversiones NyS'} • Tipo: {contract?.propertyType || propertyType}
+              </p>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Botón de alternar a modo Edición / Vista */}
+            {contract && mode === 'view' && (
+              <button
+                type="button"
+                onClick={() => setMode('edit')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-bold text-xs border border-primary/20 transition-all cursor-pointer shadow-xs"
+                title="Editar datos de la propiedad"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>Editar Ficha</span>
+              </button>
+            )}
+
+            {contract && mode === 'edit' && (
+              <button
+                type="button"
+                onClick={() => setMode('view')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-muted-foreground hover:text-foreground font-semibold text-xs border border-border transition-all cursor-pointer"
+                title="Volver a la vista de ficha"
+              >
+                <span>Ver Ficha</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
+              title="Cerrar ventana"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Pestañas */}
-        <div className="flex border-b border-border bg-muted/10 px-6 gap-2 pt-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab('inmueble')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-              activeTab === 'inmueble'
-                ? 'border-primary text-primary bg-background rounded-t-xl shadow-sm'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Building className="w-3.5 h-3.5" />
-            <span>1. Inmueble y Ubicación</span>
-          </button>
+        {/* ======================================================== */}
+        {/* MODO VISTA: FICHA ELEGANTE DE LA PROPIEDAD */}
+        {/* ======================================================== */}
+        {mode === 'view' && contract && (
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+            
+            {/* Banner Superior de Resumen Económico */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-primary/10 via-background to-muted/40 border border-primary/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  Valor Arriendo Mensual (Valor T)
+                </span>
+                <div className="text-2xl sm:text-3xl font-black text-foreground mt-0.5">
+                  ${(contract.totalRent || 0).toLocaleString('es-CL')}
+                </div>
+                <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                  <span>Base: ${contract.baseRent.toLocaleString('es-CL')}</span>
+                  {contract.adjustmentAmount > 0 && (
+                    <>
+                      <span>•</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                        +${contract.adjustmentAmount.toLocaleString('es-CL')} ({(contract.adjustmentPercentage * 100).toFixed(1)}% reajuste)
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('arrendatario')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-              activeTab === 'arrendatario'
-                ? 'border-primary text-primary bg-background rounded-t-xl shadow-sm'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>2. Arrendatario y Contactos</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('valores')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-              activeTab === 'valores'
-                ? 'border-primary text-primary bg-background rounded-t-xl shadow-sm'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>3. Valores y Condiciones</span>
-          </button>
-        </div>
-
-        {/* Formulario */}
-        <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
-          {error && (
-            <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
+              <div className="flex flex-wrap sm:flex-col items-start sm:items-end gap-1.5">
+                <div className="text-xs text-muted-foreground">
+                  Mes: <strong className="text-foreground">{contract.latestVoucher?.month || 'Actual'}</strong>
+                </div>
+                {contract.latestVoucher?.receiptNumber && (
+                  <div className="text-xs text-muted-foreground">
+                    N° Recibo: <strong className="text-foreground">{contract.latestVoucher.receiptNumber}</strong>
+                  </div>
+                )}
+                {contract.latestVoucher?.invoiceNumber && (
+                  <div className="text-xs text-muted-foreground">
+                    Factura: <strong className="text-foreground">{contract.latestVoucher.invoiceNumber}</strong>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
 
-          {/* TAB 1: INMUEBLE */}
-          {activeTab === 'inmueble' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Cuadrícula de Secciones de la Ficha */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Empresa Propietaria</label>
-                <select
-                  value={companyId}
-                  onChange={(e) => setCompanyId(e.target.value)}
-                  className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+              {/* SECCIÓN 1: DATOS DEL INMUEBLE */}
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-2xs space-y-3.5">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider pb-2 border-b border-border">
+                  <Home className="w-4 h-4 shrink-0" />
+                  <span>1. Inmueble y Ubicación</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Edificio:</span>
+                    <strong className="text-foreground text-sm font-semibold">{contract.building}</strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">N° Unidad / Depto:</span>
+                    <strong className="text-foreground text-sm font-semibold">{contract.unitNumber || 'S/N'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Tipo Inmueble:</span>
+                    <span className="text-foreground font-medium">{contract.propertyType}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">ROL:</span>
+                    <span className="text-foreground font-mono font-medium">{contract.rol || 'Sin ROL'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Bodega N°:</span>
+                    <span className="text-foreground font-medium">{contract.storageNumber || 'Sin bodega'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Estacionamiento N°:</span>
+                    <span className="text-foreground font-medium">{contract.parkingNumber || 'Sin estacionamiento'}</span>
+                  </div>
+                  <div className="col-span-2 pt-1 border-t border-border/50">
+                    <span className="text-muted-foreground block text-[11px]">Empresa Propietaria:</span>
+                    <span className="text-foreground font-semibold">
+                      {contract.company?.name || 'Inversiones NyS'} {contract.company?.code ? `(${contract.company.code})` : ''}
+                    </span>
+                  </div>
+                  {contract.address && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground block text-[11px]">Dirección:</span>
+                      <span className="text-foreground">{contract.address}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SECCIÓN 2: CONTRATO Y PERÍODO */}
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-2xs space-y-3.5">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider pb-2 border-b border-border">
+                  <Calendar className="w-4 h-4 shrink-0" />
+                  <span>2. Contrato y Vigencia</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Fecha Contrato:</span>
+                    <span className="text-foreground font-semibold">{contract.contractDate || 'No registrada'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Período Renovación:</span>
+                    <span className="text-foreground font-semibold">{contract.renewalPeriod || '1 AÑO'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Estado Propiedad:</span>
+                    <span className="text-foreground font-medium">{contract.status}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Nuevo Asignatario:</span>
+                    <span className="text-foreground font-medium">{contract.newAssignee || 'No asignado'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">N° Recibo Vigente:</span>
+                    <span className="text-foreground font-mono font-medium">{contract.latestVoucher?.receiptNumber || 'Sin recibo'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Factura Vigente:</span>
+                    <span className="text-foreground font-mono font-medium">{contract.latestVoucher?.invoiceNumber || 'Sin factura'}</span>
+                  </div>
+                  <div className="col-span-2 pt-1 border-t border-border/50">
+                    <span className="text-muted-foreground block text-[11px]">Mes Vigente:</span>
+                    <span className="text-foreground font-semibold">{contract.latestVoucher?.month || 'No liquidado'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECCIÓN 3: VALORES FINANCIEROS Y REAJUSTES */}
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-2xs space-y-3.5">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider pb-2 border-b border-border">
+                  <DollarSign className="w-4 h-4 shrink-0" />
+                  <span>3. Valores y Reajustes</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Arriendo 2026 (Base):</span>
+                    <span className="text-foreground font-semibold">${contract.baseRent.toLocaleString('es-CL')}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">% Reajuste:</span>
+                    <span className="text-foreground font-semibold">{(contract.adjustmentPercentage * 100).toFixed(1)}%</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Reajuste ($):</span>
+                    <span className="text-foreground font-semibold">${contract.adjustmentAmount.toLocaleString('es-CL')}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Valor T (Reajustado):</span>
+                    <span className="text-primary font-black text-sm">${contract.totalRent.toLocaleString('es-CL')}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Arriendo 20252 (Anterior):</span>
+                    <span className="text-foreground">{contract.previousRent ? `$${contract.previousRent.toLocaleString('es-CL')}` : '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Garantía:</span>
+                    <span className="text-foreground">{contract.guaranteeAmount ? `$${contract.guaranteeAmount.toLocaleString('es-CL')}` : '-'}</span>
+                  </div>
+                  <div className="col-span-2 pt-1 border-t border-border/50">
+                    <span className="text-muted-foreground block text-[11px]">Gastos Comunes:</span>
+                    <span className="text-foreground">
+                      {contract.expensesCharge || contract.expensesPayment
+                        ? `Cargo: $${contract.expensesCharge || 0} / Abono: $${contract.expensesPayment || 0}`
+                        : 'No aplica'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECCIÓN 4: ARRENDATARIO Y CONTACTOS */}
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-2xs space-y-3.5">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider pb-2 border-b border-border">
+                  <User className="w-4 h-4 shrink-0" />
+                  <span>4. Arrendatario y Contactos</span>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Arrendatario / Titular:</span>
+                    <strong className="text-foreground text-sm font-semibold block">{contract.tenantName}</strong>
+                    {contract.tenantRut && (
+                      <span className="text-[11px] text-muted-foreground font-mono">RUT: {contract.tenantRut}</span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
+                    <div>
+                      <span className="text-muted-foreground block text-[11px]">Teléfono Arrendatario:</span>
+                      {contract.tenantPhone ? (
+                        <a
+                          href={`tel:${contract.tenantPhone}`}
+                          className="text-primary font-semibold hover:underline flex items-center gap-1"
+                        >
+                          <Phone className="w-3 h-3 shrink-0" />
+                          <span>{contract.tenantPhone}</span>
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">Sin teléfono</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-muted-foreground block text-[11px]">Correo Arrendatario:</span>
+                      {contract.tenantEmail ? (
+                        <a
+                          href={`mailto:${contract.tenantEmail}`}
+                          className="text-primary font-semibold hover:underline truncate block"
+                          title={contract.tenantEmail}
+                        >
+                          {contract.tenantEmail}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">Sin correo</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {contract.otherContactInfo && (
+                    <div className="pt-2 border-t border-border/50">
+                      <span className="text-muted-foreground block text-[11px]">Otros Datos de Contacto:</span>
+                      <p className="text-foreground">{contract.otherContactInfo}</p>
+                    </div>
+                  )}
+
+                  {/* Datos de Aval / Contacto Adicional */}
+                  <div className="pt-2 border-t border-border/50 bg-muted/20 p-2.5 rounded-xl">
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                      Contacto Adicional / Aval
+                    </span>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-muted-foreground block">Relación:</span>
+                        <span className="font-semibold text-foreground">{contract.guarantorRelation || 'No especificada'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block">Teléfono:</span>
+                        <span className="font-semibold text-foreground">{contract.guarantorPhone || 'Sin teléfono'}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground block">Correo:</span>
+                        <span className="text-foreground">{contract.guarantorEmail || 'Sin correo'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer de Ficha */}
+            <div className="pt-4 border-t border-border flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                ID de registro: <code className="font-mono text-[10px]">{contract.id}</code>
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.code})
-                    </option>
-                  ))}
-                </select>
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('edit')}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs hover:bg-primary/90 transition-all shadow-md cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Modificar Datos (Lápiz)</span>
+                </button>
               </div>
-
-              <ComboboxCustom
-                label="Edificio / Inmueble"
-                value={building}
-                onChange={setBuilding}
-                options={buildings}
-                placeholder="Selecciona o escribe edificio..."
-                required
-              />
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Unidad / N° Depto / Local</label>
-                <input
-                  type="text"
-                  value={unitNumber}
-                  onChange={(e) => setUnitNumber(e.target.value)}
-                  placeholder="Ej: 1001, A-503, Local 1..."
-                  className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <ComboboxCustom
-                label="Tipo de Inmueble"
-                value={propertyType}
-                onChange={setPropertyType}
-                options={PROPERTY_TYPES}
-                placeholder="Selecciona tipo de inmueble..."
-                required
-              />
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">ROL Propiedad</label>
-                <input
-                  type="text"
-                  value={rol}
-                  onChange={(e) => setRol(e.target.value)}
-                  placeholder="Ej: 491-022"
-                  className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Dirección Específica</label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Ej: 1 Poniente Nº 635, Talca"
-                  className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Bodega N°</label>
-                <input
-                  type="text"
-                  value={storageNumber}
-                  onChange={(e) => setStorageNumber(e.target.value)}
-                  placeholder="Ej: 74, 12 sub..."
-                  className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Estacionamiento N°</label>
-                <input
-                  type="text"
-                  value={parkingNumber}
-                  onChange={(e) => setParkingNumber(e.target.value)}
-                  placeholder="Ej: 179, 15 ext..."
-                  className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-semibold text-foreground">Nuevo Asignatario / Administrador</label>
-                <input
-                  type="text"
-                  value={newAssignee}
-                  onChange={(e) => setNewAssignee(e.target.value)}
-                  placeholder="Ej: Patricia Retamal, Jose Manuel Retamal..."
-                  className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
             </div>
-          )}
 
-          {/* TAB 2: ARRENDATARIO Y CONTACTOS */}
-          {activeTab === 'arrendatario' && (
-            <div className="space-y-6">
-              
-              <div className="bg-muted/20 p-4 rounded-2xl border border-border space-y-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-primary">Titular del Arriendo</span>
-                
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* MODO EDICIÓN: FORMULARIO INTERACTIVO */}
+        {/* ======================================================== */}
+        {mode === 'edit' && (
+          <>
+            {/* Pestañas de Edición */}
+            <div className="flex border-b border-border bg-muted/10 px-6 gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('inmueble')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                  activeTab === 'inmueble'
+                    ? 'border-primary text-primary bg-background rounded-t-xl shadow-sm'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Building className="w-3.5 h-3.5" />
+                <span>1. Inmueble y Ubicación</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('arrendatario')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                  activeTab === 'arrendatario'
+                    ? 'border-primary text-primary bg-background rounded-t-xl shadow-sm'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>2. Arrendatario y Contactos</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('valores')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                  activeTab === 'valores'
+                    ? 'border-primary text-primary bg-background rounded-t-xl shadow-sm'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <DollarSign className="w-3.5 h-3.5" />
+                <span>3. Valores y Condiciones</span>
+              </button>
+            </div>
+
+            {/* Formulario */}
+            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+              {error && (
+                <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* TAB 1: INMUEBLE */}
+              {activeTab === 'inmueble' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Nombre Arrendatario *</label>
+                    <label className="text-xs font-semibold text-foreground">Empresa Propietaria</label>
+                    <select
+                      value={companyId}
+                      onChange={(e) => setCompanyId(e.target.value)}
+                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                    >
+                      {companies.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <ComboboxCustom
+                    label="Edificio / Inmueble"
+                    value={building}
+                    onChange={setBuilding}
+                    options={buildings}
+                    placeholder="Selecciona o escribe edificio..."
+                    required
+                  />
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">Unidad / N° Depto / Local</label>
                     <input
                       type="text"
-                      value={tenantName}
-                      onChange={(e) => setTenantName(e.target.value)}
-                      required
-                      placeholder="Nombre completo o Razón Social"
+                      value={unitNumber}
+                      onChange={(e) => setUnitNumber(e.target.value)}
+                      placeholder="Ej: 402, 101, Local 3"
                       className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">RUT Arrendatario</label>
+                    <label className="text-xs font-semibold text-foreground">Tipo de Inmueble</label>
+                    <select
+                      value={propertyType}
+                      onChange={(e) => setPropertyType(e.target.value)}
+                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                    >
+                      {PROPERTY_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">ROL</label>
                     <input
                       type="text"
-                      value={tenantRut}
-                      onChange={(e) => setTenantRut(e.target.value)}
-                      placeholder="Ej: 12.345.678-9"
+                      value={rol}
+                      onChange={(e) => setRol(e.target.value)}
+                      placeholder="Ej: 1193-213"
+                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground font-mono focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">Bodega N°</label>
+                    <input
+                      type="text"
+                      value={storageNumber}
+                      onChange={(e) => setStorageNumber(e.target.value)}
+                      placeholder="Ej: B-12"
                       className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Teléfono Arrendatario</label>
+                    <label className="text-xs font-semibold text-foreground">Estacionamiento N°</label>
                     <input
                       type="text"
-                      value={tenantPhone}
-                      onChange={(e) => setTenantPhone(e.target.value)}
-                      placeholder="Ej: +56 9 1234 5678"
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Correo Electrónico</label>
-                    <input
-                      type="email"
-                      value={tenantEmail}
-                      onChange={(e) => setTenantEmail(e.target.value)}
-                      placeholder="arrendatario@correo.cl"
+                      value={parkingNumber}
+                      onChange={(e) => setParkingNumber(e.target.value)}
+                      placeholder="Ej: E-45"
                       className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
 
                   <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-xs font-semibold text-foreground">Otros Datos de Contacto</label>
+                    <label className="text-xs font-semibold text-foreground">Dirección Específica</label>
                     <input
                       type="text"
-                      value={otherContactInfo}
-                      onChange={(e) => setOtherContactInfo(e.target.value)}
-                      placeholder="Notas adicionales de contacto o dirección alternativa..."
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Ej: 1 Norte Nº 925, Talca"
                       className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                 </div>
+              )}
+
+              {/* TAB 2: ARRENDATARIO Y CONTACTOS */}
+              {activeTab === 'arrendatario' && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-xs font-semibold text-foreground">Nombre Arrendatario / Titular *</label>
+                      <input
+                        type="text"
+                        value={tenantName}
+                        onChange={(e) => setTenantName(e.target.value)}
+                        placeholder="Ej: Juan Pérez González (o Disponible)"
+                        required
+                        className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground font-semibold focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-foreground">RUT Arrendatario</label>
+                      <input
+                        type="text"
+                        value={tenantRut}
+                        onChange={(e) => setTenantRut(e.target.value)}
+                        placeholder="Ej: 12.345.678-9"
+                        className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground font-mono focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-foreground">Teléfono Arrendatario</label>
+                      <input
+                        type="text"
+                        value={tenantPhone}
+                        onChange={(e) => setTenantPhone(e.target.value)}
+                        placeholder="Ej: +56 9 1234 5678"
+                        className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-xs font-semibold text-foreground">Correo Arrendatario</label>
+                      <input
+                        type="email"
+                        value={tenantEmail}
+                        onChange={(e) => setTenantEmail(e.target.value)}
+                        placeholder="arrendatario@correo.cl"
+                        className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-xs font-semibold text-foreground">Otros Datos de Contacto</label>
+                      <textarea
+                        value={otherContactInfo}
+                        onChange={(e) => setOtherContactInfo(e.target.value)}
+                        placeholder="Dirección laboral, referencias, notas adicionales..."
+                        rows={2}
+                        className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sección Aval */}
+                  <div className="p-4 rounded-2xl bg-muted/20 border border-border space-y-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                      Aval / Contacto Adicional
+                    </span>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Relación con Arrendatario</label>
+                        <input
+                          type="text"
+                          value={guarantorRelation}
+                          onChange={(e) => setGuarantorRelation(e.target.value)}
+                          placeholder="Ej: Aval, Cónyuge, Padre..."
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Teléfono Contacto</label>
+                        <input
+                          type="text"
+                          value={guarantorPhone}
+                          onChange={(e) => setGuarantorPhone(e.target.value)}
+                          placeholder="+56 9 8765 4321"
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Correo Contacto</label>
+                        <input
+                          type="email"
+                          value={guarantorEmail}
+                          onChange={(e) => setGuarantorEmail(e.target.value)}
+                          placeholder="aval@correo.cl"
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: VALORES Y CONDICIONES */}
+              {activeTab === 'valores' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <DatePickerField
+                      label="Fecha de Contrato"
+                      value={contractDate}
+                      onChange={setContractDate}
+                      placeholder="YYYY-MM-DD o DD-MM-YYYY"
+                    />
+
+                    <ComboboxCustom
+                      label="Período de Renovación"
+                      value={renewalPeriod}
+                      onChange={setRenewalPeriod}
+                      options={RENEWAL_OPTIONS}
+                      placeholder="Selecciona período..."
+                    />
+
+                    <ComboboxCustom
+                      label="Estado de la Propiedad"
+                      value={status}
+                      onChange={setStatus}
+                      options={STATUS_OPTIONS}
+                      placeholder="Selecciona estado..."
+                    />
+                  </div>
+
+                  {/* Valores Financieros */}
+                  <div className="bg-muted/20 p-4 rounded-2xl border border-border space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                        Valores de Arriendo y Reajustes
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRecalculate}
+                        className="text-xs font-semibold text-primary hover:underline cursor-pointer"
+                      >
+                        ⚡ Calcular Reajuste y Total
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Arriendo 2026 / Base ($)</label>
+                        <input
+                          type="number"
+                          value={baseRent}
+                          onChange={(e) => setBaseRent(e.target.value)}
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground font-semibold focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">% Reajuste (ej: 0.03 = 3%)</label>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={adjustmentPercent}
+                          onChange={(e) => setAdjustmentPercent(e.target.value)}
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Monto Reajuste ($)</label>
+                        <input
+                          type="number"
+                          value={adjustmentAmount}
+                          onChange={(e) => setAdjustmentAmount(e.target.value)}
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Total Arriendo / Valor T ($)</label>
+                        <input
+                          type="number"
+                          value={totalRent}
+                          onChange={(e) => setTotalRent(e.target.value)}
+                          className="w-full py-2 px-3 text-sm bg-primary/10 border border-primary/30 rounded-xl text-primary font-black focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-border">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Monto Garantía ($)</label>
+                        <input
+                          type="number"
+                          value={guaranteeAmount}
+                          onChange={(e) => setGuaranteeAmount(e.target.value)}
+                          placeholder="Opcional"
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Gastos Comunes Cargo ($)</label>
+                        <input
+                          type="number"
+                          value={expensesCharge}
+                          onChange={(e) => setExpensesCharge(e.target.value)}
+                          placeholder="Opcional"
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Gastos Comunes Abono ($)</label>
+                        <input
+                          type="number"
+                          value={expensesPayment}
+                          onChange={(e) => setExpensesPayment(e.target.value)}
+                          placeholder="Opcional"
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">Arriendo Anterior / 20252 ($)</label>
+                        <input
+                          type="number"
+                          value={previousRent}
+                          onChange={(e) => setPreviousRent(e.target.value)}
+                          placeholder="Opcional"
+                          className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Footer del Modal en Edición */}
+              <div className="pt-4 border-t border-border flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isEditing) setMode('view')
+                    else onClose()
+                  }}
+                  className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  {isEditing ? 'Cancelar y Volver a Ficha' : 'Cancelar'}
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground font-bold text-sm rounded-xl hover:bg-primary/90 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Crear Propiedad')}</span>
+                </button>
               </div>
-
-              {/* Aval / Contacto Secundario */}
-              <div className="bg-muted/20 p-4 rounded-2xl border border-border space-y-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Aval / Codeudor / Contacto Secundario</span>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Relación con Arrendatario</label>
-                    <input
-                      type="text"
-                      value={guarantorRelation}
-                      onChange={(e) => setGuarantorRelation(e.target.value)}
-                      placeholder="Ej: Aval, Esposa, Hermano, Hija..."
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Teléfono Contacto</label>
-                    <input
-                      type="text"
-                      value={guarantorPhone}
-                      onChange={(e) => setGuarantorPhone(e.target.value)}
-                      placeholder="Ej: +56 9 8765 4321"
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Correo Aval</label>
-                    <input
-                      type="email"
-                      value={guarantorEmail}
-                      onChange={(e) => setGuarantorEmail(e.target.value)}
-                      placeholder="aval@correo.cl"
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* TAB 3: VALORES Y CONDICIONES */}
-          {activeTab === 'valores' && (
-            <div className="space-y-6">
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <DatePickerField
-                  label="Fecha de Contrato"
-                  value={contractDate}
-                  onChange={setContractDate}
-                  placeholder="YYYY-MM-DD o DD-MM-YYYY"
-                />
-
-                <ComboboxCustom
-                  label="Período de Renovación"
-                  value={renewalPeriod}
-                  onChange={setRenewalPeriod}
-                  options={RENEWAL_OPTIONS}
-                  placeholder="Selecciona período..."
-                />
-
-                <ComboboxCustom
-                  label="Estado de la Propiedad"
-                  value={status}
-                  onChange={setStatus}
-                  options={STATUS_OPTIONS}
-                  placeholder="Selecciona estado..."
-                />
-              </div>
-
-              {/* Valores Financieros */}
-              <div className="bg-muted/20 p-4 rounded-2xl border border-border space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">Valores de Arriendo y Reajustes</span>
-                  <button
-                    type="button"
-                    onClick={handleRecalculate}
-                    className="text-xs font-semibold text-primary hover:underline cursor-pointer"
-                  >
-                    ⚡ Calcular Reajuste y Total
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Arriendo Base ($)</label>
-                    <input
-                      type="number"
-                      value={baseRent}
-                      onChange={(e) => setBaseRent(e.target.value)}
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground font-semibold focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">% Reajuste (ej: 0.03 = 3%)</label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      value={adjustmentPercent}
-                      onChange={(e) => setAdjustmentPercent(e.target.value)}
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Monto Reajuste ($)</label>
-                    <input
-                      type="number"
-                      value={adjustmentAmount}
-                      onChange={(e) => setAdjustmentAmount(e.target.value)}
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Total Arriendo / Valor T ($)</label>
-                    <input
-                      type="number"
-                      value={totalRent}
-                      onChange={(e) => setTotalRent(e.target.value)}
-                      className="w-full py-2 px-3 text-sm bg-primary/10 border border-primary/30 rounded-xl text-primary font-black focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-border">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Monto Garantía ($)</label>
-                    <input
-                      type="number"
-                      value={guaranteeAmount}
-                      onChange={(e) => setGuaranteeAmount(e.target.value)}
-                      placeholder="Opcional"
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Gastos Comunes Cargo ($)</label>
-                    <input
-                      type="number"
-                      value={expensesCharge}
-                      onChange={(e) => setExpensesCharge(e.target.value)}
-                      placeholder="Opcional"
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Gastos Comunes Abono ($)</label>
-                    <input
-                      type="number"
-                      value={expensesPayment}
-                      onChange={(e) => setExpensesPayment(e.target.value)}
-                      placeholder="Opcional"
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">Arriendo Anterior / 20252 ($)</label>
-                    <input
-                      type="number"
-                      value={previousRent}
-                      onChange={(e) => setPreviousRent(e.target.value)}
-                      placeholder="Opcional"
-                      className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* Footer del Modal */}
-          <div className="pt-4 border-t border-border flex items-center justify-between">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground font-bold text-sm rounded-xl hover:bg-primary/90 transition-all shadow-md cursor-pointer disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Crear Propiedad')}</span>
-            </button>
-          </div>
-        </form>
+            </form>
+          </>
+        )}
 
       </div>
     </div>

@@ -42,6 +42,8 @@ export default async function ArriendosAdminPage() {
         orderBy: { createdAt: 'desc' },
         take: 1,
         select: {
+          receiptNumber: true,
+          invoiceNumber: true,
           totalMonth: true,
           pendingBalance: true,
           paymentStatus: true,
@@ -89,7 +91,18 @@ export default async function ArriendosAdminPage() {
     expensesPayment: c.expensesPayment,
     previousRent: c.previousRent,
     company: c.company,
-    latestVoucher: c.vouchers[0] || null,
+    latestVoucher: c.vouchers[0]
+      ? {
+          receiptNumber: c.vouchers[0].receiptNumber,
+          invoiceNumber: c.vouchers[0].invoiceNumber,
+          totalMonth: c.vouchers[0].totalMonth,
+          pendingBalance: c.vouchers[0].pendingBalance,
+          paymentStatus: c.vouchers[0].paymentStatus,
+          month: c.vouchers[0].month,
+          year: c.vouchers[0].year,
+          paymentDate: c.vouchers[0].paymentDate,
+        }
+      : null,
   }))
 
   return (

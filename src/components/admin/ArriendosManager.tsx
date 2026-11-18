@@ -36,6 +36,9 @@ import {
   Car,
   ChevronDown,
   Info,
+  Pencil,
+  FileText,
+  Eye,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { ContractEditModal, ContractItem } from './ContractEditModal'
@@ -110,6 +113,7 @@ export function ArriendosManager({
 }: ArriendosManagerProps) {
   const [contracts, setContracts] = useState<ContractItem[]>(initialContracts)
   const [editingContract, setEditingContract] = useState<ContractItem | null>(null)
+  const [modalInitialMode, setModalInitialMode] = useState<'view' | 'edit'>('view')
   const [isCreating, setIsCreating] = useState(false)
   const [viewFormat, setViewFormat] = useState<'properties' | 'detailed'>('properties')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -830,7 +834,10 @@ export function ArriendosManager({
                     return (
                       <tr
                         key={c.id}
-                        onClick={() => toggleSelectId(c.id)}
+                        onClick={() => {
+                          setEditingContract(c)
+                          setModalInitialMode('view')
+                        }}
                         className={`hover:bg-muted/30 transition-colors cursor-pointer group ${
                           isSelected ? 'bg-primary/5' : ''
                         }`}
@@ -879,19 +886,35 @@ export function ArriendosManager({
                           )}
                         </td>
 
-                        {/* Copia / Ver Ficha */}
+                        {/* Ver Ficha y Editar con Lápiz */}
                         <td
                           className="py-3.5 px-3 text-center"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <button
-                            type="button"
-                            onClick={() => setEditingContract(c)}
-                            title="Ver / Editar contrato"
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingContract(c)
+                                setModalInitialMode('view')
+                              }}
+                              title="Ver ficha completa de la propiedad"
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingContract(c)
+                                setModalInitialMode('edit')
+                              }}
+                              title="Editar datos con lápiz"
+                              className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
 
                         {/* Dueño */}
@@ -1014,7 +1037,11 @@ export function ArriendosManager({
                   return (
                     <tr
                       key={c.id}
-                      className="hover:bg-muted/30 transition-colors group"
+                      onClick={() => {
+                        setEditingContract(c)
+                        setModalInitialMode('view')
+                      }}
+                      className="hover:bg-muted/30 transition-colors group cursor-pointer"
                     >
                       {/* Inmueble */}
                       {visibleColumns.inmueble && (
@@ -1288,17 +1315,37 @@ export function ArriendosManager({
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => setEditingContract(c)}
-                              className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
-                              title="Editar ficha completa de la propiedad"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingContract(c)
+                                setModalInitialMode('view')
+                              }}
+                              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                              title="Ver ficha de la propiedad"
                             >
-                              <Edit className="w-4 h-4" />
+                              <FileText className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingContract(c)
+                                setModalInitialMode('edit')
+                              }}
+                              className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
+                              title="Editar con lápiz"
+                            >
+                              <Pencil className="w-4 h-4" />
                             </button>
 
                             {isSuperadmin && (
                               <button
                                 type="button"
-                                onClick={() => handleDelete(c.id, `${c.building} ${c.unitNumber}`)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDelete(c.id, `${c.building} ${c.unitNumber}`)
+                                }}
                                 className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
                                 title="Eliminar propiedad"
                               >
@@ -1457,12 +1504,13 @@ export function ArriendosManager({
         </div>
       )}
 
-      {/* Modal de Edición */}
+      {/* Modal de Ficha / Edición */}
       {(editingContract || isCreating) && (
         <ContractEditModal
           contract={editingContract}
           companies={companies}
           buildings={buildings}
+          initialMode={isCreating ? 'edit' : modalInitialMode}
           onClose={() => {
             setEditingContract(null)
             setIsCreating(false)
