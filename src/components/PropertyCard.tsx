@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Property } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
+import { Ban } from "lucide-react";
 
 const FALLBACK_PROPERTY_IMAGE = "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800&auto=format&fit=crop";
 
@@ -27,7 +28,7 @@ export function PropertyCard({ property }: { property: Property }) {
       <div 
         className={`flex flex-row h-full bg-card dark:bg-card border transition-all duration-200 ${
           isUnavailable 
-            ? 'border-border/70 opacity-85 hover:opacity-100 bg-muted/30' 
+            ? 'border-dashed border-rose-300 dark:border-rose-900/50 opacity-60 hover:opacity-85 bg-muted/40' 
             : 'border-border hover:bg-muted dark:hover:bg-muted'
         }`}
       >
@@ -41,15 +42,16 @@ export function PropertyCard({ property }: { property: Property }) {
             unoptimized
             onError={() => setImgError(true)}
             className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
-              isUnavailable ? 'grayscale-[35%]' : ''
+              isUnavailable ? 'grayscale-[60%] contrast-75 brightness-90' : ''
             }`}
           />
 
           {/* Overlay translúcido oscuro si NO está disponible */}
           {isUnavailable ? (
-            <div className="absolute inset-0 bg-black/65 backdrop-blur-[1px] flex flex-col items-center justify-center p-2 text-center z-10">
-              <span className="px-2 py-1 text-[11px] sm:text-xs font-black tracking-widest text-white bg-red-950/80 border border-red-500/40 rounded shadow-lg uppercase">
-                {statusLabel}
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-[1px] flex flex-col items-center justify-center p-2 text-center z-10">
+              <span className="px-2 py-1 text-[10px] sm:text-xs font-black tracking-widest text-white bg-rose-950/90 border border-rose-500/60 rounded shadow-lg uppercase flex items-center gap-1">
+                <Ban className="w-3 h-3 text-rose-400 shrink-0" />
+                <span>{statusLabel}</span>
               </span>
             </div>
           ) : (

@@ -15,10 +15,11 @@ import { cn } from '@/lib/utils'
 
 interface PropertyAvailabilityToggleProps {
   id: string
-  title: string
+  title?: string
   operation?: string
   isAvailable: boolean
   availabilityStatus: string | null
+  variant?: 'badge' | 'button'
 }
 
 export function PropertyAvailabilityToggle({
@@ -27,6 +28,7 @@ export function PropertyAvailabilityToggle({
   operation,
   isAvailable: initialIsAvailable,
   availabilityStatus: initialStatus,
+  variant = 'badge',
 }: PropertyAvailabilityToggleProps) {
   const [isAvailable, setIsAvailable] = useState<boolean>(initialIsAvailable)
   const [status, setStatus] = useState<string>(
@@ -54,32 +56,40 @@ export function PropertyAvailabilityToggle({
 
   // Styling according to status
   const badgeClasses = isAvailable
-    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 border-emerald-500/30'
+    ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30 border-emerald-500/40 backdrop-blur-md'
     : status === 'Arrendada'
-    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border-amber-500/30'
+    ? 'bg-amber-950/90 text-amber-200 border-amber-500/70 hover:bg-amber-900 shadow-md backdrop-blur-md'
     : status === 'Vendida'
-    ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-500/25 border-blue-500/30'
-    : 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-500/25 border-zinc-500/30'
+    ? 'bg-blue-950/90 text-blue-200 border-blue-500/70 hover:bg-blue-900 shadow-md backdrop-blur-md'
+    : status === 'Reservada'
+    ? 'bg-purple-950/90 text-purple-200 border-purple-500/70 hover:bg-purple-900 shadow-md backdrop-blur-md'
+    : 'bg-rose-950/90 text-rose-100 border-rose-500/80 hover:bg-rose-900 shadow-md backdrop-blur-md'
+
+  const buttonClasses = isAvailable
+    ? 'bg-muted hover:bg-muted/80 text-foreground border-border'
+    : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-300 border-rose-500/30'
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         disabled={isLoading}
         className={cn(
-          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-sm select-none',
-          badgeClasses
+          'inline-flex items-center gap-1.5 font-bold border transition-all cursor-pointer shadow-sm select-none',
+          variant === 'button'
+            ? cn('px-3 py-1.5 rounded-full text-xs', buttonClasses)
+            : cn('px-2.5 py-1 rounded-full text-xs', badgeClasses)
         )}
-        title={`Cambiar estado: actual "${status}"`}
+        title={`Cambiar disponibilidad (actual: "${status}")`}
       >
         {isLoading ? (
           <Loader2 className="w-3 h-3 animate-spin" />
         ) : isAvailable ? (
-          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
         ) : (
-          <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+          <Ban className="w-3.5 h-3.5 text-rose-400 shrink-0" />
         )}
         <span>{status}</span>
-        <ChevronDown className="w-3 h-3 opacity-60 ml-0.5" />
+        <ChevronDown className="w-3 h-3 opacity-70 ml-0.5" />
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="start" className="w-48 bg-card border border-border shadow-xl rounded-2xl p-1.5 z-50">

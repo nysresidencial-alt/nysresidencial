@@ -2,7 +2,7 @@ import prisma from '@/lib/db'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { Pencil, Plus, MapPin, Printer } from 'lucide-react'
+import { Pencil, Plus, MapPin, Printer, Ban } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { AdminSearch } from '@/components/admin/AdminSearch'
@@ -14,7 +14,7 @@ import { redirect } from 'next/navigation'
 export default async function AdminDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; availability?: string }>
 }) {
   const session = await requireAdminAuth()
 
@@ -26,19 +26,34 @@ export default async function AdminDashboard({
     }
   }
 
-  const { q } = await searchParams
+  const { q, availability } = await searchParams
+
+  const whereClause: any = {}
   
-  // Search properties
-  const properties = await prisma.property.findMany({
-    where: {
-      OR: [
-        { title: { contains: q || '', mode: 'insensitive' } },
-        { city: { contains: q || '', mode: 'insensitive' } },
-        { sector: { contains: q || '', mode: 'insensitive' } },
-      ]
-    },
-    orderBy: { createdAt: 'desc' }
-  })
+  if (q && q.trim()) {
+    whereClause.OR = [
+      { title: { contains: q, mode: 'insensitive' } },
+      { city: { contains: q, mode: 'insensitive' } },
+      { sector: { contains: q, mode: 'insensitive' } },
+    ]
+  }
+
+  if (availability === 'disponibles') {
+    whereClause.isAvailable = true
+  } else if (availability === 'no_disponibles') {
+    whereClause.isAvailable = false
+  }
+
+  // Cargar propiedades con conteos paralelos para los filtros
+  const [properties, totalCount, availableCount, unavailableCount] = await Promise.all([
+    prisma.property.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.property.count(),
+    prisma.property.count({ where: { isAvailable: true } }),
+    prisma.property.count({ where: { isAvailable: false } }),
+  ])
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
@@ -65,11 +80,56 @@ export default async function AdminDashboard({
         </div>
       </div>
 
-      {/* Toolbar / Search */}
+      {/* Toolbar / Search & Filter Tabs */}
       <div className="bg-card border border-border p-4 rounded-2xl mb-8 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
-        <AdminSearch />
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Total:</span>
+        <div className="flex-1 w-full md:w-auto">
+          <AdminSearch />
+        </div>
+
+        {/* Availability Filter Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-muted rounded-xl border border-border overflow-x-auto w-full md:w-auto">
+          <Link
+            href={q ? `/admin?q=${encodeURIComponent(q)}` : '/admin'}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              !availability
+                ? 'bg-card text-foreground font-bold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Todas ({totalCount})
+          </Link>
+          <Link
+            href={
+              q
+                ? `/admin?q=${encodeURIComponent(q)}&availability=disponibles`
+                : '/admin?availability=disponibles'
+            }
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              availability === 'disponibles'
+                ? 'bg-card text-emerald-600 dark:text-emerald-400 font-bold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Disponibles ({availableCount})
+          </Link>
+          <Link
+            href={
+              q
+                ? `/admin?q=${encodeURIComponent(q)}&availability=no_disponibles`
+                : '/admin?availability=no_disponibles'
+            }
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              availability === 'no_disponibles'
+                ? 'bg-card text-rose-600 dark:text-rose-400 font-bold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            No Disponibles ({unavailableCount})
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-muted-foreground">Listadas:</span>
           <div className="text-sm text-foreground whitespace-nowrap bg-muted px-3 py-1 rounded-full font-semibold">
             {properties.length} {properties.length === 1 ? 'propiedad' : 'propiedades'}
           </div>
@@ -88,12 +148,15 @@ export default async function AdminDashboard({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {properties.map((prop) => {
             const isUnavailable = !prop.isAvailable
+            const unavailableLabel = (prop.availabilityStatus || 'No Disponible').toUpperCase()
 
             return (
               <div 
                 key={prop.id} 
-                className={`group flex flex-col bg-card border rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${
-                  isUnavailable ? 'border-border/80 opacity-90' : 'border-border'
+                className={`group flex flex-col border rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${
+                  isUnavailable 
+                    ? 'border-dashed border-rose-300 dark:border-rose-900/60 bg-muted/40 opacity-60 hover:opacity-95' 
+                    : 'border-border bg-card'
                 }`}
               >
                 
@@ -106,7 +169,7 @@ export default async function AdminDashboard({
                       fill
                       unoptimized
                       className={`object-cover group-hover:scale-105 transition-transform duration-500 ${
-                        isUnavailable ? 'grayscale-[25%]' : ''
+                        isUnavailable ? 'grayscale-[60%] contrast-75 brightness-90' : ''
                       }`}
                     />
                   ) : (
@@ -115,9 +178,14 @@ export default async function AdminDashboard({
                     </div>
                   )}
 
-                  {/* Translucent overlay for unavailable properties */}
+                  {/* Translucent overlay & prominent banner for unavailable properties */}
                   {isUnavailable && (
-                    <div className="absolute inset-0 bg-black/45 backdrop-blur-[0.5px] pointer-events-none" />
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center p-3 text-center z-10 pointer-events-none">
+                      <span className="px-3 py-1.5 text-xs font-black tracking-wider text-white bg-rose-950/90 border border-rose-500/70 rounded-full shadow-lg uppercase flex items-center gap-1.5">
+                        <Ban className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                        <span>{unavailableLabel}</span>
+                      </span>
+                    </div>
                   )}
                   
                   {/* Operation & Status Badges */}
@@ -146,9 +214,16 @@ export default async function AdminDashboard({
 
                 {/* Content Section */}
                 <div className="p-5 flex-1 flex flex-col">
-                  <div className="flex items-center text-xs text-muted-foreground mb-2">
-                    <MapPin className="h-3 w-3 mr-1 shrink-0" />
-                    <span className="truncate">{prop.sector}, {prop.city}</span>
+                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground mb-2">
+                    <div className="flex items-center truncate">
+                      <MapPin className="h-3 w-3 mr-1 shrink-0" />
+                      <span className="truncate">{prop.sector}, {prop.city}</span>
+                    </div>
+                    {isUnavailable && (
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
+                        {unavailableLabel}
+                      </span>
+                    )}
                   </div>
                   <h3 className="font-bold text-base leading-tight mb-2 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
                     {prop.title}
