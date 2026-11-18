@@ -2,9 +2,11 @@ import { notFound } from 'next/navigation'
 import prisma from '@/lib/db'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
-import { Bed, Bath, Square, MapPin, Car, Box, AlertCircle } from 'lucide-react'
+import { Bed, Bath, Square, MapPin, Car, Box, AlertCircle, Ban } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import type { Metadata } from 'next'
+
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ 
   params 
@@ -104,19 +106,21 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         
         {/* Aviso si la propiedad no está disponible */}
         {isUnavailable && (
-          <div className="bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 p-4 rounded-2xl mb-6 flex items-start sm:items-center gap-3 shadow-sm">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          <div className="bg-rose-500/10 border border-rose-500/30 text-rose-950 dark:text-rose-200 p-4 md:p-5 rounded-3xl mb-8 flex items-start sm:items-center gap-4 shadow-sm animate-in fade-in">
+            <div className="w-11 h-11 rounded-2xl bg-rose-500/20 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+              <Ban className="w-6 h-6 text-rose-600 dark:text-rose-400" />
             </div>
             <div className="flex-1">
-              <p className="font-bold text-sm flex items-center gap-2">
-                <span>Propiedad no disponible</span>
-                <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-extrabold text-base text-rose-600 dark:text-rose-400">
+                  Propiedad No Disponible
+                </span>
+                <span className="text-xs bg-rose-950/90 text-rose-200 px-3 py-1 rounded-full font-black uppercase tracking-wider border border-rose-500/50">
                   {statusLabel}
                 </span>
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Esta propiedad ya fue {statusLabel.toLowerCase()} y se exhibe como parte del portafolio y trayectoria de NyS. Si buscas una alternativa en {property.city}, nuestro equipo puede presentarte opciones vigentes similares.
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                Esta propiedad se encuentra {statusLabel.toLowerCase()} y se exhibe como parte del catálogo y trayectoria de NyS Residencial. Puedes revisar sus especificaciones y fotografías libremente, o consultar a nuestro equipo comercial por alternativas vigentes similares en {property.city}.
               </p>
             </div>
           </div>
@@ -129,7 +133,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             <Badge variant="outline">{property.propertyType}</Badge>
             {property.status && <Badge variant="secondary">{property.status}</Badge>}
             {isUnavailable && (
-              <Badge className="bg-zinc-800 text-amber-400 border border-amber-400/30 font-bold uppercase tracking-wider">
+              <Badge className="bg-rose-950/90 text-rose-200 border border-rose-500/50 font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                <Ban className="w-3.5 h-3.5 text-rose-400" />
                 {statusLabel}
               </Badge>
             )}
@@ -149,7 +154,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               alt={property.title}
               fill
               unoptimized
-              className={`object-cover ${isUnavailable ? 'grayscale-[20%]' : ''}`}
+              className={`object-cover ${isUnavailable ? 'grayscale-[60%] contrast-75 brightness-90' : ''}`}
             />
           ) : (
             <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-500">
@@ -157,11 +162,12 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
           )}
 
-          {/* Badge sobre la foto si está no disponible */}
+          {/* Badge central sobre la foto si está no disponible */}
           {isUnavailable && (
-            <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-xl">
-              <span className="text-xs sm:text-sm font-black text-amber-400 tracking-widest uppercase">
-                {statusLabel}
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center z-10 pointer-events-none">
+              <span className="px-5 py-2.5 text-sm sm:text-base font-black tracking-widest text-white bg-rose-950/95 border-2 border-rose-500/80 rounded-full shadow-2xl uppercase flex items-center gap-2">
+                <Ban className="w-5 h-5 text-rose-400 shrink-0" />
+                <span>{statusLabel.toUpperCase()}</span>
               </span>
             </div>
           )}

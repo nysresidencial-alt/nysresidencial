@@ -25,6 +25,8 @@ export const metadata: Metadata = {
   },
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function PropiedadesPage({
   searchParams,
 }: {
@@ -43,7 +45,13 @@ export default async function PropiedadesPage({
   }
   
   if (type) {
-    whereClause.propertyType = type;
+    if (type === 'Casa' || type === 'Casas') {
+      whereClause.propertyType = { in: ['Casa', 'Casas'] };
+    } else if (type === 'Terreno' || type === 'Terrenos') {
+      whereClause.propertyType = { in: ['Terreno', 'Terrenos'] };
+    } else {
+      whereClause.propertyType = type;
+    }
   }
   
   if (q) {
@@ -141,7 +149,7 @@ export default async function PropiedadesPage({
             </a>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {properties.map((property) => (
               <PropertyCard key={property.id} property={property} />
             ))}

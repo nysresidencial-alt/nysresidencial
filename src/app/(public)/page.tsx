@@ -3,6 +3,8 @@ import { PropertiesGrid } from "@/components/PropertiesGrid";
 import { HomeOfficeAndContact } from "@/components/HomeOfficeAndContact";
 import prisma from "@/lib/db";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home({
   searchParams,
 }: {

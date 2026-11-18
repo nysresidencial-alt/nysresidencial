@@ -198,14 +198,14 @@ export function PropertyForm({ property, actionFn }: PropertyFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="propertyType">Tipo</Label>
-            <Select name="propertyType" defaultValue={property?.propertyType || "Casas"}>
+            <Select name="propertyType" defaultValue={property?.propertyType || "Casa"}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Casas">Casas</SelectItem>
+                <SelectItem value="Casa">Casa</SelectItem>
                 <SelectItem value="Departamento">Departamento</SelectItem>
-                <SelectItem value="Terrenos">Terrenos</SelectItem>
+                <SelectItem value="Terreno">Terreno</SelectItem>
                 <SelectItem value="Oficina">Oficina</SelectItem>
                 <SelectItem value="Comercial">Local Comercial</SelectItem>
                 <SelectItem value="Parcela">Parcela</SelectItem>
