@@ -18,7 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { createClient } from '@/utils/supabase/client';
 import imageCompression from 'browser-image-compression';
-import { X, UploadCloud, GripHorizontal, Loader2 } from 'lucide-react';
+import { X, UploadCloud, GripHorizontal, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -95,6 +95,14 @@ interface ImageUploaderProps {
 
 export function ImageUploader({ images, onChange }: ImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+    fileName?: string;
+  } | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null);
+
   const supabase = createClient();
 
   const sensors = useSensors(
@@ -114,8 +122,6 @@ export function ImageUploader({ images, onChange }: ImageUploaderProps) {
   };
 
   const removeImage = (urlToRemove: string) => {
-    // Optionally delete from Supabase storage here, but for safety usually best to just remove from DB array
-    // and let a cron job clean up orphans, or explicit delete.
     onChange(images.filter((url) => url !== urlToRemove));
   };
 
@@ -124,73 +130,168 @@ export function ImageUploader({ images, onChange }: ImageUploaderProps) {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
+    setUploadError(null);
+    setUploadSuccessMessage(null);
+
+    const totalFiles = files.length;
     const newUrls: string[] = [];
+    const failedFiles: string[] = [];
 
     try {
-      for (let i = 0; i < files.length; i++) {
+      for (let i = 0; i < totalFiles; i++) {
         const file = files[i];
-        
-        // Optimización de la imagen
-        const options = {
-          maxSizeMB: 1, // Max 1MB
-          maxWidthOrHeight: 1920, // Max Full HD
-          useWebWorker: true,
-          fileType: 'image/webp' // Convertir a WebP para mayor compresión sin perder calidad
-        };
-        
-        const compressedFile = await imageCompression(file, options);
-        
-        // Generar nombre único
-        const fileExt = 'webp';
-        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+
+        setUploadProgress({
+          current: i + 1,
+          total: totalFiles,
+          fileName: file.name,
+        });
+
+        // 1. Optimización de la imagen
+        let fileToUpload: File | Blob = file;
+        let fileExt = 'webp';
+
+        try {
+          const options = {
+            maxSizeMB: 1, // Max 1MB
+            maxWidthOrHeight: 1920, // Max Full HD
+            useWebWorker: true,
+            fileType: 'image/webp' as const,
+            initialQuality: 0.85,
+          };
+          fileToUpload = await imageCompression(file, options);
+          fileExt = 'webp';
+        } catch (compressionErr) {
+          console.warn(`Compresión omitida para ${file.name}, subiendo original:`, compressionErr);
+          fileToUpload = file;
+          const extMatch = file.name.split('.').pop()?.toLowerCase();
+          fileExt = extMatch && ['jpg', 'jpeg', 'png', 'webp'].includes(extMatch) ? extMatch : 'jpg';
+        }
+
+        // 2. Generar nombre único
+        const randomHash = Math.random().toString(36).substring(2, 12);
+        const fileName = `${randomHash}_${Date.now()}.${fileExt}`;
         const filePath = `properties/${fileName}`;
 
-        // Subir a Supabase
-        const { data, error } = await supabase.storage
-          .from('properties')
-          .upload(filePath, compressedFile, {
-            cacheControl: '31536000',
-            upsert: false
-          });
+        // 3. Subir a Supabase
+        try {
+          const { error } = await supabase.storage
+            .from('properties')
+            .upload(filePath, fileToUpload, {
+              cacheControl: '31536000',
+              upsert: true,
+              contentType: fileExt === 'webp' ? 'image/webp' : file.type || 'image/jpeg',
+            });
 
-        if (error) throw error;
+          if (error) {
+            console.error(`Error al subir ${file.name}:`, error);
+            failedFiles.push(file.name);
+            continue;
+          }
 
-        // Obtener URL pública
-        const { data: { publicUrl } } = supabase.storage
-          .from('properties')
-          .getPublicUrl(filePath);
+          // 4. Obtener URL pública
+          const { data: { publicUrl } } = supabase.storage
+            .from('properties')
+            .getPublicUrl(filePath);
 
-        newUrls.push(publicUrl);
+          if (publicUrl) {
+            newUrls.push(publicUrl);
+          }
+        } catch (subErr) {
+          console.error(`Error inesperado con ${file.name}:`, subErr);
+          failedFiles.push(file.name);
+        }
       }
 
-      onChange([...images, ...newUrls]);
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      alert('Hubo un error al subir las imágenes.');
+      // Añadir las fotos que se subieron con éxito
+      if (newUrls.length > 0) {
+        onChange([...images, ...newUrls]);
+      }
+
+      // Mensajes de resultado
+      if (failedFiles.length > 0) {
+        if (newUrls.length > 0) {
+          setUploadError(`Se subieron ${newUrls.length} de ${totalFiles} imágenes. No se pudieron subir: ${failedFiles.join(', ')}.`);
+        } else {
+          setUploadError(`No se pudieron subir las imágenes seleccionadas. Por favor verifica tu conexión.`);
+        }
+      } else {
+        setUploadSuccessMessage(
+          totalFiles === 1
+            ? '¡1 imagen optimizada y subida correctamente!'
+            : `¡${totalFiles} imágenes optimizadas y subidas correctamente!`
+        );
+        setTimeout(() => setUploadSuccessMessage(null), 5000);
+      }
+    } catch (error: any) {
+      console.error('Error general al subir imágenes:', error);
+      setUploadError(error?.message || 'Hubo un error al procesar las imágenes.');
     } finally {
       setIsUploading(false);
-      // Limpiar input
+      setUploadProgress(null);
       event.target.value = '';
     }
   };
 
   return (
     <div className="space-y-4">
+      {/* Alerta de Error */}
+      {uploadError && (
+        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive text-sm flex items-start gap-2 animate-in fade-in">
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">Atención al subir imágenes</p>
+            <p className="text-xs mt-0.5 opacity-90">{uploadError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setUploadError(null)}
+            className="text-destructive/70 hover:text-destructive text-xs underline font-medium"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
+      {/* Alerta de Éxito */}
+      {uploadSuccessMessage && (
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-5 h-5 shrink-0" />
+          <p className="font-semibold text-xs">{uploadSuccessMessage}</p>
+        </div>
+      )}
+
       {/* Zona de subida */}
       <div className="relative border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-center bg-card hover:bg-accent/50 transition-colors">
         <input
           type="file"
           multiple
-          accept="image/*"
+          accept="image/*,.heic,.heif,.webp,.png,.jpg,.jpeg"
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
           onChange={uploadImages}
           disabled={isUploading}
         />
         {isUploading ? (
-          <div className="flex flex-col items-center text-primary">
-            <Loader2 className="w-10 h-10 animate-spin mb-4" />
-            <p className="font-medium">Optimizando y subiendo imágenes...</p>
-            <p className="text-sm text-muted-foreground mt-1">Por favor espera, no cierres esta ventana.</p>
+          <div className="flex flex-col items-center text-primary w-full max-w-sm px-4">
+            <Loader2 className="w-10 h-10 animate-spin mb-3" />
+            <p className="font-bold text-sm">
+              {uploadProgress
+                ? `Optimizando y subiendo foto ${uploadProgress.current} de ${uploadProgress.total}...`
+                : 'Optimizando y subiendo imágenes...'}
+            </p>
+            {uploadProgress && (
+              <div className="w-full bg-muted border border-border rounded-full h-2.5 overflow-hidden my-2.5">
+                <div
+                  className="bg-primary h-full transition-all duration-300 rounded-full"
+                  style={{
+                    width: `${Math.round((uploadProgress.current / uploadProgress.total) * 100)}%`,
+                  }}
+                />
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Por favor espera, no cierres esta ventana. Convirtiendo a WebP ligero de alta calidad.
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center text-muted-foreground">
