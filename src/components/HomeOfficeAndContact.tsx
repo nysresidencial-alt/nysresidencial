@@ -45,16 +45,52 @@ export function HomeOfficeAndContact({ offices }: HomeOfficeAndContactProps) {
 
   function getOfficeEmbedUrl(office: Office) {
     if (office.mapLink) {
+      // 1. Extraer coordenadas exactas del pin (!3d<lat>!4d<lng>) usadas en los enlaces /place/ de Google Maps
+      const pinMatch = office.mapLink.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+      if (pinMatch) {
+        return `https://maps.google.com/maps?q=${pinMatch[1]},${pinMatch[2]}&t=&z=18&ie=UTF8&iwloc=&output=embed`;
+      }
+
+      // 2. Coordenadas explícitas en query ?q= o ?query=
+      const qCoordMatch = office.mapLink.match(/[?&](?:q|query)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (qCoordMatch) {
+        return `https://maps.google.com/maps?q=${qCoordMatch[1]},${qCoordMatch[2]}&t=&z=18&ie=UTF8&iwloc=&output=embed`;
+      }
+
+      // 3. Texto de búsqueda en query ?q= o ?query=
+      const qTextMatch = office.mapLink.match(/[?&](?:q|query)=([^&]+)/);
+      if (qTextMatch) {
+        return `https://maps.google.com/maps?q=${qTextMatch[1]}&t=&z=18&ie=UTF8&iwloc=&output=embed`;
+      }
+
+      // 4. Nombre de lugar en la ruta /place/<nombre>/
+      const placeMatch = office.mapLink.match(/\/place\/([^/@]+)/);
+      if (placeMatch) {
+        const decoded = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
+        return `https://maps.google.com/maps?q=${encodeURIComponent(decoded)}&t=&z=18&ie=UTF8&iwloc=&output=embed`;
+      }
+
+      // 5. Coordenadas @lat,lng (centro de vista, como fallback secundario)
       const coordMatch = office.mapLink.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
       if (coordMatch) {
-        return `https://maps.google.com/maps?q=${coordMatch[1]},${coordMatch[2]}&t=&z=17&ie=UTF8&iwloc=&output=embed`;
-      }
-      const qMatch = office.mapLink.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-      if (qMatch) {
-        return `https://maps.google.com/maps?q=${qMatch[1]},${qMatch[2]}&t=&z=17&ie=UTF8&iwloc=&output=embed`;
+        return `https://maps.google.com/maps?q=${coordMatch[1]},${coordMatch[2]}&t=&z=18&ie=UTF8&iwloc=&output=embed`;
       }
     }
-    return `https://maps.google.com/maps?q=${encodeURIComponent(office.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+
+    // 6. Fallback basado en la dirección limpia
+    const cleanAddress = office.address
+      ? office.address
+          .replace(/\([^)]*\)/g, '')
+          .replace(/\b\d+(?:er|to|do|ro|cer)?\s+piso\b/gi, '')
+          .replace(/,\s*,/g, ',')
+          .trim()
+      : '1 Sur 885, Talca';
+
+    const fullSearch = cleanAddress.toLowerCase().includes('talca') || cleanAddress.toLowerCase().includes('santiago')
+      ? `${cleanAddress}, Chile`
+      : `${cleanAddress}, Talca, Chile`;
+
+    return `https://maps.google.com/maps?q=${encodeURIComponent(fullSearch)}&t=&z=18&ie=UTF8&iwloc=&output=embed`;
   }
 
   return (
