@@ -181,10 +181,10 @@ export async function generateMonthVouchers(month: string, year: number) {
   const upperMonth = month.trim().toUpperCase()
 
   try {
-    // 1. Obtener todos los contratos con estado Ocupado
+    // 1. Obtener todos los contratos con estado Ocupado / En Retiro
     const contracts = await prisma.rentalContract.findMany({
       where: {
-        status: { in: ['Ocupado', 'EN RETIRO'] },
+        status: { in: ['Ocupado', 'OCUPADO', 'ocupado', 'EN RETIRO', 'En Retiro', 'en retiro'] },
       },
       include: { company: true },
     })
@@ -207,7 +207,9 @@ export async function generateMonthVouchers(month: string, year: number) {
         continue
       }
 
-      const rentAmount = contract.totalRent || contract.baseRent
+      const rentAmount = Math.round(
+        contract.totalRent || (contract.baseRent + (contract.adjustmentAmount || 0)) || contract.baseRent || 0
+      )
       const amountInWords = numberToWordsCLP(rentAmount)
 
       await prisma.leaseVoucher.create({
@@ -216,15 +218,19 @@ export async function generateMonthVouchers(month: string, year: number) {
           companyId: contract.companyId,
           month: upperMonth,
           year,
-          baseRent: contract.baseRent,
-          adjustmentPercent: contract.adjustmentPercentage,
-          adjustmentAmount: contract.adjustmentAmount,
+          baseRent: Math.round(contract.baseRent || 0),
+          adjustmentPercent: contract.adjustmentPercentage || 0,
+          adjustmentAmount: Math.round(contract.adjustmentAmount || 0),
           totalRent: rentAmount,
           totalMonth: rentAmount,
           amountInWords,
           paymentStatus: 'Pendiente',
           pendingBalance: rentAmount,
+          collectedAmount: 0,
+          paymentDate: null,
+          invoiceNumber: null,
           paymentMethod: 'Transferencia',
+          bank: 'SANTANDER',
         },
       })
       createdCount++

@@ -35,6 +35,8 @@ import {
   X,
   Building2,
   Briefcase,
+  Loader2,
+  Sparkles,
 } from 'lucide-react'
 import { VoucherDetail, VoucherPrintModal } from './VoucherPrintModal'
 import { VoucherEditModal } from './VoucherEditModal'
@@ -382,9 +384,25 @@ export function VouchersManager({
     }
   }, [filteredVouchers])
 
-  // Generar Vouchers del Mes en lote
+  // Verifica si el mes seleccionado ya tiene vouchers creados en la base de datos
+  const monthHasVouchers = useMemo(() => {
+    if (filterMonth === 'TODOS') return true
+    return vouchers.some((v) => v.month?.toUpperCase() === filterMonth.toUpperCase() && v.year === filterYear)
+  }, [vouchers, filterMonth, filterYear])
+
+  // Generar Vouchers del Mes en lote (Apertura de Mes para Contabilidad)
   async function handleBatchGenerate() {
-    if (!confirm(`¿Deseas generar automáticamente las liquidaciones para el mes de ${filterMonth} ${filterYear}?`)) {
+    const targetMonthName = MONTH_NAMES_TITLE[filterMonth] || filterMonth
+    if (filterMonth === 'TODOS') {
+      alert('Por favor selecciona un mes específico (ej: Noviembre) en el selector de meses antes de aperturar el período.')
+      return
+    }
+
+    if (
+      !confirm(
+        `¿Deseas aperturar la cobranza para el mes de ${targetMonthName} ${filterYear}?\n\nSe replicarán automáticamente todos los contratos activos con estado PENDIENTE de pago.`
+      )
+    ) {
       return
     }
 
@@ -398,7 +416,7 @@ export function VouchersManager({
       setMessage({ text: res.error, type: 'error' })
     } else {
       setMessage({
-        text: `Generados ${res.createdCount} nuevos recibos para ${filterMonth} ${filterYear} (${res.skippedCount} ya existían).`,
+        text: `¡Mes de ${targetMonthName} ${filterYear} aperturado con éxito! Se crearon ${res.createdCount} propiedades activas en estado PENDIENTE (${res.skippedCount} ya existían).`,
         type: 'success',
       })
       window.location.reload()
@@ -442,6 +460,28 @@ export function VouchersManager({
 
         {/* Acciones principales superiores */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Botón Destacado Aperturar Mes (Aparece cuando hay un mes seleccionado) */}
+          {filterMonth !== 'TODOS' && (
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={handleBatchGenerate}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black shadow-2xs transition-all cursor-pointer disabled:opacity-60 ${
+                !monthHasVouchers
+                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md scale-102 ring-2 ring-primary/20'
+                  : 'border border-border bg-card hover:bg-muted text-foreground'
+              }`}
+              title={`Aperturar o actualizar arriendos para el mes de ${MONTH_NAMES_TITLE[filterMonth] || filterMonth} ${filterYear}`}
+            >
+              {isGenerating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Plus className="w-3.5 h-3.5" />
+              )}
+              <span>Aperturar {MONTH_NAMES_TITLE[filterMonth] || filterMonth}</span>
+            </button>
+          )}
+
           {/* Botón Exportar */}
           <a
             href={excelExportUrl}
@@ -810,6 +850,49 @@ export function VouchersManager({
         </div>
       </div>
 
+      {/* BANNER DE APERTURA DE MES SI NO HAY VOUCHERS REGISTRADOS EN ESTE PERÍODO */}
+      {filterMonth !== 'TODOS' && !monthHasVouchers && (
+        <div className="p-5 sm:p-6 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 dark:bg-primary/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left animate-in fade-in-50 duration-200">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 shadow-2xs">
+              <Calendar className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <h3 className="text-base sm:text-lg font-black text-foreground">
+                  El período de {MONTH_NAMES_TITLE[filterMonth] || filterMonth} {filterYear} aún no ha sido aperturado
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                  Mes Nuevo
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+                Al aperturar el mes, se replicarán automáticamente todas las propiedades con contrato activo en estado <strong className="text-amber-600 dark:text-amber-400 font-bold uppercase">PENDIENTE</strong>, listas para ingresar las transferencias de la cartola.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={handleBatchGenerate}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs sm:text-sm shadow-md hover:scale-102 transition-all cursor-pointer shrink-0 disabled:opacity-60"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Aperturando Mes...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Aperturar Mes de {MONTH_NAMES_TITLE[filterMonth] || filterMonth}</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* DISPOSICIÓN: TABLA COMPLETA (EXECUTIVE - IMAGEN 3) O SPLIT */}
       <div className={viewMode === 'split' ? 'grid grid-cols-1 lg:grid-cols-12 gap-6 items-start' : ''}>
         {/* TABLA PRINCIPAL DE VOUCHERS (IMAGEN 3) */}
@@ -843,8 +926,42 @@ export function VouchersManager({
                 <tbody className="divide-y divide-border">
                   {paginatedVouchers.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-12 text-center text-muted-foreground">
-                        No se encontraron arriendos o vouchers que coincidan con los filtros aplicados.
+                      <td colSpan={9} className="py-16 text-center">
+                        {!monthHasVouchers && filterMonth !== 'TODOS' ? (
+                          <div className="max-w-md mx-auto space-y-3 px-4">
+                            <div className="w-12 h-12 mx-auto rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                              <Calendar className="w-6 h-6" />
+                            </div>
+                            <h4 className="text-sm font-black text-foreground">
+                              Mes de {MONTH_NAMES_TITLE[filterMonth] || filterMonth} {filterYear} sin arriendos generados
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                              Haz clic en el botón a continuación para aperturar este mes y replicar automáticamente todas las propiedades en estado pendiente de pago.
+                            </p>
+                            <button
+                              type="button"
+                              disabled={isGenerating}
+                              onClick={handleBatchGenerate}
+                              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs shadow-md transition-all cursor-pointer disabled:opacity-60"
+                            >
+                              {isGenerating ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span>Generando arriendos...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="w-4 h-4" />
+                                  <span>Aperturar Mes de {MONTH_NAMES_TITLE[filterMonth] || filterMonth}</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs py-8 block">
+                            No se encontraron arriendos o vouchers que coincidan con los filtros aplicados.
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ) : (
