@@ -198,7 +198,16 @@ export async function analyzeExcelFile(base64Data: string): Promise<{ success?: 
       totalVouchers++
 
       let paymentStatus = 'Pendiente'
-      if (paymentDate) {
+      const rawEpago = String(r['EPAGO'] !== undefined ? r['EPAGO'] : '').trim().toUpperCase()
+      if (rawEpago === 'PAGADO') {
+        paymentStatus = 'Pagado'
+      } else if (rawEpago === 'PENDIENTE') {
+        paymentStatus = 'Pendiente'
+      } else if (rawEpago === '') {
+        paymentStatus = ''
+      } else if (rawEpago.includes('#') || rawEpago.includes('REF') || rawEpago.includes('VALOR')) {
+        paymentStatus = 'Error'
+      } else if (paymentDate) {
         paymentStatus = 'Pagado'
       } else if (r['ESTADO PAGO']) {
         paymentStatus = String(r['ESTADO PAGO']).trim()
@@ -456,16 +465,27 @@ export async function executeExcelImport(
       const bank = String(r['BANCO'] || '').trim()
       const comment = String(r['COMENTARIO'] || r['COMENTARIOS'] || '').trim()
 
-      const rawPaymentStatus = String(r['ESTADO PAGO'] || '').trim().toLowerCase()
       let paymentStatus = 'Pendiente'
-      if (rawPaymentStatus.includes('pag')) {
+      const rawEpago = String(r['EPAGO'] !== undefined ? r['EPAGO'] : '').trim().toUpperCase()
+      if (rawEpago === 'PAGADO') {
         paymentStatus = 'Pagado'
-      } else if (rawPaymentStatus.includes('pend')) {
+      } else if (rawEpago === 'PENDIENTE') {
         paymentStatus = 'Pendiente'
-      } else if (paymentDate || transferAmount > 0 || cashAmount > 0 || depositAmount > 0 || (collectedAmount >= totalMonth && totalMonth > 0)) {
-        paymentStatus = 'Pagado'
+      } else if (rawEpago === '') {
+        paymentStatus = ''
+      } else if (rawEpago.includes('#') || rawEpago.includes('REF') || rawEpago.includes('VALOR')) {
+        paymentStatus = 'Error'
       } else {
-        paymentStatus = 'Pendiente'
+        const rawPaymentStatus = String(r['ESTADO PAGO'] || '').trim().toLowerCase()
+        if (rawPaymentStatus.includes('pag')) {
+          paymentStatus = 'Pagado'
+        } else if (rawPaymentStatus.includes('pend')) {
+          paymentStatus = 'Pendiente'
+        } else if (paymentDate || transferAmount > 0 || cashAmount > 0 || depositAmount > 0 || (collectedAmount >= totalMonth && totalMonth > 0)) {
+          paymentStatus = 'Pagado'
+        } else {
+          paymentStatus = 'Pendiente'
+        }
       }
 
       const voucherKey = `${contractId}|${month}|${year}`

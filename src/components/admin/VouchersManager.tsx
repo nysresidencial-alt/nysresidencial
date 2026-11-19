@@ -300,7 +300,13 @@ export function VouchersManager({
       if (filterBuilding !== 'TODOS' && c.building?.toUpperCase() !== filterBuilding.toUpperCase()) return false
       if (filterMonth !== 'TODOS' && v.month?.toUpperCase() !== filterMonth.toUpperCase()) return false
       if (filterYear && v.year !== filterYear) return false
-      if (filterStatus !== 'TODOS' && v.paymentStatus?.toLowerCase() !== filterStatus.toLowerCase()) return false
+      if (filterStatus !== 'TODOS') {
+        if (filterStatus === 'Sin Estado') {
+          if (v.paymentStatus && v.paymentStatus.trim() !== '') return false
+        } else if (v.paymentStatus?.toLowerCase() !== filterStatus.toLowerCase()) {
+          return false
+        }
+      }
 
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase().trim()
@@ -370,8 +376,9 @@ export function VouchersManager({
   // Métricas superiores (KPIs)
   const stats = useMemo(() => {
     const totalCount = filteredVouchers.length
-    const paidCount = filteredVouchers.filter((v) => v.paymentStatus === 'Pagado').length
-    const pendingCount = totalCount - paidCount
+    const paidCount = filteredVouchers.filter((v) => (v.paymentStatus || '').toLowerCase().includes('pag')).length
+    const pendingCount = filteredVouchers.filter((v) => (v.paymentStatus || '').toLowerCase() === 'pendiente').length
+    const emptyCount = filteredVouchers.filter((v) => !v.paymentStatus || v.paymentStatus.trim() === '').length
     const totalAmount = filteredVouchers.reduce((acc, v) => acc + v.totalMonth, 0)
     const collectedAmount = filteredVouchers.reduce((acc, v) => acc + v.collectedAmount, 0)
 
@@ -379,6 +386,7 @@ export function VouchersManager({
       totalCount,
       paidCount,
       pendingCount,
+      emptyCount,
       totalAmount,
       collectedAmount,
     }
@@ -425,19 +433,36 @@ export function VouchersManager({
 
   // Helper para estado estilo pill con punto (Imagen 3)
   function renderPaymentBadge(status: string) {
-    const s = (status || '').toLowerCase()
+    const s = (status || '').toLowerCase().trim()
     if (s.includes('manual') || s.includes('pagado') || s.includes('pag')) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200 dark:border-sky-800 shadow-2xs">
-          <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+          <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
           <span>{s.includes('manual') ? 'PAGADO MANUAL' : 'PAGADO'}</span>
         </span>
       )
     }
+    if (s === 'pendiente') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs">
+          <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" />
+          <span>PENDIENTE</span>
+        </span>
+      )
+    }
+    if (s === 'error' || s.includes('ref')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shadow-2xs">
+          <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0" />
+          <span>ERROR</span>
+        </span>
+      )
+    }
+    // Sin estado / Vacío
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs">
-        <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" />
-        <span>PENDIENTE</span>
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium text-muted-foreground bg-muted/60 border border-border/60">
+        <span className="text-muted-foreground/60">-</span>
+        <span>Sin estado</span>
       </span>
     )
   }
@@ -454,7 +479,7 @@ export function VouchersManager({
             Vouchers
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Tienes <span className="text-emerald-600 dark:text-emerald-400 font-bold">{stats.totalCount}</span> vouchers en el periodo seleccionado, de los cuales <span className="text-rose-600 dark:text-rose-400 font-bold">{stats.pendingCount}</span> están pendientes
+            Tienes <span className="text-foreground font-bold">{stats.totalCount}</span> arriendos en el período (<span className="text-emerald-600 dark:text-emerald-400 font-bold">{stats.paidCount} pagados</span>, <span className="text-amber-600 dark:text-amber-400 font-bold">{stats.pendingCount} pendientes</span>{stats.emptyCount > 0 ? `, ${stats.emptyCount} sin estado` : ''})
           </p>
         </div>
 
@@ -783,6 +808,8 @@ export function VouchersManager({
               <option value="TODOS">Todos los Estados</option>
               <option value="Pagado">Pagado</option>
               <option value="Pendiente">Pendiente</option>
+              <option value="Sin Estado">Sin Estado (Vacío)</option>
+              <option value="Error">Error</option>
             </select>
           </div>
 
