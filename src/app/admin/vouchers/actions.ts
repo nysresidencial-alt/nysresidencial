@@ -383,10 +383,14 @@ export async function registerVoucherPayment(
     return { error: 'Voucher no encontrado' }
   }
 
-  const collected = Number(data.collectedAmount) || 0
+  const hasPaymentDate = Boolean(data.paymentDate && data.paymentDate.trim() !== '')
   const total = existing.totalMonth || existing.totalRent || existing.baseRent
+  let collected = Number(data.collectedAmount) || 0
+  if (collected === 0 && hasPaymentDate) {
+    collected = total
+  }
   const pending = Math.max(0, total - collected)
-  const isPaid = collected > 0 && pending === 0
+  const isPaid = hasPaymentDate && (collected > 0 || total === 0)
 
   const paymentMethod = data.paymentMethod || 'Transferencia'
   const transfer = paymentMethod === 'Transferencia' ? collected : 0
@@ -405,13 +409,13 @@ export async function registerVoucherPayment(
       where: { id: voucherId },
       data: {
         receiptNumber: receiptNumberToSet,
-        paymentDate: data.paymentDate,
+        paymentDate: hasPaymentDate ? data.paymentDate : null,
         paymentStatus: isPaid ? 'Pagado' : collected > 0 ? 'Parcial' : 'Pendiente',
-        collectedAmount: collected,
-        pendingBalance: pending,
-        transferAmount: transfer,
-        cashAmount: cash,
-        depositAmount: deposit,
+        collectedAmount: hasPaymentDate ? collected : 0,
+        pendingBalance: hasPaymentDate ? pending : total,
+        transferAmount: hasPaymentDate ? transfer : 0,
+        cashAmount: hasPaymentDate ? cash : 0,
+        depositAmount: hasPaymentDate ? deposit : 0,
         invoiceNumber: data.invoiceNumber !== undefined ? data.invoiceNumber.trim() : existing.invoiceNumber,
         bank: data.bank ? data.bank.trim() : (existing.bank || 'SANTANDER'),
         paymentMethod,

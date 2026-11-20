@@ -132,6 +132,22 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
 
   const formattedAmount = voucher.totalMonth.toLocaleString('es-CL')
 
+  function formatDisplayDate(dateStr: string | null | undefined) {
+    if (!dateStr) return '-'
+    if (dateStr.includes('/')) return dateStr
+    if (dateStr.includes('-')) {
+      const parts = dateStr.split('T')[0].split('-')
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`
+      }
+    }
+    return dateStr
+  }
+
+  // Se considera pagado ÚNICAMENTE si tiene fecha de pago registrada y estado Pagado
+  const hasPaymentDate = Boolean(voucher.paymentDate && voucher.paymentDate.trim() !== '')
+  const isPaid = hasPaymentDate && (voucher.paymentStatus || '').toLowerCase().includes('pag')
+
   function handlePrint() {
     window.print()
   }
@@ -284,9 +300,26 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
           {voucher.amountInWords || '---'}
         </div>
 
-        {/* FIRMA */}
-        <div className="mt-16 pt-8 flex justify-end">
-          <div className="text-center w-64 border-t-2 border-zinc-900 pt-2">
+        {/* PARTE INFERIOR: SELLO PAGADO Y FIRMA */}
+        <div className="mt-14 pt-6 flex items-end justify-between min-h-[90px]">
+          {/* SELLO DE PAGADO EN LETRAS GRANDES (SOLO SI TIENE FECHA DE PAGO REGISTRADA) */}
+          {isPaid ? (
+            <div className="border-4 border-emerald-600 rounded-2xl px-7 py-2.5 bg-emerald-50/70 text-emerald-700 transform -rotate-3 shadow-xs select-none print:border-emerald-700 print:text-emerald-800 print:bg-emerald-50">
+              <span className="text-3xl md:text-5xl font-black tracking-widest block uppercase text-center font-sans">
+                PAGADO
+              </span>
+              <span className="text-[11px] font-bold tracking-wider block text-center uppercase mt-0.5 text-emerald-800 font-mono">
+                PAGADO EL {formatDisplayDate(voucher.paymentDate)}
+              </span>
+            </div>
+          ) : (
+            <div className="text-xs italic text-zinc-400">
+              {/* Espacio reservado para timbre una vez registrado el pago */}
+            </div>
+          )}
+
+          {/* FIRMA ARRENDADOR */}
+          <div className="text-center w-64 border-t-2 border-zinc-900 pt-2 shrink-0">
             <span className="text-xs font-black tracking-widest text-zinc-900 uppercase">
               ARRENDADOR
             </span>

@@ -57,20 +57,26 @@ export async function GET(request: NextRequest) {
       ],
     })
 
-    // 3. Mapear datos a filas de Excel idénticas a la planilla maestra
+    // 3. Mapear datos a filas de Excel idénticas a la planilla maestra de Hoja1
     const excelRows = vouchers.map((v) => {
       const c = v.contract
       const comp = v.company || c.company
 
+      let epagoVal = ''
+      const statusUpper = (v.paymentStatus || '').trim().toUpperCase()
+      if (statusUpper === 'PAGADO') epagoVal = 'PAGADO'
+      else if (statusUpper === 'PENDIENTE') epagoVal = 'PENDIENTE'
+      else if (statusUpper === 'ERROR') epagoVal = 'Error'
+      else epagoVal = v.paymentStatus || ''
+
       return {
         'EMPRESA': comp?.code || '',
         'NOMBRE EMPRESA': comp?.name || '',
-        'NUEVO ASIGNATARIO': c.newAssignee || '',
+        'Nuevo asignatario': c.newAssignee || '',
         'MES': v.month,
-        'AÑO': v.year,
         'N° RECIBO': v.receiptNumber || '',
         'FACTURA': v.invoiceNumber || '',
-        'ESTADO CONTRATO': c.status,
+        'ESTADO': c.status,
         'TIPO INMUEBLE': c.propertyType,
         'ROL': c.rol || '',
         'EDIFICIO': c.building,
@@ -78,30 +84,34 @@ export async function GET(request: NextRequest) {
         'BODEGA N°': c.storageNumber || '',
         'ESTACIONAMIENTO N°': c.parkingNumber || '',
         'FECHA CONTRATO': c.contractDate || '',
-        'RENOVACIÓN': c.renewalPeriod || '',
-        'ARRIENDO BASE': v.baseRent,
-        '% REAJUSTE': v.adjustmentPercent,
-        'REAJUSTE $': v.adjustmentAmount,
-        'TOTAL ARRIENDO': v.totalRent,
-        'GARANTÍA': v.guaranteeAmount || 0,
-        'TOTAL MES': v.totalMonth,
-        'ESTADO PAGO': v.paymentStatus,
-        'FECHA PAGO': v.paymentDate || '',
-        'TRANSFERENCIA': v.transferAmount || 0,
-        'EFECTIVO': v.cashAmount || 0,
-        'DEPÓSITO': v.depositAmount || 0,
-        'RECAUDACIÓN': v.collectedAmount || 0,
+        'RENOVACIÓN ': c.renewalPeriod || '',
+        'ARRIENDO 2026': v.baseRent || '',
+        '% REAJUSTE': v.adjustmentPercent || '',
+        'REAJUSTE': v.adjustmentAmount || '',
+        'VALOR T': v.totalRent || '',
+        'ARRIENDO 20262': c.previousRent || '',
+        'GARANT': v.guaranteeAmount || '',
+        'TOTAL PARCIAL': v.totalRent || '',
+        'GASTO COMUN2': v.expensesCharge || '',
+        'TOTAL FINAL': v.totalMonth || '',
+        'FECHA INGRESO': v.paymentDate || '',
+        'TRANSFERENCIA': v.transferAmount || '',
+        'EFECTIVO': v.cashAmount || '',
+        'CUENTAS X COBRAR': v.accountsReceivable || '',
+        'DEPOSITO': v.depositAmount || '',
+        'RECAUDACIÓN': v.collectedAmount || '',
         'BANCO': v.bank || '',
-        'SALDO PENDIENTE': v.pendingBalance || 0,
-        'COMENTARIOS': v.comment || '',
-        'ARRENDATARIO': c.tenantName,
-        'RUT ARRENDATARIO': c.tenantRut || '',
+        'SALDO PENDIENTE': v.pendingBalance || '',
+        'COMENTARIO': v.comment || '',
+        'Columna1': '',
+        'ARRENDATARIO': c.tenantName || '',
         'TELÉFONO ARRENDATARIO': c.tenantPhone || '',
         'CORREO': c.tenantEmail || '',
-        'AVAL / CONTACTO': c.guarantorRelation || '',
+        'OTROS DATOS DE CONTACTO': c.otherContactInfo || '',
+        'RELACIÓN CON ARRENDATARIO': c.guarantorRelation || '',
         'TELÉFONO CONTACTO': c.guarantorPhone || '',
-        'CORREO CONTACTO': c.guarantorEmail || '',
-        'DIRECCIÓN INMUEBLE': c.address || '',
+        'CORREO ': c.guarantorEmail || '',
+        'EPAGO': epagoVal,
       }
     })
 
