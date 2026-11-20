@@ -43,7 +43,7 @@ import { VoucherEditModal } from './VoucherEditModal'
 import { VoucherStatusModal } from './VoucherStatusModal'
 import { PaymentDateModal } from './PaymentDateModal'
 import { InvoiceEditModal } from './InvoiceEditModal'
-import { generateMonthVouchers } from '@/app/admin/vouchers/actions'
+import { generateMonthVouchers, assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
 
 interface VouchersManagerProps {
   initialVouchers: VoucherDetail[]
@@ -945,6 +945,7 @@ export function VouchersManager({
                     <th className="py-3 px-4">Arrendatario</th>
                     <th className="py-3 px-4 text-right">Valor Arriendo</th>
                     <th className="py-3 px-4 text-center">Fecha Pago</th>
+                    <th className="py-3 px-4 text-center">N° Recibo</th>
                     <th className="py-3 px-4 text-center">N° Factura</th>
                     <th className="py-3 px-4 text-center">Estado</th>
                     <th className="py-3 px-3 text-center">Acciones</th>
@@ -953,7 +954,7 @@ export function VouchersManager({
                 <tbody className="divide-y divide-border">
                   {paginatedVouchers.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-16 text-center">
+                      <td colSpan={10} className="py-16 text-center">
                         {!monthHasVouchers && filterMonth !== 'TODOS' ? (
                           <div className="max-w-md mx-auto space-y-3 px-4">
                             <div className="w-12 h-12 mx-auto rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
@@ -1102,6 +1103,42 @@ export function VouchersManager({
                               <span className="text-xs text-muted-foreground font-mono">
                                 -
                               </span>
+                            )}
+                          </td>
+
+                          {/* N° Recibo (Correlativo por Empresa) */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            {v.receiptNumber ? (
+                              <span
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-muted text-foreground font-bold text-xs border border-border/80 font-mono shadow-2xs"
+                                title={`Recibo Oficial Nº ${v.receiptNumber}`}
+                              >
+                                <Receipt className="w-3.5 h-3.5 text-primary" />
+                                <span>Rec #{v.receiptNumber}</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const res = await assignVoucherReceiptNumber(v.id)
+                                  if (res.success && res.voucher) {
+                                    setVouchers((prev) =>
+                                      prev.map((item) =>
+                                        item.id === v.id ? { ...item, receiptNumber: res.voucher.receiptNumber } : item
+                                      )
+                                    )
+                                    setMessage({
+                                      text: `N° de Recibo #${res.voucher.receiptNumber} asignado correlativamente con éxito para ${v.contract.tenantName}`,
+                                      type: 'success',
+                                    })
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-foreground text-[11px] font-semibold transition-all hover:bg-muted/50 cursor-pointer"
+                                title="Asignar el siguiente número correlativo de recibo"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>Recibo</span>
+                              </button>
                             )}
                           </td>
 
@@ -1355,6 +1392,14 @@ export function VouchersManager({
         <VoucherPrintModal
           voucher={printingVoucher}
           onClose={() => setPrintingVoucher(null)}
+          onReceiptNumberAssigned={(updated) => {
+            setVouchers((prev) =>
+              prev.map((v) => (v.id === updated.id ? { ...v, receiptNumber: updated.receiptNumber } : v))
+            )
+            setPrintingVoucher((prev) =>
+              prev && prev.id === updated.id ? { ...prev, receiptNumber: updated.receiptNumber } : prev
+            )
+          }}
         />
       )}
 

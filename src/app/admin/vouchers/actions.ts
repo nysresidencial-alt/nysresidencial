@@ -173,6 +173,99 @@ export async function updateContract(
 }
 
 /**
+ * Obtiene el siguiente N° de Recibo correlativo para una empresa (talonario por empresa)
+ */
+export async function getNextReceiptNumberForCompany(companyId: string | null): Promise<string> {
+  let targetCompanyIds: string[] = []
+
+  if (companyId) {
+    const comp = await prisma.ownerCompany.findUnique({ where: { id: companyId } })
+    if (comp) {
+      if (comp.code === 'JR' || comp.code === 'AMB') {
+        const jrAmb = await prisma.ownerCompany.findMany({
+          where: { code: { in: ['JR', 'AMB'] } },
+          select: { id: true },
+        })
+        targetCompanyIds = jrAmb.map((c) => c.id)
+      } else {
+        targetCompanyIds = [comp.id]
+      }
+    }
+  }
+
+  const whereClause: any = {
+    receiptNumber: { not: null },
+  }
+  if (targetCompanyIds.length > 0) {
+    whereClause.companyId = { in: targetCompanyIds }
+  }
+
+  const vouchers = await prisma.leaseVoucher.findMany({
+    where: whereClause,
+    select: { receiptNumber: true },
+  })
+
+  let maxNum = 0
+  for (const v of vouchers) {
+    if (!v.receiptNumber) continue
+    const clean = v.receiptNumber.replace(/\D/g, '')
+    if (clean) {
+      const n = parseInt(clean, 10)
+      if (!isNaN(n) && n > maxNum) {
+        maxNum = n
+      }
+    }
+  }
+
+  return String(maxNum + 1)
+}
+
+/**
+ * Asigna el siguiente N° de Recibo correlativo a un voucher si aún no lo tiene.
+ * Si ya tiene número de recibo, lo conserva intacto.
+ */
+export async function assignVoucherReceiptNumber(voucherId: string) {
+  await checkAuth('edit')
+
+  const existing = await prisma.leaseVoucher.findUnique({
+    where: { id: voucherId },
+    include: {
+      contract: {
+        include: { company: true },
+      },
+      company: true,
+    },
+  })
+
+  if (!existing) {
+    return { error: 'Voucher no encontrado' }
+  }
+
+  // Si ya tiene número de recibo válido, lo retornamos sin alterar
+  if (existing.receiptNumber && existing.receiptNumber.trim() !== '' && existing.receiptNumber !== 'S/N') {
+    return { success: true, voucher: existing, assigned: false }
+  }
+
+  const companyId = existing.companyId || existing.contract?.companyId || null
+  const nextNumber = await getNextReceiptNumberForCompany(companyId)
+
+  const updated = await prisma.leaseVoucher.update({
+    where: { id: voucherId },
+    data: { receiptNumber: nextNumber },
+    include: {
+      contract: {
+        include: { company: true },
+      },
+      company: true,
+    },
+  })
+
+  revalidatePath('/admin/vouchers')
+  revalidatePath('/admin/arriendos')
+  return { success: true, voucher: updated, assigned: true }
+}
+
+/**
  * Genera automáticamente en lote los vouchers de un mes para todos los contratos activos
  */
 export async function generateMonthVouchers(month: string, year: number) {
@@ -192,6 +285,9 @@ export async function generateMonthVouchers(month: string, year: number) {
     let createdCount = 0
     let skippedCount = 0
 
+    // Mapa en memoria para correlativos consecutivos por empresa durante la generación masiva
+    const companyRunningNumMap = new Map<string, number>()
+
     for (const contract of contracts) {
       // Verificar si ya existe voucher para este contrato y mes
       const exists = await prisma.leaseVoucher.findFirst({
@@ -207,6 +303,16 @@ export async function generateMonthVouchers(month: string, year: number) {
         continue
       }
 
+      // Correlativo consecutivo para la empresa
+      const compIdKey = contract.companyId || 'GENERAL'
+      let currentNum = companyRunningNumMap.get(compIdKey)
+      if (currentNum === undefined) {
+        const nextStr = await getNextReceiptNumberForCompany(contract.companyId)
+        currentNum = parseInt(nextStr, 10) || 1
+      }
+      const assignedReceiptNo = String(currentNum)
+      companyRunningNumMap.set(compIdKey, currentNum + 1)
+
       const rentAmount = Math.round(
         contract.totalRent || (contract.baseRent + (contract.adjustmentAmount || 0)) || contract.baseRent || 0
       )
@@ -218,6 +324,7 @@ export async function generateMonthVouchers(month: string, year: number) {
           companyId: contract.companyId,
           month: upperMonth,
           year,
+          receiptNumber: assignedReceiptNo,
           baseRent: Math.round(contract.baseRent || 0),
           adjustmentPercent: contract.adjustmentPercentage || 0,
           adjustmentAmount: Math.round(contract.adjustmentAmount || 0),
@@ -247,6 +354,7 @@ export async function generateMonthVouchers(month: string, year: number) {
 /**
  * Registra el pago de un Voucher (Conciliación Bancaria)
  * Permite registrar fecha real de pago, monto pagado, N° de factura (opcional), banco y método de pago
+ * Si el voucher no tiene número de recibo, le asigna el siguiente correlativo para la empresa
  */
 export async function registerVoucherPayment(
   voucherId: string,
@@ -263,6 +371,12 @@ export async function registerVoucherPayment(
 
   const existing = await prisma.leaseVoucher.findUnique({
     where: { id: voucherId },
+    include: {
+      contract: {
+        include: { company: true },
+      },
+      company: true,
+    },
   })
 
   if (!existing) {
@@ -279,10 +393,18 @@ export async function registerVoucherPayment(
   const cash = paymentMethod === 'Efectivo' ? collected : 0
   const deposit = paymentMethod === 'Documento' ? collected : 0
 
+  // Si aún no tiene número de recibo, asignar automáticamente el correlativo para su empresa
+  let receiptNumberToSet = existing.receiptNumber
+  if (!receiptNumberToSet || receiptNumberToSet.trim() === '' || receiptNumberToSet === 'S/N') {
+    const compId = existing.companyId || existing.contract?.companyId || null
+    receiptNumberToSet = await getNextReceiptNumberForCompany(compId)
+  }
+
   try {
     const updated = await prisma.leaseVoucher.update({
       where: { id: voucherId },
       data: {
+        receiptNumber: receiptNumberToSet,
         paymentDate: data.paymentDate,
         paymentStatus: isPaid ? 'Pagado' : collected > 0 ? 'Parcial' : 'Pendiente',
         collectedAmount: collected,
@@ -304,6 +426,7 @@ export async function registerVoucherPayment(
             tenantName: true,
           },
         },
+        company: true,
       },
     })
 

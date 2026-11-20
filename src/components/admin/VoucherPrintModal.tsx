@@ -1,7 +1,8 @@
 'use client'
 
-import React from 'react'
-import { X, Printer, Download } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { X, Printer, Download, Loader2 } from 'lucide-react'
+import { assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
 
 export interface VoucherDetail {
   id: string
@@ -84,11 +85,36 @@ export interface VoucherDetail {
 interface VoucherPrintModalProps {
   voucher: VoucherDetail
   onClose: () => void
+  onReceiptNumberAssigned?: (updatedVoucher: VoucherDetail) => void
 }
 
-export function VoucherPrintModal({ voucher, onClose }: VoucherPrintModalProps) {
+export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptNumberAssigned }: VoucherPrintModalProps) {
+  const [voucher, setVoucher] = useState<VoucherDetail>(initialVoucher)
+  const [isAssigning, setIsAssigning] = useState(false)
+
+  // Asignar correlativo automáticamente si aún no tiene N° de Recibo
+  useEffect(() => {
+    let isMounted = true
+    const currentNum = voucher.receiptNumber ? voucher.receiptNumber.trim() : ''
+    if ((!currentNum || currentNum === 'S/N') && !isAssigning) {
+      setIsAssigning(true)
+      assignVoucherReceiptNumber(voucher.id)
+        .then((res) => {
+          if (isMounted && res.success && res.voucher) {
+            setVoucher(res.voucher as any)
+            onReceiptNumberAssigned?.(res.voucher as any)
+          }
+          if (isMounted) setIsAssigning(false)
+        })
+        .catch((err) => {
+          console.error('Error auto-asignando recibo:', err)
+          if (isMounted) setIsAssigning(false)
+        })
+    }
+  }, [voucher.id])
+
   const c = voucher.contract
-  const comp = voucher.company
+  const comp = voucher.company || c.company
 
   const landlordName = comp?.landlordName || 'PATRICIA DEL CARMEN RETAMAL BUSTOS'
   const landlordRut = comp?.rut || '10.943.065-K'
@@ -150,8 +176,15 @@ export function VoucherPrintModal({ voucher, onClose }: VoucherPrintModalProps) 
             {/* Número de Recibo */}
             <div className="text-right">
               <span className="text-xs font-bold text-zinc-600 block">Nº</span>
-              <span className="text-2xl md:text-3xl font-black text-zinc-950 border-2 border-zinc-900 px-3 py-1 rounded inline-block bg-zinc-50">
-                {receiptNo}
+              <span className="text-2xl md:text-3xl font-black text-zinc-950 border-2 border-zinc-900 px-3 py-1 rounded inline-block bg-zinc-50 min-w-[70px] text-center">
+                {isAssigning ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 py-1">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Asignando...</span>
+                  </span>
+                ) : (
+                  receiptNo
+                )}
               </span>
             </div>
           </div>
