@@ -111,3 +111,24 @@
   --input: #334155;
   --ring: #CE1156;
 }
+
+/* Reglas de impresión aisladas para comprobante de arriendo (1 sola plana) */
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 8mm 12mm;
+  }
+  
+  /* Ocultar el fondo y la tabla cuando el modal del voucher está montado */
+  body:has(#voucher-printable-card) > *:not(:has(#voucher-printable-card)) {
+    display: none !important;
+  }
+  
+  body:has(#voucher-printable-card) {
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}

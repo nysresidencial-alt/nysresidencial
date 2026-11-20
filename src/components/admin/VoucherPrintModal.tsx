@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { X, Printer, Download, Loader2 } from 'lucide-react'
 import { assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 export interface VoucherDetail {
   id: string
@@ -91,6 +93,7 @@ interface VoucherPrintModalProps {
 export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptNumberAssigned }: VoucherPrintModalProps) {
   const [voucher, setVoucher] = useState<VoucherDetail>(initialVoucher)
   const [isAssigning, setIsAssigning] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   // Asignar correlativo automáticamente si aún no tiene N° de Recibo
   useEffect(() => {
@@ -148,22 +151,168 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
   const hasPaymentDate = Boolean(voucher.paymentDate && voucher.paymentDate.trim() !== '')
   const isPaid = hasPaymentDate && (voucher.paymentStatus || '').toLowerCase().includes('pag')
 
+  // Descargar directamente en archivo PDF (1 plana)
+  async function handleDownloadPDF() {
+    const card = document.getElementById('voucher-printable-card')
+    if (!card) return
+
+    setIsDownloading(true)
+    try {
+      const canvas = await html2canvas(card, {
+        scale: 2.5,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      })
+      const imgData = canvas.toDataURL('image/png')
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'letter',
+      })
+
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+
+      const margin = 10
+      const contentWidth = pdfWidth - margin * 2
+      const contentHeight = (canvas.height * contentWidth) / canvas.width
+      const finalHeight = Math.min(contentHeight, pdfHeight - margin * 2)
+
+      pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, finalHeight)
+
+      const receiptNum = voucher.receiptNumber || 'SN'
+      const cleanBuilding = (voucher.contract.building || 'Inmueble').replace(/\s+/g, '_')
+      const cleanUnit = (voucher.contract.unitNumber || '').replace(/\s+/g, '_')
+      const fileName = `Recibo_${voucher.month}_${voucher.year}_${cleanBuilding}_${cleanUnit}_N${receiptNum}.pdf`
+      pdf.save(fileName)
+    } catch (err) {
+      console.error('Error al generar PDF descargable:', err)
+      alert('Hubo un problema al generar el archivo PDF descargable. Por favor intenta con la opción de Imprimir.')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  // Imprimir aislado en iframe (garantiza estrictamente 1 plana sin imprimir la tabla ni 4 hojas)
   function handlePrint() {
-    window.print()
+    const card = document.getElementById('voucher-printable-card')
+    if (!card) return
+
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentWindow?.document
+    if (!doc) return
+
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((s) => s.outerHTML)
+      .join('\n')
+
+    doc.open()
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Recibo de Arriendo - ${voucher.contract.building} ${voucher.contract.unitNumber}</title>
+          ${styles}
+          <style>
+            @page {
+              size: letter portrait;
+              margin: 8mm 12mm;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            html, body {
+              background: #ffffff !important;
+              color: #000000 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              height: auto !important;
+            }
+            .voucher-isolated-sheet {
+              width: 100% !important;
+              max-width: 740px !important;
+              margin: 0 auto !important;
+              padding: 24px 32px !important;
+              border: 2px solid #18181b !important;
+              border-radius: 12px !important;
+              page-break-inside: avoid !important;
+              page-break-after: avoid !important;
+              page-break-before: avoid !important;
+              box-sizing: border-box !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="voucher-isolated-sheet">
+            ${card.innerHTML}
+          </div>
+        </body>
+      </html>
+    `)
+    doc.close()
+
+    iframe.contentWindow?.focus()
+    setTimeout(() => {
+      iframe.contentWindow?.print()
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe)
+        }
+      }, 1000)
+    }, 350)
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
       {/* Botones Flotantes de Acción (Ocultos al imprimir) */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2 print:hidden">
+        {/* Botón Descargar PDF directo */}
         <button
+          type="button"
+          onClick={handleDownloadPDF}
+          disabled={isDownloading}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-lg transition-all cursor-pointer disabled:opacity-60"
+          title="Descargar archivo PDF directamente a tu computador"
+        >
+          {isDownloading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Generando PDF...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4" />
+              <span>Descargar PDF</span>
+            </>
+          )}
+        </button>
+
+        {/* Botón Imprimir (1 plana aislada) */}
+        <button
+          type="button"
           onClick={handlePrint}
           className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-bold text-sm rounded-xl shadow-lg hover:bg-primary/90 transition-all cursor-pointer"
+          title="Imprimir solo este recibo (1 plana limpia)"
         >
           <Printer className="w-4 h-4" />
-          <span>Imprimir / Guardar PDF</span>
+          <span>Imprimir</span>
         </button>
+
+        {/* Botón Cerrar */}
         <button
+          type="button"
           onClick={onClose}
           className="p-2 bg-background border border-border text-foreground hover:bg-muted rounded-xl transition-colors cursor-pointer shadow-md"
           title="Cerrar vista previa"
@@ -172,10 +321,13 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
         </button>
       </div>
 
-      {/* Contenedor del Voucher Oficial */}
-      <div className="w-full max-w-3xl bg-white text-zinc-950 font-sans p-8 md:p-12 rounded-2xl shadow-2xl border border-zinc-200 my-8 print:m-0 print:p-8 print:border-none print:shadow-none print:w-full">
+      {/* Contenedor del Voucher Oficial (id para captura e impresión aislada) */}
+      <div
+        id="voucher-printable-card"
+        className="w-full max-w-3xl bg-white text-zinc-950 font-sans p-6 sm:p-10 rounded-2xl shadow-2xl border border-zinc-200 my-8 print:m-0 print:p-6 print:border-none print:shadow-none print:w-full"
+      >
         {/* ENCABEZADO */}
-        <div className="border-b-2 border-zinc-900 pb-4 mb-6">
+        <div className="border-b-2 border-zinc-900 pb-3 mb-4">
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-lg md:text-xl font-black tracking-tight text-zinc-950 uppercase">
@@ -207,18 +359,18 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
         </div>
 
         {/* TÍTULO PRINCIPAL */}
-        <div className="text-center my-6">
-          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-wider text-zinc-950 border-y-2 border-zinc-900 py-2 inline-block px-12">
+        <div className="text-center my-4">
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-wider text-zinc-950 border-y-2 border-zinc-900 py-1.5 inline-block px-12">
             RECIBO DE ARRIENDO
           </h1>
-          <p className="text-xs font-bold text-zinc-800 uppercase tracking-widest mt-3">
+          <p className="text-xs font-bold text-zinc-800 uppercase tracking-widest mt-2">
             TALCA, 1 DE {month} DE {year}
           </p>
         </div>
 
         {/* CUERPO DEL RECIBO */}
-        <div className="space-y-4 my-8 text-sm text-zinc-900">
-          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-b border-zinc-300 pb-2">
+        <div className="space-y-3 my-5 text-sm text-zinc-900">
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-b border-zinc-300 pb-1.5">
             <span className="font-extrabold uppercase text-xs text-zinc-600 shrink-0 min-w-[170px]">
               RECIBÍ DE DON (ÑA):
             </span>
@@ -227,7 +379,7 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-b border-zinc-300 pb-2">
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-b border-zinc-300 pb-1.5">
             <span className="font-extrabold uppercase text-xs text-zinc-600 shrink-0 min-w-[170px]">
               POR ARRIENDO DE:
             </span>
@@ -238,7 +390,7 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-b border-zinc-300 pb-2">
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-b border-zinc-300 pb-1.5">
             <span className="font-extrabold uppercase text-xs text-zinc-600 shrink-0 min-w-[170px]">
               UBICADO EN:
             </span>
@@ -247,7 +399,7 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-b border-zinc-300 pb-2">
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-b border-zinc-300 pb-1.5">
             <span className="font-extrabold uppercase text-xs text-zinc-600 shrink-0 min-w-[170px]">
               CORRESPONDIENTE AL MES DE:
             </span>
@@ -258,9 +410,9 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
         </div>
 
         {/* FORMA DE PAGO Y TOTALES */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 my-8 items-center bg-zinc-50 p-5 rounded-xl border border-zinc-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-5 items-center bg-zinc-50 p-4 rounded-xl border border-zinc-200">
           {/* Checkboxes de medio de pago */}
-          <div className="space-y-2 text-xs font-bold text-zinc-800 uppercase">
+          <div className="space-y-1.5 text-xs font-bold text-zinc-800 uppercase">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 border-2 border-zinc-900 rounded flex items-center justify-center font-black">
                 {isCash ? '✓' : ''}
@@ -295,16 +447,16 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
         </div>
 
         {/* MONTO EN PALABRAS */}
-        <div className="bg-zinc-100/80 p-3 rounded-lg border border-zinc-200 text-xs font-bold text-zinc-900 uppercase">
+        <div className="bg-zinc-100/80 p-2.5 rounded-lg border border-zinc-200 text-xs font-bold text-zinc-900 uppercase">
           <span className="text-zinc-600 font-extrabold">SON: </span>
           {voucher.amountInWords || '---'}
         </div>
 
         {/* PARTE INFERIOR: SELLO PAGADO Y FIRMA */}
-        <div className="mt-14 pt-6 flex items-end justify-between min-h-[90px]">
+        <div className="mt-8 pt-4 flex items-end justify-between min-h-[90px]">
           {/* SELLO DE PAGADO EN LETRAS GRANDES (SOLO SI TIENE FECHA DE PAGO REGISTRADA) */}
           {isPaid ? (
-            <div className="border-4 border-emerald-600 rounded-2xl px-7 py-2.5 bg-emerald-50/70 text-emerald-700 transform -rotate-3 shadow-xs select-none print:border-emerald-700 print:text-emerald-800 print:bg-emerald-50">
+            <div className="border-4 border-emerald-600 rounded-2xl px-6 py-2 bg-emerald-50/70 text-emerald-700 transform -rotate-3 shadow-xs select-none print:border-emerald-700 print:text-emerald-800 print:bg-emerald-50">
               <span className="text-3xl md:text-5xl font-black tracking-widest block uppercase text-center font-sans">
                 PAGADO
               </span>
