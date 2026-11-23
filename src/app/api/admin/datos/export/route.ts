@@ -3,8 +3,23 @@ import prisma from '@/lib/db'
 import { getAdminSession } from '@/lib/admin-auth'
 import * as XLSX from 'xlsx'
 
+const MONTH_ORDER: Record<string, number> = {
+  ENERO: 1,
+  FEBRERO: 2,
+  MARZO: 3,
+  ABRIL: 4,
+  MAYO: 5,
+  JUNIO: 6,
+  JULIO: 7,
+  AGOSTO: 8,
+  SEPTIEMBRE: 9,
+  OCTUBRE: 10,
+  NOVIEMBRE: 11,
+  DICIEMBRE: 12,
+}
+
 export async function GET(request: NextRequest) {
-  // 1. Proteger ruta: solo administradores autenticados con rol Contabilidad o Superadmin
+  // 1. Proteger ruta: administradores autenticados con rol Contabilidad o Superadmin
   const session = await getAdminSession()
   if (!session) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -22,40 +37,22 @@ export async function GET(request: NextRequest) {
   const isTemplateOnly = searchParams.get('template') === 'true'
 
   try {
-    // 2. Obtener datos de la BD si no es solo plantilla
     const companies = await prisma.ownerCompany.findMany({
       orderBy: { code: 'asc' },
     })
 
-    const contracts = isTemplateOnly
-      ? []
-      : await prisma.rentalContract.findMany({
-          include: {
-            company: true,
-            vouchers: {
-              orderBy: [{ year: 'desc' }, { month: 'desc' }],
-            },
-          },
-          orderBy: [
-            { building: 'asc' },
-            { unitNumber: 'asc' },
-          ],
-        })
-
-    // 3. Crear filas para la hoja "BASE CONSOLIDADA" (estructura completa estándar)
-    let consolidatedRows: any[] = []
+    let dataRows: any[] = []
 
     if (isTemplateOnly) {
-      // 2 filas de ejemplo para plantilla vacía
-      consolidatedRows = [
+      // 2 filas modelo para la plantilla limpia, reflejando exactamente las 42 columnas oficiales
+      dataRows = [
         {
           'EMPRESA': 'BC',
-          'NOMBRE EMPRESA': 'Inversiones Buses Los Cipreses',
-          'NUEVO ASIGNATARIO': 'José Manuel Retamal',
+          'NOMBRE EMPRESA': 'Buses Cipreses',
+          'Nuevo asignatario': 'José Manuel Retamal',
           'MES': 'NOVIEMBRE',
-          'AÑO': 2026,
-          'N° RECIBO': '14701',
-          'FACTURA': '',
+          'N° RECIBO': '990',
+          'FACTURA': '905',
           'ESTADO': 'Ocupado',
           'TIPO INMUEBLE': 'Departamento',
           'ROL': '1193-213',
@@ -64,95 +61,119 @@ export async function GET(request: NextRequest) {
           'BODEGA N°': 'B-12',
           'ESTACIONAMIENTO N°': 'E-45',
           'FECHA CONTRATO': '2024-03-01',
-          'RENOVACIÓN': '1 AÑO',
+          'RENOVACIÓN ': '1 AÑO',
           'ARRIENDO 2026': 450000,
-          '% REAJUSTE': 3.5,
+          '% REAJUSTE': 0.035,
           'REAJUSTE': 15750,
           'VALOR T': 465750,
+          'ARRIENDO 20262': 450000,
           'GARANT': 450000,
-          'TOTAL': 465750,
-          'GASTOS COMUNES CARGO': 0,
-          'GASTOS COMUNES ABONO': 0,
-          'ESTADO PAGO': 'Pagado',
-          'FECHA PAGO': '2026-11-05',
+          'TOTAL PARCIAL': 465750,
+          'GASTO COMUN2': 0,
+          'TOTAL FINAL': 465750,
+          'FECHA INGRESO': '2026-11-05',
           'TRANSFERENCIA': 465750,
           'EFECTIVO': 0,
-          'DEPOSITO': 0,
           'CUENTAS X COBRAR': 0,
+          'DEPOSITO': 0,
           'RECAUDACIÓN': 465750,
           'BANCO': 'SANTANDER',
           'SALDO PENDIENTE': 0,
-          'COMENTARIO': 'Al día en cartola',
+          'COMENTARIO': 'Al día en cartola bancaria',
+          'Columna1': '',
           'ARRENDATARIO': 'Juan Pérez González',
-          'RUT ARRENDATARIO': '15.907.454-4',
           'TELÉFONO ARRENDATARIO': '+56 9 87654321',
           'CORREO': 'juan.perez@gmail.com',
-          'OTROS DATOS DE CONTACTO': '',
+          'OTROS DATOS DE CONTACTO': 'Contacto adicional',
           'RELACIÓN CON ARRENDATARIO': 'Aval',
           'TELÉFONO CONTACTO': '+56 9 12345678',
-          'CORREO CONTACTO': 'aval.perez@gmail.com',
-          'DIRECCIÓN INMUEBLE': '2 Sur 1285, Talca',
+          'CORREO ': 'aval.perez@gmail.com',
+          'EPAGO': 'PAGADO',
         },
         {
           'EMPRESA': 'JR',
           'NOMBRE EMPRESA': 'Jose Retamal',
-          'NUEVO ASIGNATARIO': '',
+          'Nuevo asignatario': '',
           'MES': 'NOVIEMBRE',
-          'AÑO': 2026,
           'N° RECIBO': '',
           'FACTURA': '',
           'ESTADO': 'Disponible',
           'TIPO INMUEBLE': 'Estacionamiento',
           'ROL': '491-022',
           'EDIFICIO': 'LIBERTADOR',
-          'N°': 'E-154',
+          'N°': 'EST-154',
           'BODEGA N°': '',
           'ESTACIONAMIENTO N°': '154',
           'FECHA CONTRATO': '',
-          'RENOVACIÓN': '',
+          'RENOVACIÓN ': '',
           'ARRIENDO 2026': 40000,
           '% REAJUSTE': 0,
           'REAJUSTE': 0,
           'VALOR T': 40000,
-          'GARANT': 0,
-          'TOTAL': 40000,
-          'GASTOS COMUNES CARGO': 0,
-          'GASTOS COMUNES ABONO': 0,
-          'ESTADO PAGO': 'Disponible',
-          'FECHA PAGO': '',
-          'TRANSFERENCIA': 0,
-          'EFECTIVO': 0,
-          'DEPOSITO': 0,
-          'CUENTAS X COBRAR': 0,
-          'RECAUDACIÓN': 0,
+          'ARRIENDO 20262': '',
+          'GARANT': '',
+          'TOTAL PARCIAL': 40000,
+          'GASTO COMUN2': '',
+          'TOTAL FINAL': 40000,
+          'FECHA INGRESO': '',
+          'TRANSFERENCIA': '',
+          'EFECTIVO': '',
+          'CUENTAS X COBRAR': '',
+          'DEPOSITO': '',
+          'RECAUDACIÓN': '',
           'BANCO': '',
           'SALDO PENDIENTE': 0,
-          'COMENTARIO': 'Vacante',
-          'ARRENDATARIO': 'DISPONIBLE',
-          'RUT ARRENDATARIO': '',
+          'COMENTARIO': 'Disponible para arriendo',
+          'Columna1': '',
+          'ARRENDATARIO': '',
           'TELÉFONO ARRENDATARIO': '',
           'CORREO': '',
           'OTROS DATOS DE CONTACTO': '',
           'RELACIÓN CON ARRENDATARIO': '',
           'TELÉFONO CONTACTO': '',
-          'CORREO CONTACTO': '',
-          'DIRECCIÓN INMUEBLE': '1 Poniente 635, Talca',
+          'CORREO ': '',
+          'EPAGO': '',
         },
       ]
     } else {
-      // Exportar datos reales consolidados
-      consolidatedRows = contracts.map((c) => {
-        const v = c.vouchers[0] || null
-        const comp = c.company
+      // Exportación de toda la base de datos real con todas sus liquidaciones
+      const vouchers = await prisma.leaseVoucher.findMany({
+        include: {
+          contract: {
+            include: { company: true },
+          },
+          company: true,
+        },
+      })
+
+      // Ordenar cronológicamente por mes y luego por edificio y unidad
+      vouchers.sort((a, b) => {
+        const mA = MONTH_ORDER[a.month?.toUpperCase()] || 99
+        const mB = MONTH_ORDER[b.month?.toUpperCase()] || 99
+        if (mA !== mB) return mA - mB
+        const bComp = (a.contract.building || '').localeCompare(b.contract.building || '')
+        if (bComp !== 0) return bComp
+        return (a.contract.unitNumber || '').localeCompare(b.contract.unitNumber || '')
+      })
+
+      dataRows = vouchers.map((v) => {
+        const c = v.contract
+        const comp = v.company || c.company
+
+        let epagoVal = ''
+        const statusUpper = (v.paymentStatus || '').trim().toUpperCase()
+        if (statusUpper === 'PAGADO') epagoVal = 'PAGADO'
+        else if (statusUpper === 'PENDIENTE') epagoVal = 'PENDIENTE'
+        else if (statusUpper === 'ERROR') epagoVal = 'Error'
+        else epagoVal = v.paymentStatus || ''
 
         return {
           'EMPRESA': comp?.code || '',
           'NOMBRE EMPRESA': comp?.name || '',
-          'NUEVO ASIGNATARIO': c.newAssignee || '',
-          'MES': v?.month || 'NOVIEMBRE',
-          'AÑO': v?.year || 2026,
-          'N° RECIBO': v?.receiptNumber || '',
-          'FACTURA': v?.invoiceNumber || '',
+          'Nuevo asignatario': c.newAssignee || '',
+          'MES': v.month,
+          'N° RECIBO': v.receiptNumber || '',
+          'FACTURA': v.invoiceNumber || '',
           'ESTADO': c.status,
           'TIPO INMUEBLE': c.propertyType,
           'ROL': c.rol || '',
@@ -161,56 +182,92 @@ export async function GET(request: NextRequest) {
           'BODEGA N°': c.storageNumber || '',
           'ESTACIONAMIENTO N°': c.parkingNumber || '',
           'FECHA CONTRATO': c.contractDate || '',
-          'RENOVACIÓN': c.renewalPeriod || '',
-          'ARRIENDO 2026': c.baseRent || 0,
-          '% REAJUSTE': c.adjustmentPercentage || 0,
-          'REAJUSTE': c.adjustmentAmount || 0,
-          'VALOR T': c.totalRent || c.baseRent || 0,
-          'GARANT': c.guaranteeAmount || 0,
-          'TOTAL': v?.totalMonth ?? (c.totalRent || c.baseRent || 0),
-          'GASTOS COMUNES CARGO': c.expensesCharge || 0,
-          'GASTOS COMUNES ABONO': c.expensesPayment || 0,
-          'ESTADO PAGO': v?.paymentStatus ?? (c.status === 'Disponible' ? 'Disponible' : 'Pendiente'),
-          'FECHA PAGO': v?.paymentDate || '',
-          'TRANSFERENCIA': v?.transferAmount || 0,
-          'EFECTIVO': v?.cashAmount || 0,
-          'DEPOSITO': v?.depositAmount || 0,
-          'CUENTAS X COBRAR': v?.accountsReceivable || 0,
-          'RECAUDACIÓN': v?.collectedAmount || 0,
-          'BANCO': v?.bank || '',
-          'SALDO PENDIENTE': v?.pendingBalance || 0,
-          'COMENTARIO': v?.comment || '',
+          'RENOVACIÓN ': c.renewalPeriod || '',
+          'ARRIENDO 2026': v.baseRent || '',
+          '% REAJUSTE': v.adjustmentPercent || '',
+          'REAJUSTE': v.adjustmentAmount || '',
+          'VALOR T': v.totalRent || '',
+          'ARRIENDO 20262': c.previousRent || '',
+          'GARANT': v.guaranteeAmount || '',
+          'TOTAL PARCIAL': v.totalRent || '',
+          'GASTO COMUN2': v.expensesCharge || '',
+          'TOTAL FINAL': v.totalMonth || '',
+          'FECHA INGRESO': v.paymentDate || '',
+          'TRANSFERENCIA': v.transferAmount || '',
+          'EFECTIVO': v.cashAmount || '',
+          'CUENTAS X COBRAR': v.accountsReceivable || '',
+          'DEPOSITO': v.depositAmount || '',
+          'RECAUDACIÓN': v.collectedAmount || '',
+          'BANCO': v.bank || '',
+          'SALDO PENDIENTE': v.pendingBalance || '',
+          'COMENTARIO': v.comment || '',
+          'Columna1': '',
           'ARRENDATARIO': c.tenantName || '',
-          'RUT ARRENDATARIO': c.tenantRut || '',
           'TELÉFONO ARRENDATARIO': c.tenantPhone || '',
           'CORREO': c.tenantEmail || '',
           'OTROS DATOS DE CONTACTO': c.otherContactInfo || '',
           'RELACIÓN CON ARRENDATARIO': c.guarantorRelation || '',
           'TELÉFONO CONTACTO': c.guarantorPhone || '',
-          'CORREO CONTACTO': c.guarantorEmail || '',
-          'DIRECCIÓN INMUEBLE': c.address || '',
+          'CORREO ': c.guarantorEmail || '',
+          'EPAGO': epagoVal,
         }
       })
     }
 
-    // 4. Hoja de instrucciones y catálogos válidos
+    // 2. Hoja de instrucciones y catálogos válidos
     const instructionRows = [
       {
         'CAMPO': 'EMPRESA',
         'DESCRIPCIÓN': 'Código de la empresa propietaria.',
-        'VALORES VÁLIDOS': companies.map((comp) => `${comp.code} (${comp.name})`).join(', ') || 'JR, BC, GP, JFR, RB, AMB',
+        'VALORES VÁLIDOS': companies.map((c) => `${c.code} (${c.name})`).join(', ') || 'JR, BC, GP, JFR, RB, AMB, CANDY, ADL, GOLY, IC, NYS',
         'OBLIGATORIO': 'Sí',
       },
       {
+        'CAMPO': 'EPAGO',
+        'DESCRIPCIÓN': 'Estado del pago para el mes.',
+        'VALORES VÁLIDOS': 'PAGADO (si se recibió el arriendo), PENDIENTE (por cobrar), o dejar vacío ("") si la propiedad está vacante/disponible.',
+        'OBLIGATORIO': 'Recomendado',
+      },
+      {
+        'CAMPO': 'N° RECIBO',
+        'DESCRIPCIÓN': 'Número correlativo oficial de comprobante de arriendo emitido.',
+        'VALORES VÁLIDOS': 'Numérico (si ya existe un número se respeta; si está vacío el sistema le asigna el siguiente mayor + 1).',
+        'OBLIGATORIO': 'Opcional',
+      },
+      {
+        'CAMPO': 'FACTURA',
+        'DESCRIPCIÓN': 'Número de factura comercial emitida al arrendatario.',
+        'VALORES VÁLIDOS': 'Texto / Numérico (ej: 905, 505)',
+        'OBLIGATORIO': 'Opcional',
+      },
+      {
+        'CAMPO': 'MES',
+        'DESCRIPCIÓN': 'Mes correspondiente a la cobranza.',
+        'VALORES VÁLIDOS': 'ENERO, FEBRERO, MARZO, ABRIL, MAYO, JUNIO, JULIO, AGOSTO, SEPTIEMBRE, OCTUBRE, NOVIEMBRE, DICIEMBRE',
+        'OBLIGATORIO': 'Sí',
+      },
+      {
+        'CAMPO': 'FECHA INGRESO',
+        'DESCRIPCIÓN': 'Fecha real en que se registró el pago en cartola bancaria.',
+        'VALORES VÁLIDOS': 'Formato YYYY-MM-DD o DD/MM/YYYY (dejar vacío si está pendiente)',
+        'OBLIGATORIO': 'Opcional',
+      },
+      {
+        'CAMPO': 'BANCO',
+        'DESCRIPCIÓN': 'Banco o cuenta receptora de la recaudación.',
+        'VALORES VÁLIDOS': 'SANTANDER, ITAU, BANCOESTADO, BCI, etc.',
+        'OBLIGATORIO': 'Opcional',
+      },
+      {
         'CAMPO': 'EDIFICIO',
-        'DESCRIPCIÓN': 'Nombre del edificio o proyecto.',
-        'VALORES VÁLIDOS': 'AMALFI, LIBERTADOR, COSTA AZUL, PASEO PEHUENCE, 19 SUR, etc.',
+        'DESCRIPCIÓN': 'Nombre del edificio o condominio.',
+        'VALORES VÁLIDOS': 'AMALFI, LIBERTADOR, COSTA AZUL, PAZ, SAN FCO, MARBELLA, etc.',
         'OBLIGATORIO': 'Sí',
       },
       {
         'CAMPO': 'N°',
-        'DESCRIPCIÓN': 'Número de departamento, local, bodega o estacionamiento.',
-        'VALORES VÁLIDOS': 'Texto (ej: 1511, E-502, B-12, Estac. 30)',
+        'DESCRIPCIÓN': 'Número de unidad (departamento, local, casa, bodega o estacionamiento).',
+        'VALORES VÁLIDOS': 'Texto (ej: 1511, E-502, EST-154, BOD-74)',
         'OBLIGATORIO': 'Sí',
       },
       {
@@ -221,44 +278,32 @@ export async function GET(request: NextRequest) {
       },
       {
         'CAMPO': 'ARRENDATARIO',
-        'DESCRIPCIÓN': 'Nombre completo del arrendatario o DISPONIBLE.',
-        'VALORES VÁLIDOS': 'Texto',
+        'DESCRIPCIÓN': 'Nombre del arrendatario o empresa inquilina.',
+        'VALORES VÁLIDOS': 'Texto (o dejar vacío si es propiedad disponible)',
         'OBLIGATORIO': 'Sí',
-      },
-      {
-        'CAMPO': 'MES',
-        'DESCRIPCIÓN': 'Mes de la liquidación o voucher a generar.',
-        'VALORES VÁLIDOS': 'ENERO, FEBRERO, MARZO, ABRIL, MAYO, JUNIO, JULIO, AGOSTO, SEPTIEMBRE, OCTUBRE, NOVIEMBRE, DICIEMBRE',
-        'OBLIGATORIO': 'Sí',
-      },
-      {
-        'CAMPO': 'FECHA PAGO',
-        'DESCRIPCIÓN': 'Fecha real en que el arrendatario pagó en cartola (si ya pagó).',
-        'VALORES VÁLIDOS': 'Formato YYYY-MM-DD o DD/MM/YYYY (dejar vacío si está pendiente)',
-        'OBLIGATORIO': 'Opcional',
       },
     ]
 
-    // 5. Generar archivo Excel binario
+    // 3. Generar libro Excel binario
     const wb = XLSX.utils.book_new()
 
-    // Hoja 1: BASE CONSOLIDADA
-    const wsConsolidated = XLSX.utils.json_to_sheet(consolidatedRows)
-    const colWidths = Object.keys(consolidatedRows[0] || {}).map((key) => ({
+    // Hoja principal: nombrada "Hoja1" para máxima compatibilidad con el importador
+    const wsMain = XLSX.utils.json_to_sheet(dataRows)
+    const colWidths = Object.keys(dataRows[0] || {}).map((key) => ({
       wch: Math.max(key.length + 3, 14),
     }))
-    wsConsolidated['!cols'] = colWidths
-    XLSX.utils.book_append_sheet(wb, wsConsolidated, 'BASE CONSOLIDADA')
+    wsMain['!cols'] = colWidths
+    XLSX.utils.book_append_sheet(wb, wsMain, 'Hoja1')
 
-    // Hoja 2: GUIA DE LLENADO
+    // Hoja secundaria: GUIA DE LLENADO
     const wsInstructions = XLSX.utils.json_to_sheet(instructionRows)
-    wsInstructions['!cols'] = [{ wch: 22 }, { wch: 45 }, { wch: 55 }, { wch: 14 }]
+    wsInstructions['!cols'] = [{ wch: 18 }, { wch: 45 }, { wch: 65 }, { wch: 14 }]
     XLSX.utils.book_append_sheet(wb, wsInstructions, 'GUIA DE LLENADO')
 
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
     const filename = isTemplateOnly
-      ? 'Plantilla_NyS_Propiedades_Vouchers.xlsx'
-      : `Base_Datos_NyS_Arriendos_${new Date().toISOString().split('T')[0]}.xlsx`
+      ? 'Plantilla_Oficial_NyS_Arriendos.xlsx'
+      : `Base_Datos_Completa_NyS_Arriendos_${new Date().toISOString().split('T')[0]}.xlsx`
 
     return new NextResponse(buf, {
       status: 200,
@@ -268,7 +313,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (err: any) {
-    console.error('Error exportando base de datos a Excel:', err)
+    console.error('Error exportando datos a Excel:', err)
     return NextResponse.json(
       { error: err.message || 'Error al exportar los datos a Excel' },
       { status: 500 }
