@@ -23,7 +23,10 @@ import {
   Copy,
 } from 'lucide-react'
 import { VoucherDetail } from './VoucherPrintModal'
+import { VoucherCard } from './VoucherCard'
 import { registerVoucherPayment, updateVoucher } from '@/app/admin/vouchers/actions'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 interface PaymentDateModalProps {
   voucher: VoucherDetail
@@ -129,6 +132,11 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
   const [bank, setBank] = useState<string>(voucher.bank || 'SANTANDER')
   const [paymentMethod, setPaymentMethod] = useState<string>(voucher.paymentMethod || 'Transferencia')
   const [comment, setComment] = useState<string>(voucher.comment || '')
+
+  // Enviar comprobante por correo (Activo por defecto en marcha blanca hacia correo de la empresa)
+  const [sendEmail, setSendEmail] = useState<boolean>(true)
+  const [voucherForPdf, setVoucherForPdf] = useState<VoucherDetail | null>(null)
+  const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -264,8 +272,9 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
       }
 
       if (res?.voucher) {
-        onSaved({
+        const updatedVoucher: VoucherDetail = {
           ...voucher,
+          receiptNumber: res.voucher.receiptNumber || voucher.receiptNumber,
           paymentDate: isoDate,
           paymentStatus: 'Pagado',
           collectedAmount: numCollected,
@@ -274,7 +283,69 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
           bank,
           paymentMethod,
           comment: comment.trim() || null,
-        })
+          totalMonth: expectedRent,
+          amountInWords: res.voucher.amountInWords || voucher.amountInWords,
+        }
+
+        // Si el switch de correo está activado, generamos el PDF idéntico y despachamos
+        if (sendEmail) {
+          try {
+            setIsSendingEmail(true)
+            setVoucherForPdf(updatedVoucher)
+
+            // Breve espera para que React monte el componente en el DOM oculto
+            await new Promise((resolve) => setTimeout(resolve, 200))
+
+            const card = document.getElementById('hidden-voucher-card-for-email')
+            if (card) {
+              const canvas = await html2canvas(card, {
+                scale: 2.2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+              })
+              const imgData = canvas.toDataURL('image/png')
+              const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'letter',
+              })
+              const pdfWidth = pdf.internal.pageSize.getWidth()
+              const pdfHeight = pdf.internal.pageSize.getHeight()
+              const margin = 10
+              const contentWidth = pdfWidth - margin * 2
+              const contentHeight = (canvas.height * contentWidth) / canvas.width
+              const finalHeight = Math.min(contentHeight, pdfHeight - margin * 2)
+              pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, finalHeight)
+
+              const pdfBase64 = pdf.output('datauristring')
+
+              await fetch('/api/admin/vouchers/send-receipt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  voucherId: voucher.id,
+                  pdfBase64,
+                  receiptNumber: updatedVoucher.receiptNumber,
+                  tenantName: c.tenantName,
+                  tenantEmail: c.tenantEmail,
+                  building: c.building,
+                  unitNumber: c.unitNumber,
+                  month: voucher.month,
+                  year: voucher.year,
+                  totalAmount: numCollected,
+                  paymentDate: dateInput,
+                }),
+              })
+            }
+          } catch (emailErr) {
+            console.error('Error al generar o enviar comprobante por correo:', emailErr)
+          } finally {
+            setIsSendingEmail(false)
+          }
+        }
+
+        onSaved(updatedVoucher)
       }
     } catch (err: any) {
       setError(err?.message || 'Error al registrar el pago')
@@ -731,7 +802,7 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
               </div>
             </div>
 
-            {/* Fila 2: Factura (Opcional) y Banco */}
+            {/* Fila 2: Factura (Opcional) y Medio de Pago (Banco eliminado por solicitud) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {/* N° de Factura (Opcional) */}
               <div className="space-y-1.5">
@@ -753,36 +824,49 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
                 </p>
               </div>
 
-              {/* Banco Receptor */}
+              {/* Medio de Pago */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground block">
-                  Banco Receptor
+                  Medio de Pago
                 </label>
                 <select
-                  value={bank}
-                  onChange={(e) => setBank(e.target.value)}
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
                   className="w-full px-3 py-2.5 text-xs font-semibold bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
-                  <option value="SANTANDER">Santander</option>
-                  <option value="ITAU">Itaú</option>
-                  <option value="BANCO DE CHILE">Banco de Chile</option>
-                  <option value="BANCOESTADO">BancoEstado</option>
-                  <option value="BCI">BCI</option>
-                  <option value="SCOTIABANK">Scotiabank</option>
-                  <option value="OTRO">Otro / Caja</option>
+                  <option value="Transferencia">Transferencia Electrónica</option>
+                  <option value="Efectivo">Efectivo en Oficina</option>
+                  <option value="Documento">Depósito / Cheque</option>
                 </select>
-                <div className="pt-0.5">
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl text-muted-foreground"
-                  >
-                    <option value="Transferencia">Transferencia Electrónica</option>
-                    <option value="Efectivo">Efectivo en Oficina</option>
-                    <option value="Documento">Depósito / Cheque</option>
-                  </select>
-                </div>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Marca la casilla correspondiente en el recibo timbrado oficial.
+                </p>
               </div>
+            </div>
+
+            {/* SWITCH ENVÍO DE COMPROBANTE POR CORREO (MARCHA BLANCA) */}
+            <div className="p-3.5 rounded-xl bg-card border border-border flex items-center justify-between gap-3 shadow-2xs">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                  <Mail className="w-4 h-4 text-primary" />
+                  <span>Enviar comprobante por correo (Voucher PDF)</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">
+                    Marcha Blanca
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  El recibo oficial timbrado con <strong className="text-emerald-600 dark:text-emerald-400">PAGADO</strong> se enviará a la casilla de la empresa (<span className="font-mono text-foreground font-semibold">administracion@sunrisechile.cl</span>).
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={sendEmail}
+                  onChange={(e) => setSendEmail(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
             </div>
 
             {/* Aviso informativo */}
@@ -828,7 +912,7 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Guardando Pago...</span>
+                      <span>{isSendingEmail ? 'Generando y Despachando Correo...' : 'Guardando Pago...'}</span>
                     </>
                   ) : (
                     <>
@@ -842,6 +926,22 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
           </form>
         </div>
       </div>
+
+      {/* RENDERIZADOR OCULTO DEL VOUCHER IDÉNTICO PARA CAPTURA Y ENVÍO POR CORREO */}
+      {voucherForPdf && (
+        <div
+          style={{
+            position: 'fixed',
+            left: -9999,
+            top: 0,
+            opacity: 0,
+            pointerEvents: 'none',
+            zIndex: -50,
+          }}
+        >
+          <VoucherCard voucher={voucherForPdf} id="hidden-voucher-card-for-email" />
+        </div>
+      )}
     </div>
   )
 }
