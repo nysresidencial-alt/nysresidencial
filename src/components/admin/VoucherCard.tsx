@@ -35,7 +35,7 @@ export function VoucherCard({
   const c = voucher.contract
   const comp = voucher.company || c.company
 
-  const landlordName = comp?.landlordName || 'PATRICIA DEL CARMEN RETAMAL BUSTOS'
+  const landlordName = (c.newAssignee?.trim() || comp?.name || comp?.landlordName || 'PATRICIA DEL CARMEN RETAMAL BUSTOS').toUpperCase()
   const landlordRut = comp?.rut || '10.943.065-K'
   const landlordAddress = comp?.address || '1 SUR , Nº885 TALCA'
   const landlordPhone = comp?.phone || '+56 9 98859496'

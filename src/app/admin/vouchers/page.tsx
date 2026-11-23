@@ -57,6 +57,7 @@ export default async function VouchersAdminPage() {
           guarantorEmail: true,
           baseRent: true,
           totalRent: true,
+          newAssignee: true,
           vouchers: {
             select: {
               id: true,
