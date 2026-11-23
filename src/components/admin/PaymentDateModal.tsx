@@ -289,7 +289,7 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
         if (sendEmail) {
           try {
             setIsSendingEmail(true)
-            const pdfBase64 = generateVoucherPdfBase64(updatedVoucher)
+            const pdfBase64 = generateVoucherPdfBase64(updatedVoucher, dateInput)
 
             await fetch('/api/admin/vouchers/send-receipt', {
               method: 'POST',

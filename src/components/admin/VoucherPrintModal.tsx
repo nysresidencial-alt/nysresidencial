@@ -6,6 +6,7 @@ import { assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
 import { VoucherCard } from './VoucherCard'
 import { VoucherEmailModal } from './VoucherEmailModal'
 import { generateVoucherVectorPdf } from '@/lib/voucher-pdf'
+import { VoucherDatePicker } from './VoucherDatePicker'
 
 export interface VoucherDetail {
   id: string
@@ -97,6 +98,24 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
   const [isDownloading, setIsDownloading] = useState(false)
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
 
+  // Fecha seleccionada para el comprobante (por defecto la fecha registrada o la de hoy)
+  const initialVoucherDate = initialVoucher.paymentDate
+    ? (() => {
+        const raw = initialVoucher.paymentDate
+        if (raw.includes('/')) return raw
+        if (raw.includes('-')) {
+          const parts = raw.split('T')[0].split('-')
+          if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`
+        }
+        return raw
+      })()
+    : (() => {
+        const now = new Date()
+        return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
+      })()
+
+  const [customDate, setCustomDate] = useState<string>(initialVoucherDate)
+
   // Asignar correlativo automáticamente si aún no tiene N° de Recibo
   useEffect(() => {
     let isMounted = true
@@ -157,7 +176,7 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
   async function handleDownloadPDF() {
     setIsDownloading(true)
     try {
-      const pdf = generateVoucherVectorPdf(voucher)
+      const pdf = generateVoucherVectorPdf(voucher, customDate)
       const receiptNum = voucher.receiptNumber || 'SN'
       const cleanBuilding = (voucher.contract.building || 'Inmueble').replace(/\s+/g, '_')
       const cleanUnit = (voucher.contract.unitNumber || '').replace(/\s+/g, '_')
@@ -308,15 +327,35 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
         </button>
       </div>
 
+      {/* Barra Flotante de Selección de Fecha (Oculta al imprimir) */}
+      <div className="fixed top-4 left-4 z-50 print:hidden bg-card/95 backdrop-blur-md border border-border p-2.5 rounded-2xl shadow-xl w-72">
+        <VoucherDatePicker
+          value={customDate}
+          onChange={setCustomDate}
+          label="Fecha de Emisión / Pago"
+          fallbackMonth={voucher.month}
+          fallbackYear={voucher.year}
+          defaultCartolaDate={voucher.paymentDate ? formatDisplayDate(voucher.paymentDate) : null}
+        />
+      </div>
+
       {/* Contenedor del Voucher Oficial (id para captura e impresión aislada) */}
       <div className="my-8">
-        <VoucherCard voucher={voucher} id="voucher-printable-card" isAssigning={isAssigning} />
+        <VoucherCard
+          voucher={voucher}
+          id="voucher-printable-card"
+          isAssigning={isAssigning}
+          customDate={customDate}
+        />
       </div>
 
       {/* MODAL PARA ENVIAR VOUCHER POR CORREO */}
       {isEmailModalOpen && (
         <VoucherEmailModal
-          voucher={voucher}
+          voucher={{
+            ...voucher,
+            paymentDate: customDate,
+          }}
           onClose={() => setIsEmailModalOpen(false)}
           onSent={(updated) => {
             setVoucher(updated)

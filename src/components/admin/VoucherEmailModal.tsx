@@ -19,6 +19,7 @@ import { VoucherDetail } from './VoucherPrintModal'
 import { VoucherCard, formatVoucherDisplayDate } from './VoucherCard'
 import { assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
 import { generateVoucherPdfBase64 } from '@/lib/voucher-pdf'
+import { VoucherDatePicker } from './VoucherDatePicker'
 
 interface VoucherEmailModalProps {
   voucher: VoucherDetail
@@ -40,6 +41,16 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
 
   // Casilla de destino (en marcha blanca prellena con la casilla de la empresa, pero editable para pruebas)
   const [targetEmail, setTargetEmail] = useState('administracion@sunrisechile.cl')
+
+  // Fecha seleccionada para emitir y timbrar el comprobante
+  const initialDateStr = voucher.paymentDate
+    ? formatVoucherDisplayDate(voucher.paymentDate)
+    : (() => {
+        const now = new Date()
+        return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
+      })()
+
+  const [voucherDate, setVoucherDate] = useState<string>(initialDateStr)
 
   // Auto-asignar número de recibo si no tiene
   useEffect(() => {
@@ -71,8 +82,8 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
     setErrorMessage(null)
 
     try {
-      // 1. Generar el PDF vectorial exacto, nítido y perfectamente alineado
-      const pdfBase64 = generateVoucherPdfBase64(voucher)
+      // 1. Generar el PDF vectorial exacto con la fecha elegida
+      const pdfBase64 = generateVoucherPdfBase64(voucher, voucherDate)
 
       // 2. Despachar a la API de envío
       const response = await fetch('/api/admin/vouchers/send-receipt', {
@@ -90,7 +101,7 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
           month: voucher.month,
           year: voucher.year,
           totalAmount: expectedRent,
-          paymentDate: voucher.paymentDate ? formatVoucherDisplayDate(voucher.paymentDate) : null,
+          paymentDate: voucherDate,
         }),
       })
 
@@ -166,7 +177,7 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
             {isPaid ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-black text-xs">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>PAGADO (Timbre {formatVoucherDisplayDate(voucher.paymentDate)})</span>
+                <span>PAGADO (Timbre {voucherDate || formatVoucherDisplayDate(voucher.paymentDate)})</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-black text-xs">
@@ -174,6 +185,18 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
                 <span>PENDIENTE DE PAGO</span>
               </span>
             )}
+          </div>
+
+          {/* SELECTOR DE FECHA PARA EL VOUCHER */}
+          <div className="p-3.5 rounded-2xl bg-muted/30 border border-border">
+            <VoucherDatePicker
+              value={voucherDate}
+              onChange={setVoucherDate}
+              label="Fecha de Emisión / Timbre en el Voucher"
+              fallbackMonth={voucher.month}
+              fallbackYear={voucher.year}
+              defaultCartolaDate={voucher.paymentDate ? formatVoucherDisplayDate(voucher.paymentDate) : null}
+            />
           </div>
 
           {/* FICHA RESUMEN */}

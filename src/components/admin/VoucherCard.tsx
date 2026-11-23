@@ -3,12 +3,14 @@
 import React from 'react'
 import { Loader2 } from 'lucide-react'
 import { VoucherDetail } from './VoucherPrintModal'
+import { formatVoucherHeaderDate } from '@/lib/voucher-pdf'
 
 interface VoucherCardProps {
   voucher: VoucherDetail
   id?: string
   isAssigning?: boolean
   className?: string
+  customDate?: string
 }
 
 export function formatVoucherDisplayDate(dateStr: string | null | undefined): string {
@@ -23,7 +25,13 @@ export function formatVoucherDisplayDate(dateStr: string | null | undefined): st
   return dateStr
 }
 
-export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssigning = false, className = '' }: VoucherCardProps) {
+export function VoucherCard({
+  voucher,
+  id = 'voucher-printable-card',
+  isAssigning = false,
+  className = '',
+  customDate,
+}: VoucherCardProps) {
   const c = voucher.contract
   const comp = voucher.company || c.company
 
@@ -43,9 +51,11 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
 
   const formattedAmount = Math.round(voucher.totalMonth || voucher.totalRent || 0).toLocaleString('es-CL')
 
-  // Se considera pagado ÚNICAMENTE si tiene fecha de pago registrada y estado Pagado
-  const hasPaymentDate = Boolean(voucher.paymentDate && voucher.paymentDate.trim() !== '')
-  const isPaid = hasPaymentDate && (voucher.paymentStatus || '').toLowerCase().includes('pag')
+  // Determinar fecha activa (customDate seleccionada en modal o paymentDate registrada)
+  const activeDate = customDate || voucher.paymentDate
+  const hasPaymentDate = Boolean(activeDate && activeDate.trim() !== '' && activeDate !== '-')
+  const isPaid = hasPaymentDate
+  const headerDateStr = formatVoucherHeaderDate(activeDate, month, year)
 
   return (
     <div
@@ -171,7 +181,7 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
               textAlign: 'center',
             }}
           >
-            TALCA, 1 DE {month} DE {year}
+            {headerDateStr}
           </p>
         </div>
       </div>
@@ -465,7 +475,7 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
                   textTransform: 'uppercase',
                 }}
               >
-                PAGADO EL {formatVoucherDisplayDate(voucher.paymentDate)}
+                PAGADO EL {formatVoucherDisplayDate(activeDate)}
               </span>
             </div>
           </div>

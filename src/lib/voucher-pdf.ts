@@ -1,6 +1,21 @@
 import { jsPDF } from 'jspdf'
 import { VoucherDetail } from '@/components/admin/VoucherPrintModal'
 
+const SPANISH_MONTHS_NAMES = [
+  'ENERO',
+  'FEBRERO',
+  'MARZO',
+  'ABRIL',
+  'MAYO',
+  'JUNIO',
+  'JULIO',
+  'AGOSTO',
+  'SEPTIEMBRE',
+  'OCTUBRE',
+  'NOVIEMBRE',
+  'DICIEMBRE',
+]
+
 export function formatPdfDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '-'
   if (dateStr.includes('/')) return dateStr
@@ -13,7 +28,45 @@ export function formatPdfDate(dateStr: string | null | undefined): string {
   return dateStr
 }
 
-export function generateVoucherVectorPdf(voucher: VoucherDetail): jsPDF {
+export function formatVoucherHeaderDate(
+  dateStr: string | null | undefined,
+  fallbackMonth: string,
+  fallbackYear: number
+): string {
+  if (!dateStr || dateStr.trim() === '' || dateStr === '-') {
+    return `TALCA, 1 DE ${fallbackMonth.toUpperCase()} DE ${fallbackYear}`
+  }
+
+  // Si viene en formato DD/MM/AAAA
+  if (dateStr.includes('/')) {
+    const parts = dateStr.trim().split('/')
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10)
+      const monthIdx = parseInt(parts[1], 10) - 1
+      const year = parseInt(parts[2], 10)
+      if (!isNaN(day) && monthIdx >= 0 && monthIdx < 12 && !isNaN(year)) {
+        return `TALCA, ${day} DE ${SPANISH_MONTHS_NAMES[monthIdx]} DE ${year}`
+      }
+    }
+  }
+
+  // Si viene en formato ISO AAAA-MM-DD
+  if (dateStr.includes('-')) {
+    const parts = dateStr.split('T')[0].split('-')
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10)
+      const monthIdx = parseInt(parts[1], 10) - 1
+      const day = parseInt(parts[2], 10)
+      if (!isNaN(day) && monthIdx >= 0 && monthIdx < 12 && !isNaN(year)) {
+        return `TALCA, ${day} DE ${SPANISH_MONTHS_NAMES[monthIdx]} DE ${year}`
+      }
+    }
+  }
+
+  return `TALCA, 1 DE ${fallbackMonth.toUpperCase()} DE ${fallbackYear}`
+}
+
+export function generateVoucherVectorPdf(voucher: VoucherDetail, customDate?: string): jsPDF {
   const c = voucher.contract
   const comp = voucher.company || c.company
 
@@ -34,9 +87,12 @@ export function generateVoucherVectorPdf(voucher: VoucherDetail): jsPDF {
   const totalAmount = Math.round(voucher.totalMonth || voucher.totalRent || 0)
   const formattedVal = totalAmount.toLocaleString('es-CL')
 
-  const hasPaymentDate = Boolean(voucher.paymentDate && voucher.paymentDate.trim() !== '')
-  const isPaid = hasPaymentDate && (voucher.paymentStatus || '').toLowerCase().includes('pag')
-  const paymentDateStr = formatPdfDate(voucher.paymentDate)
+  // Determinar fecha activa (customDate o paymentDate del voucher)
+  const activeDate = customDate || voucher.paymentDate
+  const hasPaymentDate = Boolean(activeDate && activeDate.trim() !== '' && activeDate !== '-')
+  const isPaid = hasPaymentDate
+  const paymentDateStr = formatPdfDate(activeDate)
+  const headerDateStr = formatVoucherHeaderDate(activeDate, month, year)
 
   // Documento Letter en orientación vertical
   const doc = new jsPDF({
@@ -130,7 +186,7 @@ export function generateVoucherVectorPdf(voucher: VoucherDetail): jsPDF {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
   doc.setTextColor(39, 39, 42)
-  doc.text(`TALCA, 1 DE ${month} DE ${year}`, contentX + contentW / 2, curY, { align: 'center' })
+  doc.text(headerDateStr, contentX + contentW / 2, curY, { align: 'center' })
 
   // --- 3. FILAS DE DATOS ---
   curY += 8
@@ -290,7 +346,8 @@ export function generateVoucherVectorPdf(voucher: VoucherDetail): jsPDF {
   return doc
 }
 
-export function generateVoucherPdfBase64(voucher: VoucherDetail): string {
-  const doc = generateVoucherVectorPdf(voucher)
+export function generateVoucherPdfBase64(voucher: VoucherDetail, customDate?: string): string {
+  const doc = generateVoucherVectorPdf(voucher, customDate)
   return doc.output('datauristring')
 }
+
