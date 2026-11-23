@@ -43,6 +43,7 @@ import { VoucherEditModal } from './VoucherEditModal'
 import { VoucherStatusModal } from './VoucherStatusModal'
 import { PaymentDateModal } from './PaymentDateModal'
 import { InvoiceEditModal } from './InvoiceEditModal'
+import { VoucherEmailModal } from './VoucherEmailModal'
 import { generateMonthVouchers, assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
 
 interface VouchersManagerProps {
@@ -128,6 +129,7 @@ export function VouchersManager({
   const [statusChangingVoucher, setStatusChangingVoucher] = useState<VoucherDetail | null>(null)
   const [paymentDateVoucher, setPaymentDateVoucher] = useState<VoucherDetail | null>(null)
   const [invoiceEditingVoucher, setInvoiceEditingVoucher] = useState<VoucherDetail | null>(null)
+  const [emailSendingVoucher, setEmailSendingVoucher] = useState<VoucherDetail | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
@@ -1213,6 +1215,16 @@ export function VouchersManager({
                                 <Printer className="w-4 h-4" />
                               </button>
 
+                              {/* Enviar Comprobante por Correo */}
+                              <button
+                                type="button"
+                                onClick={() => setEmailSendingVoucher(v)}
+                                className="p-1.5 text-muted-foreground hover:text-sky-600 hover:bg-sky-500/10 rounded-lg transition-colors cursor-pointer"
+                                title="Enviar comprobante por correo (PDF)"
+                              >
+                                <Mail className="w-4 h-4" />
+                              </button>
+
                               {/* Editar Liquidación */}
                               <button
                                 type="button"
@@ -1370,6 +1382,14 @@ export function VouchersManager({
                   </button>
 
                   <button
+                    onClick={() => setEmailSendingVoucher(selectedVoucher)}
+                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    <Mail className="w-4 h-4" />
+                    <span>Enviar Comprobante por Correo</span>
+                  </button>
+
+                  <button
                     onClick={() => setEditingVoucher(selectedVoucher)}
                     className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-background hover:bg-muted text-foreground border border-border text-xs font-bold rounded-xl transition-colors cursor-pointer"
                   >
@@ -1436,6 +1456,23 @@ export function VouchersManager({
           voucher={invoiceEditingVoucher}
           onClose={() => setInvoiceEditingVoucher(null)}
           onSaved={handleInvoiceSaved}
+        />
+      )}
+
+      {/* MODAL DE ENVÍO MANUAL DE COMPROBANTE POR CORREO */}
+      {emailSendingVoucher && (
+        <VoucherEmailModal
+          voucher={emailSendingVoucher}
+          onClose={() => setEmailSendingVoucher(null)}
+          onSent={(updated) => {
+            setVouchers((prev) =>
+              prev.map((item) => (item.id === updated.id ? { ...item, receiptNumber: updated.receiptNumber } : item))
+            )
+            setMessage({
+              text: `Comprobante N° ${updated.receiptNumber || 'S/N'} despachado con éxito`,
+              type: 'success',
+            })
+          }}
         />
       )}
     </div>

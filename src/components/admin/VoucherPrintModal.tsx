@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { X, Printer, Download, Loader2 } from 'lucide-react'
+import { X, Printer, Download, Loader2, Mail } from 'lucide-react'
 import { assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
 import { VoucherCard } from './VoucherCard'
+import { VoucherEmailModal } from './VoucherEmailModal'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 
@@ -95,6 +96,7 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
   const [voucher, setVoucher] = useState<VoucherDetail>(initialVoucher)
   const [isAssigning, setIsAssigning] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
 
   // Asignar correlativo automáticamente si aún no tiene N° de Recibo
   useEffect(() => {
@@ -279,6 +281,17 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
       {/* Botones Flotantes de Acción (Ocultos al imprimir) */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2 print:hidden">
+        {/* Botón Enviar por Correo */}
+        <button
+          type="button"
+          onClick={() => setIsEmailModalOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm rounded-xl shadow-lg transition-all cursor-pointer"
+          title="Enviar este recibo por correo electrónico (Marcha blanca / Arrendatario)"
+        >
+          <Mail className="w-4 h-4" />
+          <span>Enviar por Correo</span>
+        </button>
+
         {/* Botón Descargar PDF directo */}
         <button
           type="button"
@@ -324,6 +337,18 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
 
       {/* Contenedor del Voucher Oficial (id para captura e impresión aislada) */}
       <VoucherCard voucher={voucher} id="voucher-printable-card" isAssigning={isAssigning} />
+
+      {/* MODAL PARA ENVIAR VOUCHER POR CORREO */}
+      {isEmailModalOpen && (
+        <VoucherEmailModal
+          voucher={voucher}
+          onClose={() => setIsEmailModalOpen(false)}
+          onSent={(updated) => {
+            setVoucher(updated)
+            onReceiptNumberAssigned?.(updated)
+          }}
+        />
+      )}
     </div>
   )
 }
