@@ -79,13 +79,17 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
       }
 
       const canvas = await html2canvas(card, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
         onclone: (_clonedDoc, clonedElement) => {
           clonedElement.style.boxShadow = 'none'
           clonedElement.style.textShadow = 'none'
+          clonedElement.style.opacity = '1'
+          if (clonedElement.parentElement) {
+            clonedElement.parentElement.style.opacity = '1'
+          }
           const allEls = clonedElement.getElementsByTagName('*')
           for (let i = 0; i < allEls.length; i++) {
             const el = allEls[i] as HTMLElement
@@ -95,7 +99,8 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
         },
       })
 
-      const imgData = canvas.toDataURL('image/png')
+      // Usar compresión JPEG al 85% para reducir el tamaño de ~6MB a ~150KB sin pérdida perceptible
+      const imgData = canvas.toDataURL('image/jpeg', 0.85)
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -109,7 +114,7 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
       const contentHeight = (canvas.height * contentWidth) / canvas.width
       const finalHeight = Math.min(contentHeight, pdfHeight - margin * 2)
 
-      pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, finalHeight)
+      pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, finalHeight, undefined, 'FAST')
       const pdfBase64 = pdf.output('datauristring')
 
       // 2. Despachar a la API de envío
@@ -122,6 +127,7 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
           receiptNumber: voucher.receiptNumber,
           tenantName: c.tenantName,
           tenantEmail: c.tenantEmail,
+          targetEmail: targetEmail.trim(),
           building: c.building,
           unitNumber: c.unitNumber,
           month: voucher.month,
@@ -131,7 +137,13 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
         }),
       })
 
-      const result = await response.json()
+      const responseText = await response.text()
+      let result: any = {}
+      try {
+        result = JSON.parse(responseText)
+      } catch {
+        throw new Error(responseText || `Error del servidor (${response.status})`)
+      }
 
       if (!response.ok || result.error) {
         throw new Error(result.error || 'Error al procesar el envío')
@@ -315,7 +327,6 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
           position: 'fixed',
           left: -9999,
           top: 0,
-          opacity: 0,
           pointerEvents: 'none',
           zIndex: -50,
         }}

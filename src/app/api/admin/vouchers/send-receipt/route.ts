@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/admin-auth'
 import nodemailer from 'nodemailer'
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
 export async function POST(request: NextRequest) {
   // 1. Validar autenticación de administrador (Contabilidad o Superadmin)
   const session = await getAdminSession()
@@ -37,11 +40,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Falta el archivo PDF del comprobante' }, { status: 400 })
     }
 
-    // 2. Destinatario en MARCHA BLANCA (Siempre al correo de la empresa / contabilidad)
+    // 2. Destinatario en MARCHA BLANCA (Por defecto a la casilla de la empresa, o la indicada en la prueba)
     // Cuando el usuario defina pasar a producción, se envía directamente a tenantEmail
     const isProductionEmail = process.env.EMAIL_ENV === 'production'
     const companyEmail = process.env.COMPANY_TEST_EMAIL || 'administracion@sunrisechile.cl'
-    const targetEmail = isProductionEmail && tenantEmail ? tenantEmail : companyEmail
+    const targetEmail = isProductionEmail && tenantEmail ? tenantEmail : (body.targetEmail?.trim() || companyEmail)
 
     const cleanReceipt = receiptNumber && receiptNumber !== 'S/N' ? receiptNumber : 'S/N'
     const formattedAmount = Number(totalAmount || 0).toLocaleString('es-CL')
@@ -159,7 +162,7 @@ export async function POST(request: NextRequest) {
       })
 
       const info = await transporter.sendMail({
-        from: `"NyS Arriendos" <${process.env.SMTP_FROM || smtpUser}>`,
+        from: process.env.SMTP_FROM || `"NyS Arriendos" <${smtpUser}>`,
         to: targetEmail,
         subject,
         html: htmlContent,

@@ -299,13 +299,17 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
             const card = document.getElementById('hidden-voucher-card-for-email')
             if (card) {
               const canvas = await html2canvas(card, {
-                scale: 2,
+                scale: 1.5,
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff',
                 onclone: (_clonedDoc, clonedElement) => {
                   clonedElement.style.boxShadow = 'none'
                   clonedElement.style.textShadow = 'none'
+                  clonedElement.style.opacity = '1'
+                  if (clonedElement.parentElement) {
+                    clonedElement.parentElement.style.opacity = '1'
+                  }
                   const allEls = clonedElement.getElementsByTagName('*')
                   for (let i = 0; i < allEls.length; i++) {
                     const el = allEls[i] as HTMLElement
@@ -314,7 +318,7 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
                   }
                 },
               })
-              const imgData = canvas.toDataURL('image/png')
+              const imgData = canvas.toDataURL('image/jpeg', 0.85)
               const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
@@ -326,7 +330,7 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
               const contentWidth = pdfWidth - margin * 2
               const contentHeight = (canvas.height * contentWidth) / canvas.width
               const finalHeight = Math.min(contentHeight, pdfHeight - margin * 2)
-              pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, finalHeight)
+              pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, finalHeight, undefined, 'FAST')
 
               const pdfBase64 = pdf.output('datauristring')
 
@@ -944,7 +948,6 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
             position: 'fixed',
             left: -9999,
             top: 0,
-            opacity: 0,
             pointerEvents: 'none',
             zIndex: -50,
           }}
