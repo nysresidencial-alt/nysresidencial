@@ -89,6 +89,12 @@ export async function updateVoucher(
         comment: data.comment !== undefined ? data.comment.trim() : existing.comment,
         paymentMethod: data.paymentMethod || (cash > 0 ? 'Efectivo' : 'Transferencia'),
       },
+      include: {
+        contract: {
+          include: { company: true },
+        },
+        company: true,
+      },
     })
 
     revalidatePath('/admin/vouchers')
@@ -423,12 +429,7 @@ export async function registerVoucherPayment(
       },
       include: {
         contract: {
-          select: {
-            id: true,
-            building: true,
-            unitNumber: true,
-            tenantName: true,
-          },
+          include: { company: true },
         },
         company: true,
       },
@@ -456,6 +457,12 @@ export async function updateVoucherInvoice(voucherId: string, invoiceNumber: str
       where: { id: voucherId },
       data: {
         invoiceNumber: invoiceNumber ? invoiceNumber.trim() : null,
+      },
+      include: {
+        contract: {
+          include: { company: true },
+        },
+        company: true,
       },
     })
 

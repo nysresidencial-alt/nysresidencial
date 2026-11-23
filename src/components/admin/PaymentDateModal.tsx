@@ -272,6 +272,11 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
       if (res?.voucher) {
         const updatedVoucher: VoucherDetail = {
           ...voucher,
+          contract: {
+            ...voucher.contract,
+            ...((res.voucher as any).contract || {}),
+          },
+          company: (res.voucher as any).company || voucher.company,
           receiptNumber: res.voucher.receiptNumber || voucher.receiptNumber,
           paymentDate: isoDate,
           paymentStatus: 'Pagado',

@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   description: 'Gestión de cobros de arriendos, recibos mensuales y recaudación inmobiliaria.',
 }
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function VouchersAdminPage() {
   const session = await requireAdminAuth('vouchers', 'view')
 
