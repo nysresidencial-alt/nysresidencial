@@ -79,10 +79,20 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
       }
 
       const canvas = await html2canvas(card, {
-        scale: 2.2,
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
+        onclone: (_clonedDoc, clonedElement) => {
+          clonedElement.style.boxShadow = 'none'
+          clonedElement.style.textShadow = 'none'
+          const allEls = clonedElement.getElementsByTagName('*')
+          for (let i = 0; i < allEls.length; i++) {
+            const el = allEls[i] as HTMLElement
+            el.style.boxShadow = 'none'
+            el.style.textShadow = 'none'
+          }
+        },
       })
 
       const imgData = canvas.toDataURL('image/png')
