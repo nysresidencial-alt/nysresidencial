@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Property } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
-import { Ban, MapPin, ArrowUpRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Ban } from "lucide-react";
 
 const FALLBACK_PROPERTY_IMAGE = "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800&auto=format&fit=crop";
 
@@ -16,47 +15,63 @@ export function PropertyCard({ property }: { property: Property }) {
   const isUnavailable = property.isAvailable === false;
   const statusLabel = (property.availabilityStatus || "No Disponible").toUpperCase();
 
+  // Formato similar a "UF: 15.000"
+  const formattedPrice = formatCurrency(property.currency, property.price)
+    .replace('UF', '')
+    .replace('CLP', '')
+    .trim();
+
   const displayImageSrc = imgError || !hasImages ? FALLBACK_PROPERTY_IMAGE : property.images[0];
+
+  // Construir línea inferior con características separadas por "|"
+  const specs: string[] = [];
+  if (property.beds && property.beds > 0) {
+    specs.push(`${property.beds} Habitaciones`);
+  }
+  if (property.baths && property.baths > 0) {
+    specs.push(`${property.baths} Baños`);
+  }
+  if (property.builtArea && property.builtArea > 0) {
+    specs.push(`Metros Construido ${property.builtArea}`);
+  } else if (property.landArea && property.landArea > 0) {
+    specs.push(`Metros Terreno ${property.landArea}`);
+  }
 
   return (
     <Link href={`/propiedades/${property.id}`} className="block h-full group">
       <div 
-        className={`flex flex-col h-full border rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${
+        className={`flex flex-row h-full bg-card dark:bg-card border transition-all duration-200 ${
           isUnavailable 
-            ? 'border-dashed border-rose-300 dark:border-rose-900/60 bg-muted/40 opacity-60 hover:opacity-95' 
-            : 'border-border bg-card hover:border-primary/40'
+            ? 'border-dashed border-rose-300 dark:border-rose-900/50 opacity-60 hover:opacity-85 bg-muted/40' 
+            : 'border-border hover:bg-muted dark:hover:bg-muted'
         }`}
       >
         
         {/* Sección de Imagen */}
-        <div className="relative h-48 sm:h-52 w-full bg-muted overflow-hidden">
+        <div className="relative w-[130px] sm:w-[160px] xl:w-[180px] shrink-0 bg-muted overflow-hidden">
           <Image
             src={displayImageSrc}
             alt={property.title}
             fill
             unoptimized
             onError={() => setImgError(true)}
-            className={`object-cover group-hover:scale-105 transition-transform duration-500 ${
+            className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
               isUnavailable ? 'grayscale-[60%] contrast-75 brightness-90' : ''
             }`}
           />
 
-          {/* Badges de Operación y Estado (Top Left) */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
-            <Badge className="bg-background/90 text-foreground backdrop-blur border-none font-semibold text-xs shadow-sm">
-              {property.operation}
-            </Badge>
-            {property.status && (
-              <Badge variant="secondary" className="bg-primary/90 text-primary-foreground backdrop-blur border-none font-semibold text-xs shadow-sm">
-                {property.status}
-              </Badge>
-            )}
-          </div>
-
-          {/* Sello de agua NYS (Top Right cuando está disponible) */}
-          {!isUnavailable && (
-            <div className="absolute top-3 right-3 bg-background/90 dark:bg-background/80 px-2 py-1 rounded-md shadow-sm z-10 flex items-center justify-center">
-              <div className="relative h-3.5 w-6">
+          {/* Overlay translúcido oscuro si NO está disponible */}
+          {isUnavailable ? (
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-[1px] flex flex-col items-center justify-center p-2 text-center z-10">
+              <span className="px-2 py-1 text-[10px] sm:text-xs font-black tracking-widest text-white bg-rose-950/90 border border-rose-500/60 rounded shadow-lg uppercase flex items-center gap-1">
+                <Ban className="w-3 h-3 text-rose-400 shrink-0" />
+                <span>{statusLabel}</span>
+              </span>
+            </div>
+          ) : (
+            /* Sello de agua NYS oficial */
+            <div className="absolute top-2 left-2 bg-background/90 dark:bg-background/80 px-1 py-0.5 rounded shadow-sm z-10 flex items-center justify-center">
+              <div className="relative h-3 w-5">
                 <Image
                   src="/logo-nys.png"
                   alt="NyS"
@@ -66,67 +81,37 @@ export function PropertyCard({ property }: { property: Property }) {
               </div>
             </div>
           )}
-
-          {/* Banner central prominente cuando NO está disponible */}
-          {isUnavailable && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center p-3 text-center z-10 pointer-events-none">
-              <span className="px-3.5 py-1.5 text-xs font-black tracking-wider text-white bg-rose-950/95 border border-rose-500/70 rounded-full shadow-lg uppercase flex items-center gap-1.5">
-                <Ban className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                <span>{statusLabel}</span>
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Sección de Contenido */}
-        <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
-          <div>
-            {/* Ubicación y Badge de Estado */}
-            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground mb-2">
-              <div className="flex items-center truncate">
-                <MapPin className="h-3 w-3 mr-1 shrink-0 text-primary" />
-                <span className="truncate">{property.sector}, {property.city}</span>
-              </div>
-              {isUnavailable && (
-                <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
-                  {statusLabel}
-                </span>
-              )}
-            </div>
-
-            {/* Título de la propiedad */}
-            <h3 className="font-bold text-base leading-tight mb-2 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
-              {property.title}
-            </h3>
-
-            {/* Características (Habitaciones, Baños, Metros) */}
-            <div className="text-muted-foreground text-xs mb-3 flex items-center gap-2 flex-wrap">
-              {Boolean(property.beds && property.beds > 0) && <span>{property.beds} Hab.</span>}
-              {Boolean(property.beds && property.beds > 0 && property.baths && property.baths > 0) && <span>•</span>}
-              {Boolean(property.baths && property.baths > 0) && <span>{property.baths} Baños</span>}
-              {Boolean(((property.builtArea && property.builtArea > 0) || (property.landArea && property.landArea > 0)) && (property.beds || property.baths)) && <span>•</span>}
-              {property.builtArea && property.builtArea > 0 ? (
-                <span>{property.builtArea} m² constr.</span>
-              ) : property.landArea && property.landArea > 0 ? (
-                <span>{property.landArea} m² terr.</span>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Precio y Tipo */}
-          <div className="pt-3 border-t border-border flex items-baseline justify-between mt-auto">
-            <div>
-              <p className="text-lg sm:text-xl font-black text-foreground">
-                {formatCurrency(property.currency, property.price)}
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground font-medium">
-                {property.propertyType}
+        <div className="flex-1 p-3 sm:p-4 flex flex-col justify-center min-w-0">
+          
+          {/* Top Line: Ubicación | Operación | Precio */}
+          <div className="flex items-center gap-1.5 text-[13px] sm:text-sm font-medium mb-1 truncate">
+            {isUnavailable && (
+              <span className="inline-block text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-amber-400 border border-amber-400/30 shrink-0">
+                {statusLabel}
               </span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-            </div>
+            )}
+            <span className="text-primary truncate">
+              {property.city} | {property.operation} | {property.currency}: {formattedPrice}
+            </span>
           </div>
+          
+          {/* Title Line: Tipo - Sector - Dirección / Título */}
+          <div className="text-foreground text-[13px] sm:text-sm mb-1 sm:mb-2 line-clamp-2">
+            <strong className="font-bold">{property.propertyType}</strong>
+            {property.sector ? ` - Sector ${property.sector}` : ''}
+            {property.title ? ` - ${property.title}` : ''}
+          </div>
+
+          {/* Bottom Line: Habitaciones | Baños | Metros */}
+          {specs.length > 0 && (
+            <div className="text-muted-foreground text-[11px] sm:text-xs truncate">
+              {specs.join(' | ')}
+            </div>
+          )}
+          
         </div>
       </div>
     </Link>
