@@ -47,8 +47,9 @@ export async function POST(request: NextRequest) {
     const formattedAmount = Number(totalAmount || 0).toLocaleString('es-CL')
     const fileName = `Recibo_Arriendo_N${cleanReceipt}_${(building || 'Inmueble').replace(/\s+/g, '_')}_${(unitNumber || '').replace(/\s+/g, '_')}.pdf`
 
-    // Convertir el base64 a Buffer
-    const pdfBuffer = Buffer.from(pdfBase64.replace(/^data:application\/pdf;base64,/, ''), 'base64')
+    // Convertir el base64 a Buffer eliminando cualquier prefijo de Data URL
+    const cleanBase64 = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64
+    const pdfBuffer = Buffer.from(cleanBase64, 'base64')
 
     // 3. Plantilla de correo HTML profesional y corporativa
     const subject = !isProductionEmail
