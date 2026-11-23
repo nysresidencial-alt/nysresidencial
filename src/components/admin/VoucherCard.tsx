@@ -425,16 +425,15 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
       >
         {/* SELLO DE PAGADO */}
         {isPaid ? (
-          <div style={{ padding: '8px 12px 12px 8px', overflow: 'visible' }}>
+          <div style={{ padding: '4px', overflow: 'visible' }}>
             <div
               style={{
                 border: '3px solid #059669',
                 backgroundColor: '#ecfdf5',
                 color: '#047857',
-                borderRadius: '12px',
+                borderRadius: '10px',
                 padding: '8px 22px',
-                transform: 'rotate(-2deg)',
-                transformOrigin: 'center center',
+                transform: 'none',
                 display: 'inline-block',
                 boxShadow: 'none',
               }}
@@ -442,7 +441,7 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
               <span
                 style={{
                   color: '#047857',
-                  fontSize: '32px',
+                  fontSize: '30px',
                   fontWeight: 900,
                   letterSpacing: '0.12em',
                   display: 'block',

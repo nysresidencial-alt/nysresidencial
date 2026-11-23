@@ -5,8 +5,7 @@ import { X, Printer, Download, Loader2, Mail } from 'lucide-react'
 import { assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
 import { VoucherCard } from './VoucherCard'
 import { VoucherEmailModal } from './VoucherEmailModal'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
+import { generateVoucherVectorPdf } from '@/lib/voucher-pdf'
 
 export interface VoucherDetail {
   id: string
@@ -154,47 +153,11 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
   const hasPaymentDate = Boolean(voucher.paymentDate && voucher.paymentDate.trim() !== '')
   const isPaid = hasPaymentDate && (voucher.paymentStatus || '').toLowerCase().includes('pag')
 
-  // Descargar directamente en archivo PDF (1 plana)
+  // Descargar directamente en archivo PDF (1 plana vectorial nítida y perfectamente alineada)
   async function handleDownloadPDF() {
-    const card = document.getElementById('voucher-printable-card')
-    if (!card) return
-
     setIsDownloading(true)
     try {
-      const canvas = await html2canvas(card, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        onclone: (_clonedDoc, clonedElement) => {
-          clonedElement.style.boxShadow = 'none'
-          clonedElement.style.textShadow = 'none'
-          const allEls = clonedElement.getElementsByTagName('*')
-          for (let i = 0; i < allEls.length; i++) {
-            const el = allEls[i] as HTMLElement
-            el.style.boxShadow = 'none'
-            el.style.textShadow = 'none'
-          }
-        },
-      })
-      const imgData = canvas.toDataURL('image/jpeg', 0.88)
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'letter',
-      })
-
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight()
-
-      const marginX = 14
-      const contentWidth = pdfWidth - marginX * 2
-      const contentHeight = (canvas.height * contentWidth) / canvas.width
-      const marginY = Math.max(12, (pdfHeight - contentHeight) / 2)
-
-      pdf.addImage(imgData, 'JPEG', marginX, marginY, contentWidth, contentHeight, undefined, 'FAST')
-
+      const pdf = generateVoucherVectorPdf(voucher)
       const receiptNum = voucher.receiptNumber || 'SN'
       const cleanBuilding = (voucher.contract.building || 'Inmueble').replace(/\s+/g, '_')
       const cleanUnit = (voucher.contract.unitNumber || '').replace(/\s+/g, '_')

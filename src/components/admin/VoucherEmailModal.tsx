@@ -18,8 +18,7 @@ import {
 import { VoucherDetail } from './VoucherPrintModal'
 import { VoucherCard, formatVoucherDisplayDate } from './VoucherCard'
 import { assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
+import { generateVoucherPdfBase64 } from '@/lib/voucher-pdf'
 
 interface VoucherEmailModalProps {
   voucher: VoucherDetail
@@ -72,50 +71,8 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
     setErrorMessage(null)
 
     try {
-      // 1. Capturar el elemento oculto del Voucher idéntico
-      const card = document.getElementById('modal-hidden-voucher-card')
-      if (!card) {
-        throw new Error('No se encontró la plantilla del comprobante para generar el PDF')
-      }
-
-      const canvas = await html2canvas(card, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        onclone: (_clonedDoc, clonedElement) => {
-          clonedElement.style.boxShadow = 'none'
-          clonedElement.style.textShadow = 'none'
-          clonedElement.style.opacity = '1'
-          if (clonedElement.parentElement) {
-            clonedElement.parentElement.style.opacity = '1'
-          }
-          const allEls = clonedElement.getElementsByTagName('*')
-          for (let i = 0; i < allEls.length; i++) {
-            const el = allEls[i] as HTMLElement
-            el.style.boxShadow = 'none'
-            el.style.textShadow = 'none'
-          }
-        },
-      })
-
-      // Usar compresión JPEG al 85% para reducir el tamaño sin pérdida perceptible
-      const imgData = canvas.toDataURL('image/jpeg', 0.85)
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'letter',
-      })
-
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight()
-      const marginX = 14
-      const contentWidth = pdfWidth - marginX * 2
-      const contentHeight = (canvas.height * contentWidth) / canvas.width
-      const marginY = Math.max(12, (pdfHeight - contentHeight) / 2)
-
-      pdf.addImage(imgData, 'JPEG', marginX, marginY, contentWidth, contentHeight, undefined, 'FAST')
-      const pdfBase64 = pdf.output('datauristring')
+      // 1. Generar el PDF vectorial exacto, nítido y perfectamente alineado
+      const pdfBase64 = generateVoucherPdfBase64(voucher)
 
       // 2. Despachar a la API de envío
       const response = await fetch('/api/admin/vouchers/send-receipt', {
@@ -319,23 +276,6 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
             </button>
           )}
         </div>
-      </div>
-
-      {/* RENDERIZADOR OCULTO PARA CAPTURA DEL PDF IDÉNTICO */}
-      <div
-        style={{
-          position: 'fixed',
-          left: -9999,
-          top: 0,
-          width: '740px',
-          minWidth: '740px',
-          maxWidth: '740px',
-          backgroundColor: '#ffffff',
-          pointerEvents: 'none',
-          zIndex: -50,
-        }}
-      >
-        <VoucherCard voucher={voucher} id="modal-hidden-voucher-card" isAssigning={isAssigning} />
       </div>
     </div>
   )

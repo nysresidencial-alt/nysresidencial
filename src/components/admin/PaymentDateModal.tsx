@@ -23,10 +23,8 @@ import {
   Copy,
 } from 'lucide-react'
 import { VoucherDetail } from './VoucherPrintModal'
-import { VoucherCard } from './VoucherCard'
 import { registerVoucherPayment, updateVoucher } from '@/app/admin/vouchers/actions'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
+import { generateVoucherPdfBase64 } from '@/lib/voucher-pdf'
 
 interface PaymentDateModalProps {
   voucher: VoucherDetail
@@ -287,71 +285,29 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
           amountInWords: res.voucher.amountInWords || voucher.amountInWords,
         }
 
-        // Si el switch de correo está activado, generamos el PDF idéntico y despachamos
+        // Si el switch de correo está activado, generamos el PDF vectorial idéntico y despachamos
         if (sendEmail) {
           try {
             setIsSendingEmail(true)
-            setVoucherForPdf(updatedVoucher)
+            const pdfBase64 = generateVoucherPdfBase64(updatedVoucher)
 
-            // Breve espera para que React monte el componente en el DOM oculto
-            await new Promise((resolve) => setTimeout(resolve, 200))
-
-            const card = document.getElementById('hidden-voucher-card-for-email')
-            if (card) {
-              const canvas = await html2canvas(card, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                onclone: (_clonedDoc, clonedElement) => {
-                  clonedElement.style.boxShadow = 'none'
-                  clonedElement.style.textShadow = 'none'
-                  clonedElement.style.opacity = '1'
-                  if (clonedElement.parentElement) {
-                    clonedElement.parentElement.style.opacity = '1'
-                  }
-                  const allEls = clonedElement.getElementsByTagName('*')
-                  for (let i = 0; i < allEls.length; i++) {
-                    const el = allEls[i] as HTMLElement
-                    el.style.boxShadow = 'none'
-                    el.style.textShadow = 'none'
-                  }
-                },
-              })
-              const imgData = canvas.toDataURL('image/jpeg', 0.85)
-              const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'letter',
-              })
-              const pdfWidth = pdf.internal.pageSize.getWidth()
-              const pdfHeight = pdf.internal.pageSize.getHeight()
-              const marginX = 14
-              const contentWidth = pdfWidth - marginX * 2
-              const contentHeight = (canvas.height * contentWidth) / canvas.width
-              const marginY = Math.max(12, (pdfHeight - contentHeight) / 2)
-              pdf.addImage(imgData, 'JPEG', marginX, marginY, contentWidth, contentHeight, undefined, 'FAST')
-
-              const pdfBase64 = pdf.output('datauristring')
-
-              await fetch('/api/admin/vouchers/send-receipt', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  voucherId: voucher.id,
-                  pdfBase64,
-                  receiptNumber: updatedVoucher.receiptNumber,
-                  tenantName: c.tenantName,
-                  tenantEmail: c.tenantEmail,
-                  building: c.building,
-                  unitNumber: c.unitNumber,
-                  month: voucher.month,
-                  year: voucher.year,
-                  totalAmount: numCollected,
-                  paymentDate: dateInput,
-                }),
-              })
-            }
+            await fetch('/api/admin/vouchers/send-receipt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                voucherId: voucher.id,
+                pdfBase64,
+                receiptNumber: updatedVoucher.receiptNumber,
+                tenantName: c.tenantName,
+                tenantEmail: c.tenantEmail,
+                building: c.building,
+                unitNumber: c.unitNumber,
+                month: voucher.month,
+                year: voucher.year,
+                totalAmount: numCollected,
+                paymentDate: dateInput,
+              }),
+            })
           } catch (emailErr) {
             console.error('Error al generar o enviar comprobante por correo:', emailErr)
           } finally {
@@ -940,25 +896,6 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
           </form>
         </div>
       </div>
-
-      {/* RENDERIZADOR OCULTO DEL VOUCHER IDÉNTICO PARA CAPTURA Y ENVÍO POR CORREO */}
-      {voucherForPdf && (
-        <div
-          style={{
-            position: 'fixed',
-            left: -9999,
-            top: 0,
-            width: '740px',
-            minWidth: '740px',
-            maxWidth: '740px',
-            backgroundColor: '#ffffff',
-            pointerEvents: 'none',
-            zIndex: -50,
-          }}
-        >
-          <VoucherCard voucher={voucherForPdf} id="hidden-voucher-card-for-email" />
-        </div>
-      )}
     </div>
   )
 }
