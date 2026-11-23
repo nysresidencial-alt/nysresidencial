@@ -753,9 +753,9 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
                   <input
                     type="number"
                     required
-                    min={1}
-                    step={100}
-                    placeholder={`Ej: ${expectedRent.toLocaleString('es-CL')}`}
+                    min={0}
+                    step="any"
+                    placeholder={`Ej: ${expectedRent}`}
                     value={collectedAmount}
                     onChange={(e) => setCollectedAmount(e.target.value)}
                     className="w-full pl-7 pr-3.5 py-2.5 text-sm font-black bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs font-mono"
