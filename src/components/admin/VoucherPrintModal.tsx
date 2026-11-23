@@ -177,7 +177,7 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
           }
         },
       })
-      const imgData = canvas.toDataURL('image/png')
+      const imgData = canvas.toDataURL('image/jpeg', 0.88)
 
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -188,12 +188,12 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
       const pdfWidth = pdf.internal.pageSize.getWidth()
       const pdfHeight = pdf.internal.pageSize.getHeight()
 
-      const margin = 10
-      const contentWidth = pdfWidth - margin * 2
+      const marginX = 14
+      const contentWidth = pdfWidth - marginX * 2
       const contentHeight = (canvas.height * contentWidth) / canvas.width
-      const finalHeight = Math.min(contentHeight, pdfHeight - margin * 2)
+      const marginY = Math.max(12, (pdfHeight - contentHeight) / 2)
 
-      pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, finalHeight)
+      pdf.addImage(imgData, 'JPEG', marginX, marginY, contentWidth, contentHeight, undefined, 'FAST')
 
       const receiptNum = voucher.receiptNumber || 'SN'
       const cleanBuilding = (voucher.contract.building || 'Inmueble').replace(/\s+/g, '_')
@@ -346,7 +346,9 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
       </div>
 
       {/* Contenedor del Voucher Oficial (id para captura e impresión aislada) */}
-      <VoucherCard voucher={voucher} id="voucher-printable-card" isAssigning={isAssigning} />
+      <div className="my-8">
+        <VoucherCard voucher={voucher} id="voucher-printable-card" isAssigning={isAssigning} />
+      </div>
 
       {/* MODAL PARA ENVIAR VOUCHER POR CORREO */}
       {isEmailModalOpen && (

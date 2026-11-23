@@ -79,7 +79,7 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
       }
 
       const canvas = await html2canvas(card, {
-        scale: 1.5,
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
@@ -99,7 +99,7 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
         },
       })
 
-      // Usar compresión JPEG al 85% para reducir el tamaño de ~6MB a ~150KB sin pérdida perceptible
+      // Usar compresión JPEG al 85% para reducir el tamaño sin pérdida perceptible
       const imgData = canvas.toDataURL('image/jpeg', 0.85)
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -109,12 +109,12 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
 
       const pdfWidth = pdf.internal.pageSize.getWidth()
       const pdfHeight = pdf.internal.pageSize.getHeight()
-      const margin = 10
-      const contentWidth = pdfWidth - margin * 2
+      const marginX = 14
+      const contentWidth = pdfWidth - marginX * 2
       const contentHeight = (canvas.height * contentWidth) / canvas.width
-      const finalHeight = Math.min(contentHeight, pdfHeight - margin * 2)
+      const marginY = Math.max(12, (pdfHeight - contentHeight) / 2)
 
-      pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, finalHeight, undefined, 'FAST')
+      pdf.addImage(imgData, 'JPEG', marginX, marginY, contentWidth, contentHeight, undefined, 'FAST')
       const pdfBase64 = pdf.output('datauristring')
 
       // 2. Despachar a la API de envío
@@ -327,6 +327,10 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
           position: 'fixed',
           left: -9999,
           top: 0,
+          width: '740px',
+          minWidth: '740px',
+          maxWidth: '740px',
+          backgroundColor: '#ffffff',
           pointerEvents: 'none',
           zIndex: -50,
         }}

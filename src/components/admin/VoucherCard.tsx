@@ -53,104 +53,237 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
       style={{
         backgroundColor: '#ffffff',
         color: '#09090b',
-        borderColor: '#e4e4e7',
+        border: '1px solid #e4e4e7',
+        borderRadius: '16px',
         boxShadow: 'none',
+        width: '740px',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        padding: '36px 40px',
+        margin: '0 auto',
       }}
-      className={`w-full max-w-3xl font-sans p-6 sm:p-10 rounded-2xl border my-8 print:m-0 print:p-6 print:border-none print:w-full ${className}`}
+      className={`font-sans print:m-0 print:p-6 print:border-none print:w-full ${className}`}
     >
       {/* ENCABEZADO */}
-      <div style={{ borderBottom: '2px solid #18181b', paddingBottom: '12px', marginBottom: '16px' }}>
-        <div className="flex justify-between items-start">
+      <div style={{ borderBottom: '2px solid #18181b', paddingBottom: '14px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h2 style={{ color: '#09090b' }} className="text-lg md:text-xl font-black tracking-tight uppercase">
+            <h2
+              style={{
+                color: '#09090b',
+                fontSize: '18px',
+                fontWeight: 900,
+                letterSpacing: '-0.02em',
+                textTransform: 'uppercase',
+                margin: 0,
+                lineHeight: '1.2',
+              }}
+            >
               {landlordName}
             </h2>
-            <div style={{ color: '#3f3f46' }} className="text-xs font-semibold space-y-0.5 mt-1">
-              <p>RUT: {landlordRut}</p>
-              <p>{landlordAddress}</p>
-              <p>CEL: {landlordPhone}</p>
-              <p>E-MAIL: {landlordEmail}</p>
+            <div style={{ color: '#3f3f46', fontSize: '11px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
+              <p style={{ margin: '1px 0' }}>RUT: {landlordRut}</p>
+              <p style={{ margin: '1px 0' }}>{landlordAddress}</p>
+              <p style={{ margin: '1px 0' }}>CEL: {landlordPhone}</p>
+              <p style={{ margin: '1px 0' }}>E-MAIL: {landlordEmail}</p>
             </div>
           </div>
 
           {/* Número de Recibo */}
-          <div className="text-right">
-            <span style={{ color: '#52525b' }} className="text-xs font-bold block">Nº</span>
+          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
             <span
+              style={{
+                color: '#52525b',
+                fontSize: '11px',
+                fontWeight: 800,
+                display: 'block',
+                margin: '0 0 2px 0',
+                lineHeight: '1',
+              }}
+            >
+              Nº
+            </span>
+            <div
               style={{
                 color: '#09090b',
                 border: '2px solid #18181b',
-                backgroundColor: '#f8fafc',
-                minWidth: '70px',
+                backgroundColor: '#ffffff',
+                minWidth: '85px',
+                padding: '4px 14px',
+                borderRadius: '6px',
+                textAlign: 'center',
+                fontSize: '26px',
+                fontWeight: 900,
+                lineHeight: '1.2',
               }}
-              className="text-2xl md:text-3xl font-black px-3 py-1 rounded inline-block text-center"
             >
               {isAssigning ? (
-                <span style={{ color: '#71717a' }} className="inline-flex items-center gap-1.5 text-xs font-bold py-1">
+                <span
+                  style={{
+                    color: '#71717a',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    padding: '4px 0',
+                  }}
+                >
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Asignando...</span>
                 </span>
               ) : (
                 receiptNo
               )}
-            </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* TÍTULO PRINCIPAL */}
-      <div className="text-center my-4">
-        <h1
-          style={{
-            color: '#09090b',
-            borderTop: '2px solid #18181b',
-            borderBottom: '2px solid #18181b',
-          }}
-          className="text-2xl md:text-3xl font-black uppercase tracking-wider py-1.5 inline-block px-12"
-        >
-          RECIBO DE ARRIENDO
-        </h1>
-        <p style={{ color: '#27272a' }} className="text-xs font-bold uppercase tracking-widest mt-2">
-          TALCA, 1 DE {month} DE {year}
-        </p>
+      <div style={{ textAlign: 'center', marginTop: '16px', marginBottom: '16px' }}>
+        <div style={{ display: 'inline-block' }}>
+          <h1
+            style={{
+              color: '#09090b',
+              borderTop: '2px solid #18181b',
+              borderBottom: '2px solid #18181b',
+              fontSize: '22px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              padding: '6px 48px',
+              margin: '0 auto',
+              lineHeight: '1.3',
+            }}
+          >
+            RECIBO DE ARRIENDO
+          </h1>
+          <p
+            style={{
+              color: '#27272a',
+              fontSize: '11px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              marginTop: '6px',
+              marginBottom: 0,
+              textAlign: 'center',
+            }}
+          >
+            TALCA, 1 DE {month} DE {year}
+          </p>
+        </div>
       </div>
 
       {/* CUERPO DEL RECIBO */}
-      <div style={{ color: '#09090b' }} className="space-y-3 my-5 text-sm">
-        <div style={{ borderBottom: '1px solid #d4d4d8', paddingBottom: '6px' }} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
-          <span style={{ color: '#52525b', minWidth: '170px' }} className="font-extrabold uppercase text-xs shrink-0">
+      <div style={{ color: '#09090b', marginTop: '16px', marginBottom: '16px' }}>
+        <div
+          style={{
+            borderBottom: '1px solid #d4d4d8',
+            paddingTop: '6px',
+            paddingBottom: '6px',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '12px',
+          }}
+        >
+          <span
+            style={{
+              color: '#52525b',
+              width: '190px',
+              minWidth: '190px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              fontSize: '11px',
+            }}
+          >
             RECIBÍ DE DON (ÑA):
           </span>
-          <span style={{ color: '#09090b' }} className="font-bold text-base flex-1">
+          <span style={{ color: '#09090b', fontWeight: 700, fontSize: '14px', flex: 1 }}>
             {c.tenantName} {c.tenantRut ? `(RUT: ${c.tenantRut})` : ''}
           </span>
         </div>
 
-        <div style={{ borderBottom: '1px solid #d4d4d8', paddingBottom: '6px' }} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
-          <span style={{ color: '#52525b', minWidth: '170px' }} className="font-extrabold uppercase text-xs shrink-0">
+        <div
+          style={{
+            borderBottom: '1px solid #d4d4d8',
+            paddingTop: '6px',
+            paddingBottom: '6px',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '12px',
+          }}
+        >
+          <span
+            style={{
+              color: '#52525b',
+              width: '190px',
+              minWidth: '190px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              fontSize: '11px',
+            }}
+          >
             POR ARRIENDO DE:
           </span>
-          <span style={{ color: '#09090b' }} className="font-bold text-sm flex-1">
+          <span style={{ color: '#09090b', fontWeight: 700, fontSize: '13px', flex: 1 }}>
             {c.propertyType.toUpperCase()} {c.unitNumber} - EDIFICIO {c.building}
             {c.parkingNumber ? ` + ESTAC. Nº ${c.parkingNumber}` : ''}
             {c.storageNumber ? ` + BODEGA Nº ${c.storageNumber}` : ''}
           </span>
         </div>
 
-        <div style={{ borderBottom: '1px solid #d4d4d8', paddingBottom: '6px' }} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
-          <span style={{ color: '#52525b', minWidth: '170px' }} className="font-extrabold uppercase text-xs shrink-0">
+        <div
+          style={{
+            borderBottom: '1px solid #d4d4d8',
+            paddingTop: '6px',
+            paddingBottom: '6px',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '12px',
+          }}
+        >
+          <span
+            style={{
+              color: '#52525b',
+              width: '190px',
+              minWidth: '190px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              fontSize: '11px',
+            }}
+          >
             UBICADO EN:
           </span>
-          <span style={{ color: '#27272a' }} className="font-medium text-sm flex-1">
+          <span style={{ color: '#27272a', fontWeight: 600, fontSize: '13px', flex: 1 }}>
             {c.address || `EDIFICIO ${c.building}, TALCA`}
           </span>
         </div>
 
-        <div style={{ borderBottom: '1px solid #d4d4d8', paddingBottom: '6px' }} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
-          <span style={{ color: '#52525b', minWidth: '170px' }} className="font-extrabold uppercase text-xs shrink-0">
+        <div
+          style={{
+            borderBottom: '1px solid #d4d4d8',
+            paddingTop: '6px',
+            paddingBottom: '6px',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '12px',
+          }}
+        >
+          <span
+            style={{
+              color: '#52525b',
+              width: '190px',
+              minWidth: '190px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              fontSize: '11px',
+            }}
+          >
             CORRESPONDIENTE AL MES DE:
           </span>
-          <span style={{ color: '#09090b' }} className="font-black text-sm flex-1">
+          <span style={{ color: '#09090b', fontWeight: 900, fontSize: '13px', flex: 1 }}>
             {month} {year}
           </span>
         </div>
@@ -161,51 +294,77 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
         style={{
           backgroundColor: '#f8fafc',
           border: '1px solid #e4e4e7',
-          padding: '16px',
+          padding: '14px 18px',
+          borderRadius: '10px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: '16px',
+          marginBottom: '16px',
         }}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-5 items-center rounded-xl"
       >
         {/* Checkboxes de medio de pago */}
-        <div style={{ color: '#27272a' }} className="space-y-1.5 text-xs font-bold uppercase">
-          <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', fontWeight: 800, color: '#27272a' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div
               style={{
                 border: '2px solid #18181b',
                 color: '#09090b',
-                width: '20px',
-                height: '20px',
+                width: '18px',
+                height: '18px',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 900,
+                fontSize: '12px',
+                lineHeight: 1,
+                backgroundColor: '#ffffff',
               }}
-              className="rounded flex items-center justify-center font-black"
             >
               {isCash ? '✓' : ''}
             </div>
             <span>EFECTIVO</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div
               style={{
                 border: '2px solid #18181b',
                 color: '#09090b',
-                width: '20px',
-                height: '20px',
+                width: '18px',
+                height: '18px',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 900,
+                fontSize: '12px',
+                lineHeight: 1,
+                backgroundColor: '#ffffff',
               }}
-              className="rounded flex items-center justify-center font-black"
             >
               {isTransfer ? '✓' : ''}
             </div>
             <span>TRANSFERENCIA</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div
               style={{
                 border: '2px solid #18181b',
                 color: '#09090b',
-                width: '20px',
-                height: '20px',
+                width: '18px',
+                height: '18px',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 900,
+                fontSize: '12px',
+                lineHeight: 1,
+                backgroundColor: '#ffffff',
               }}
-              className="rounded flex items-center justify-center font-black"
             >
               {isDoc ? '✓' : ''}
             </div>
@@ -214,19 +373,21 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
         </div>
 
         {/* Montos */}
-        <div className="text-right space-y-1">
-          <div style={{ color: '#52525b' }} className="text-xs font-semibold">
-            VALOR $: <span style={{ color: '#09090b' }} className="font-bold">${formattedAmount}</span>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ color: '#52525b', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
+            VALOR $: <span style={{ color: '#09090b', fontWeight: 800 }}>${formattedAmount}</span>
           </div>
           <div
             style={{
               color: '#09090b',
               borderTop: '1px solid #d4d4d8',
-              paddingTop: '4px',
+              paddingTop: '6px',
+              fontSize: '13px',
+              fontWeight: 800,
             }}
-            className="text-sm font-extrabold"
           >
-            TOTAL DE ARRIENDO: <span style={{ color: '#09090b' }} className="text-base font-black">${formattedAmount}</span>
+            TOTAL DE ARRIENDO:{' '}
+            <span style={{ color: '#09090b', fontSize: '16px', fontWeight: 900 }}>${formattedAmount}</span>
           </div>
         </div>
       </div>
@@ -237,47 +398,80 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
           backgroundColor: '#f4f4f5',
           border: '1px solid #e4e4e7',
           color: '#09090b',
-          padding: '10px',
+          padding: '10px 14px',
+          borderRadius: '8px',
+          fontSize: '11px',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          marginTop: '12px',
+          marginBottom: '20px',
         }}
-        className="rounded-lg text-xs font-bold uppercase"
       >
-        <span style={{ color: '#52525b' }} className="font-extrabold">SON: </span>
+        <span style={{ color: '#52525b', fontWeight: 800 }}>SON: </span>
         {voucher.amountInWords || '---'}
       </div>
 
       {/* PARTE INFERIOR: SELLO PAGADO Y FIRMA */}
-      <div className="mt-8 pt-4 flex items-end justify-between min-h-[90px]">
-        {/* SELLO DE PAGADO EN LETRAS GRANDES (SOLO SI TIENE FECHA DE PAGO REGISTRADA) */}
+      <div
+        style={{
+          marginTop: '16px',
+          paddingTop: '8px',
+          paddingBottom: '8px',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          minHeight: '110px',
+        }}
+      >
+        {/* SELLO DE PAGADO */}
         {isPaid ? (
-          <div
-            style={{
-              border: '4px solid #059669',
-              backgroundColor: '#ecfdf5',
-              color: '#047857',
-              borderRadius: '16px',
-              padding: '8px 24px',
-              transform: 'rotate(-3deg)',
-              boxShadow: 'none',
-            }}
-            className="select-none"
-          >
-            <span
-              style={{ color: '#047857' }}
-              className="text-3xl md:text-5xl font-black tracking-widest block uppercase text-center font-sans"
+          <div style={{ padding: '8px 12px 12px 8px', overflow: 'visible' }}>
+            <div
+              style={{
+                border: '3px solid #059669',
+                backgroundColor: '#ecfdf5',
+                color: '#047857',
+                borderRadius: '12px',
+                padding: '8px 22px',
+                transform: 'rotate(-2deg)',
+                transformOrigin: 'center center',
+                display: 'inline-block',
+                boxShadow: 'none',
+              }}
             >
-              PAGADO
-            </span>
-            <span
-              style={{ color: '#065f46' }}
-              className="text-[11px] font-bold tracking-wider block text-center uppercase mt-0.5 font-mono"
-            >
-              PAGADO EL {formatVoucherDisplayDate(voucher.paymentDate)}
-            </span>
+              <span
+                style={{
+                  color: '#047857',
+                  fontSize: '32px',
+                  fontWeight: 900,
+                  letterSpacing: '0.12em',
+                  display: 'block',
+                  textAlign: 'center',
+                  lineHeight: '1.1',
+                  textTransform: 'uppercase',
+                }}
+              >
+                PAGADO
+              </span>
+              <span
+                style={{
+                  color: '#065f46',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  display: 'block',
+                  textAlign: 'center',
+                  marginTop: '4px',
+                  fontFamily: 'monospace',
+                  textTransform: 'uppercase',
+                }}
+              >
+                PAGADO EL {formatVoucherDisplayDate(voucher.paymentDate)}
+              </span>
+            </div>
           </div>
         ) : (
-          <div className="text-xs italic text-zinc-400">
-            {/* Espacio reservado para timbre una vez registrado el pago */}
-          </div>
+          <div style={{ width: '100px' }} />
         )}
 
         {/* FIRMA ARRENDADOR */}
@@ -285,14 +479,24 @@ export function VoucherCard({ voucher, id = 'voucher-printable-card', isAssignin
           style={{
             borderTop: '2px solid #18181b',
             paddingTop: '8px',
-            width: '256px',
+            width: '240px',
+            textAlign: 'center',
+            marginBottom: '4px',
           }}
-          className="text-center shrink-0"
         >
-          <span style={{ color: '#09090b' }} className="text-xs font-black tracking-widest uppercase block">
+          <span
+            style={{
+              color: '#09090b',
+              fontSize: '11px',
+              fontWeight: 900,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              display: 'block',
+            }}
+          >
             ARRENDADOR
           </span>
-          <span style={{ color: '#71717a' }} className="block text-[10px] font-medium">
+          <span style={{ color: '#71717a', fontSize: '10px', fontWeight: 500, display: 'block', marginTop: '2px' }}>
             NyS Negocios y Soluciones Inmobiliarias
           </span>
         </div>

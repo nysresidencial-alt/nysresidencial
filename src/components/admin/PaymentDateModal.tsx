@@ -299,7 +299,7 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
             const card = document.getElementById('hidden-voucher-card-for-email')
             if (card) {
               const canvas = await html2canvas(card, {
-                scale: 1.5,
+                scale: 2,
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff',
@@ -326,11 +326,11 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
               })
               const pdfWidth = pdf.internal.pageSize.getWidth()
               const pdfHeight = pdf.internal.pageSize.getHeight()
-              const margin = 10
-              const contentWidth = pdfWidth - margin * 2
+              const marginX = 14
+              const contentWidth = pdfWidth - marginX * 2
               const contentHeight = (canvas.height * contentWidth) / canvas.width
-              const finalHeight = Math.min(contentHeight, pdfHeight - margin * 2)
-              pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, finalHeight, undefined, 'FAST')
+              const marginY = Math.max(12, (pdfHeight - contentHeight) / 2)
+              pdf.addImage(imgData, 'JPEG', marginX, marginY, contentWidth, contentHeight, undefined, 'FAST')
 
               const pdfBase64 = pdf.output('datauristring')
 
@@ -948,6 +948,10 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
             position: 'fixed',
             left: -9999,
             top: 0,
+            width: '740px',
+            minWidth: '740px',
+            maxWidth: '740px',
+            backgroundColor: '#ffffff',
             pointerEvents: 'none',
             zIndex: -50,
           }}
