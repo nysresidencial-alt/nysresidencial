@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 import {
   FileText,
   Printer,
@@ -110,13 +111,42 @@ export function VouchersManager({
     initialVouchers[0]?.id || null
   )
 
-  // Filtros
-  const [filterCompany, setFilterCompany] = useState<string>('TODAS')
+  // Helper para mes actual dinámico en base al reloj del sistema (ej: 'NOVIEMBRE' en nov 2026)
+  const currentMonthName = useMemo(() => {
+    const mIndex = new Date().getMonth()
+    return MONTHS[mIndex] || 'NOVIEMBRE'
+  }, [])
+
+  // Filtros con soporte de Selección Múltiple
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([currentMonthName])
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([])
+  const [selectedOwners, setSelectedOwners] = useState<string[]>([])
   const [filterBuilding, setFilterBuilding] = useState<string>('TODOS')
-  const [filterMonth, setFilterMonth] = useState<string>('OCTUBRE')
   const [filterYear, setFilterYear] = useState<number>(2026)
   const [filterStatus, setFilterStatus] = useState<string>('TODOS')
   const [searchTerm, setSearchTerm] = useState<string>('')
+
+  // Control de dropdowns desplegables emergentes
+  const [openDropdown, setOpenDropdown] = useState<'month' | 'company' | 'owner' | 'building' | 'status' | 'year' | null>(null)
+  const filterRef = useRef<HTMLDivElement>(null)
+
+  // Búsquedas internas en desplegables
+  const [ownerSearchTerm, setOwnerSearchTerm] = useState<string>('')
+  const [companySearchTerm, setCompanySearchTerm] = useState<string>('')
+  const [buildingSearchTerm, setBuildingSearchTerm] = useState<string>('')
+
+  // Cierra los menús desplegables al hacer clic afuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // Selección múltiple y vista ejecutiva (Imagen 3)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -169,114 +199,77 @@ export function VouchersManager({
     })
   }
 
-  // Opciones de filtro dependientes (en cascada)
+  // Lista de empresas disponibles con conteo
   const availableCompanies = useMemo(() => {
-    const map = new Map<string, { id: string; code: string; name: string }>()
+    const map = new Map<string, { id: string; code: string; name: string; count: number }>()
     companies.forEach((c) => {
-      map.set(c.code.toUpperCase(), c)
+      map.set(c.code.toUpperCase(), { ...c, count: 0 })
     })
     vouchers.forEach((v) => {
       const comp = v.company || v.contract.company
-      if (comp && comp.code && !map.has(comp.code.toUpperCase())) {
-        map.set(comp.code.toUpperCase(), {
-          id: comp.id,
-          code: comp.code,
-          name: comp.name || comp.code,
-        })
+      if (comp && comp.code) {
+        const codeUpper = comp.code.toUpperCase()
+        if (!map.has(codeUpper)) {
+          map.set(codeUpper, {
+            id: comp.id,
+            code: comp.code,
+            name: comp.name || comp.code,
+            count: 0,
+          })
+        }
+        map.get(codeUpper)!.count++
       }
     })
     return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code))
   }, [companies, vouchers])
 
+  // Lista de propietarios (Nuevo Asignatario o Nombre Empresa) con conteo
+  const availableOwners = useMemo(() => {
+    const map = new Map<string, number>()
+    vouchers.forEach((v) => {
+      const owner =
+        (v.contract?.newAssignee && v.contract.newAssignee.trim() !== '')
+          ? v.contract.newAssignee.trim()
+          : (v.company?.name || v.contract?.company?.name || 'Sin Asignar')
+      map.set(owner, (map.get(owner) || 0) + 1)
+    })
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [vouchers])
+
+  // Lista de edificios disponibles
   const availableBuildings = useMemo(() => {
-    let pool = vouchers
-    if (filterCompany !== 'TODAS') {
-      pool = pool.filter((v) => {
-        const comp = v.company || v.contract.company
-        return (
-          comp?.code?.toUpperCase() === filterCompany.toUpperCase() ||
-          comp?.id === filterCompany ||
-          comp?.name?.toLowerCase().includes(filterCompany.toLowerCase())
-        )
-      })
-    }
     const bSet = new Set<string>()
-    pool.forEach((v) => {
+    vouchers.forEach((v) => {
       if (v.contract.building) bSet.add(v.contract.building)
     })
     return Array.from(bSet).sort()
-  }, [vouchers, filterCompany])
-
-  const availableStatuses = useMemo(() => {
-    let pool = vouchers
-    if (filterCompany !== 'TODAS') {
-      pool = pool.filter((v) => {
-        const comp = v.company || v.contract.company
-        return comp?.code?.toUpperCase() === filterCompany.toUpperCase()
-      })
-    }
-    if (filterBuilding !== 'TODOS') {
-      pool = pool.filter((v) => v.contract.building === filterBuilding)
-    }
-    const sSet = new Set<string>()
-    pool.forEach((v) => {
-      if (v.paymentStatus) sSet.add(v.paymentStatus)
-    })
-    return Array.from(sSet).sort()
-  }, [vouchers, filterCompany, filterBuilding])
-
-  function handleCompanyChange(newCompany: string) {
-    setFilterCompany(newCompany)
-    setCurrentPage(1)
-    if (newCompany !== 'TODAS') {
-      const validForNewCompany = new Set(
-        vouchers
-          .filter((v) => {
-            const comp = v.company || v.contract.company
-            return (
-              comp?.code?.toUpperCase() === newCompany.toUpperCase() ||
-              comp?.id === newCompany ||
-              comp?.name?.toLowerCase().includes(newCompany.toLowerCase())
-            )
-          })
-          .map((v) => v.contract.building)
-      )
-      if (filterBuilding !== 'TODOS' && !validForNewCompany.has(filterBuilding)) {
-        setFilterBuilding('TODOS')
-      }
-    }
-  }
-
-  function handleBuildingChange(newBuilding: string) {
-    setFilterBuilding(newBuilding)
-    setCurrentPage(1)
-  }
-
-  function handleMonthChange(newMonth: string) {
-    setFilterMonth(newMonth)
-    setCurrentPage(1)
-  }
-
-  function handleStatusChange(newStatus: string) {
-    setFilterStatus(newStatus)
-    setCurrentPage(1)
-  }
+  }, [vouchers])
 
   function resetFilters() {
-    setFilterCompany('TODAS')
+    setSelectedMonths([currentMonthName])
+    setSelectedCompanies([])
+    setSelectedOwners([])
     setFilterBuilding('TODOS')
-    setFilterMonth('TODOS')
     setFilterStatus('TODOS')
     setFilterYear(2026)
     setSearchTerm('')
+    setOwnerSearchTerm('')
+    setCompanySearchTerm('')
+    setBuildingSearchTerm('')
+    setOpenDropdown(null)
     setCurrentPage(1)
   }
 
   const isFiltered =
-    filterCompany !== 'TODAS' ||
+    selectedMonths.length !== 1 ||
+    selectedMonths[0] !== currentMonthName ||
+    selectedCompanies.length > 0 ||
+    selectedOwners.length > 0 ||
     filterBuilding !== 'TODOS' ||
-    filterMonth !== 'TODOS' ||
     filterStatus !== 'TODOS' ||
+    filterYear !== 2026 ||
     searchTerm.trim() !== ''
 
   function handleVoucherStatusUpdated(updated: VoucherDetail) {
@@ -292,16 +285,45 @@ export function VouchersManager({
     const list = vouchers.filter((v) => {
       const c = v.contract
       const comp = v.company || c.company
+      const ownerName =
+        (c.newAssignee && c.newAssignee.trim() !== '')
+          ? c.newAssignee.trim()
+          : (v.company?.name || c.company?.name || 'Sin Asignar')
 
-      if (filterCompany !== 'TODAS') {
-        const matchesCode = comp?.code?.toUpperCase() === filterCompany.toUpperCase()
-        const matchesId = comp?.id === filterCompany
-        const matchesName = comp?.name?.toLowerCase().includes(filterCompany.toLowerCase())
-        if (!matchesCode && !matchesId && !matchesName) return false
+      // Filtro Meses (multi-selección)
+      if (selectedMonths.length > 0 && selectedMonths.length < 12) {
+        const m = (v.month || '').toUpperCase()
+        if (!selectedMonths.includes(m)) return false
       }
-      if (filterBuilding !== 'TODOS' && c.building?.toUpperCase() !== filterBuilding.toUpperCase()) return false
-      if (filterMonth !== 'TODOS' && v.month?.toUpperCase() !== filterMonth.toUpperCase()) return false
+
+      // Filtro Empresas (multi-selección)
+      if (selectedCompanies.length > 0) {
+        const code = comp?.code?.toUpperCase() || ''
+        const id = comp?.id || ''
+        const name = (comp?.name || '').toLowerCase()
+        const matchComp = selectedCompanies.some(
+          (sc) =>
+            sc.toUpperCase() === code ||
+            sc === id ||
+            name.includes(sc.toLowerCase())
+        )
+        if (!matchComp) return false
+      }
+
+      // Filtro Propietarios / Asignatarios (multi-selección)
+      if (selectedOwners.length > 0) {
+        if (!selectedOwners.includes(ownerName)) return false
+      }
+
+      // Filtro Edificio
+      if (filterBuilding !== 'TODOS' && c.building?.toUpperCase() !== filterBuilding.toUpperCase()) {
+        return false
+      }
+
+      // Filtro Año
       if (filterYear && v.year !== filterYear) return false
+
+      // Filtro Estado de Pago
       if (filterStatus !== 'TODOS') {
         if (filterStatus === 'Sin Estado') {
           if (v.paymentStatus && v.paymentStatus.trim() !== '') return false
@@ -310,6 +332,7 @@ export function VouchersManager({
         }
       }
 
+      // Búsqueda textual amplia
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase().trim()
         const matchName = c.tenantName?.toLowerCase().includes(query)
@@ -319,7 +342,10 @@ export function VouchersManager({
         const matchInvoice = v.invoiceNumber?.toLowerCase().includes(query)
         const matchBuilding = c.building?.toLowerCase().includes(query)
         const matchCompany = (comp?.name || comp?.code)?.toLowerCase().includes(query)
-        if (!matchName && !matchRut && !matchUnit && !matchReceipt && !matchInvoice && !matchBuilding && !matchCompany) return false
+        const matchOwner = ownerName.toLowerCase().includes(query)
+        if (!matchName && !matchRut && !matchUnit && !matchReceipt && !matchInvoice && !matchBuilding && !matchCompany && !matchOwner) {
+          return false
+        }
       }
 
       return true
@@ -336,7 +362,7 @@ export function VouchersManager({
       if (bComp !== 0) return bComp
       return (a.contract.unitNumber || '').localeCompare(b.contract.unitNumber || '')
     })
-  }, [vouchers, filterCompany, filterBuilding, filterMonth, filterYear, filterStatus, searchTerm])
+  }, [vouchers, selectedMonths, selectedCompanies, selectedOwners, filterBuilding, filterYear, filterStatus, searchTerm])
 
   // Paginación
   const [currentPage, setCurrentPage] = useState<number>(1)
@@ -394,19 +420,17 @@ export function VouchersManager({
     }
   }, [filteredVouchers])
 
+  // Mes seleccionado principal para la acción de aperturar
+  const targetApertureMonth = selectedMonths.length === 1 ? selectedMonths[0] : currentMonthName
+
   // Verifica si el mes seleccionado ya tiene vouchers creados en la base de datos
   const monthHasVouchers = useMemo(() => {
-    if (filterMonth === 'TODOS') return true
-    return vouchers.some((v) => v.month?.toUpperCase() === filterMonth.toUpperCase() && v.year === filterYear)
-  }, [vouchers, filterMonth, filterYear])
+    return vouchers.some((v) => v.month?.toUpperCase() === targetApertureMonth.toUpperCase() && v.year === filterYear)
+  }, [vouchers, targetApertureMonth, filterYear])
 
   // Generar Vouchers del Mes en lote (Apertura de Mes para Contabilidad)
   async function handleBatchGenerate() {
-    const targetMonthName = MONTH_NAMES_TITLE[filterMonth] || filterMonth
-    if (filterMonth === 'TODOS') {
-      alert('Por favor selecciona un mes específico (ej: Noviembre) en el selector de meses antes de aperturar el período.')
-      return
-    }
+    const targetMonthName = MONTH_NAMES_TITLE[targetApertureMonth] || targetApertureMonth
 
     if (
       !confirm(
@@ -419,7 +443,7 @@ export function VouchersManager({
     setIsGenerating(true)
     setMessage(null)
 
-    const res = await generateMonthVouchers(filterMonth, filterYear)
+    const res = await generateMonthVouchers(targetApertureMonth, filterYear)
     setIsGenerating(false)
 
     if (res.error) {
@@ -470,7 +494,9 @@ export function VouchersManager({
   }
 
   // URL para exportar a Excel
-  const excelExportUrl = `/api/vouchers/export?month=${filterMonth}&year=${filterYear}&building=${filterBuilding}&company=${filterCompany}`
+  const exportMonthParam = selectedMonths.length === 1 ? selectedMonths[0] : 'TODOS'
+  const exportCompanyParam = selectedCompanies.length === 1 ? selectedCompanies[0] : 'TODOS'
+  const excelExportUrl = `/api/vouchers/export?month=${exportMonthParam}&year=${filterYear}&building=${filterBuilding}&company=${exportCompanyParam}`
 
   return (
     <div className="space-y-4 max-w-[1700px] mx-auto pb-16">
@@ -487,27 +513,25 @@ export function VouchersManager({
 
         {/* Acciones principales superiores */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Botón Destacado Aperturar Mes (Aparece cuando hay un mes seleccionado) */}
-          {filterMonth !== 'TODOS' && (
-            <button
-              type="button"
-              disabled={isGenerating}
-              onClick={handleBatchGenerate}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black shadow-2xs transition-all cursor-pointer disabled:opacity-60 ${
-                !monthHasVouchers
-                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md scale-102 ring-2 ring-primary/20'
-                  : 'border border-border bg-card hover:bg-muted text-foreground'
-              }`}
-              title={`Aperturar o actualizar arriendos para el mes de ${MONTH_NAMES_TITLE[filterMonth] || filterMonth} ${filterYear}`}
-            >
-              {isGenerating ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Plus className="w-3.5 h-3.5" />
-              )}
-              <span>Aperturar {MONTH_NAMES_TITLE[filterMonth] || filterMonth}</span>
-            </button>
-          )}
+          {/* Botón Destacado Aperturar Mes */}
+          <button
+            type="button"
+            disabled={isGenerating}
+            onClick={handleBatchGenerate}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black shadow-2xs transition-all cursor-pointer disabled:opacity-60 ${
+              !monthHasVouchers
+                ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md scale-102 ring-2 ring-primary/20'
+                : 'border border-border bg-card hover:bg-muted text-foreground'
+            }`}
+            title={`Aperturar o actualizar arriendos para el mes de ${MONTH_NAMES_TITLE[targetApertureMonth] || targetApertureMonth} ${filterYear}`}
+          >
+            {isGenerating ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Plus className="w-3.5 h-3.5" />
+            )}
+            <span>Aperturar {MONTH_NAMES_TITLE[targetApertureMonth] || targetApertureMonth}</span>
+          </button>
 
           {/* Botón Exportar */}
           <a
@@ -593,8 +617,8 @@ export function VouchersManager({
         </div>
       )}
 
-      {/* PANEL DE FILTROS Y SEGMENTACIÓN (ESTILO EXCEL SLICERS & PROPIEDADES) */}
-      <div className="bg-card border border-border p-4 rounded-2xl shadow-xs space-y-3.5">
+      {/* PANEL DE FILTROS Y SEGMENTACIÓN REESTRUCTURADO */}
+      <div ref={filterRef} className="bg-card border border-border p-4 rounded-2xl shadow-xs space-y-3.5 relative">
         {/* Encabezado del panel de filtros */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-border">
           <div className="flex items-center gap-2">
@@ -602,8 +626,8 @@ export function VouchersManager({
             <span className="text-xs font-bold text-foreground uppercase tracking-wider">
               Segmentación y Filtros
             </span>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
-              {stats.totalCount} vouchers encontrados
+            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+              {stats.totalCount} {stats.totalCount === 1 ? 'voucher' : 'vouchers'} encontrados
             </span>
           </div>
 
@@ -611,7 +635,7 @@ export function VouchersManager({
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all cursor-pointer shadow-2xs"
             >
               <X className="w-3.5 h-3.5" />
               <span>Limpiar filtros</span>
@@ -629,8 +653,8 @@ export function VouchersManager({
               setSearchTerm(e.target.value)
               setCurrentPage(1)
             }}
-            placeholder="Buscar por arrendatario, RUT, edificio, N° unidad, N° recibo o empresa..."
-            className="w-full pl-10 pr-10 py-2.5 text-xs bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs"
+            placeholder="Buscar por arrendatario, RUT, propietario, edificio, N° unidad, N° recibo o empresa..."
+            className="w-full pl-10 pr-10 py-2.5 text-xs bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs font-medium"
           />
           {searchTerm && (
             <button
@@ -646,191 +670,589 @@ export function VouchersManager({
           )}
         </div>
 
-        {/* 1. SLICER MES (SEGMENTADOR VISUAL ESTILO EXCEL) */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+        {/* FILA DE MENÚS DESPLEGABLES (COMPACTOS Y ORDENADOS) */}
+        <div className="flex items-center gap-2 flex-wrap pt-1">
+          {/* 1. Dropdown MES */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === 'month' ? null : 'month')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs',
+                selectedMonths.length > 0 && !(selectedMonths.length === 1 && selectedMonths[0] === currentMonthName)
+                  ? 'bg-primary/10 border-primary/40 text-primary ring-1 ring-primary/20'
+                  : 'bg-background border-border hover:bg-muted text-foreground'
+              )}
+            >
               <Calendar className="w-3.5 h-3.5 text-primary" />
-              <span>Mes</span>
-            </span>
-            {filterMonth !== 'TODOS' && (
-              <button
-                type="button"
-                onClick={() => handleMonthChange('TODOS')}
-                className="text-[10px] text-primary hover:underline font-semibold cursor-pointer"
-              >
-                Ver todos los meses
-              </button>
+              <span>
+                {selectedMonths.length === 0 || selectedMonths.length === 12
+                  ? 'Mes: Todos'
+                  : selectedMonths.length === 1
+                  ? `Mes: ${MONTH_NAMES_TITLE[selectedMonths[0]] || selectedMonths[0]}`
+                  : `Meses (${selectedMonths.length})`}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+
+            {openDropdown === 'month' && (
+              <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-card border border-border rounded-2xl shadow-xl z-50 space-y-2.5 animate-in fade-in-50 zoom-in-95 duration-100">
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <span className="text-xs font-bold text-foreground">Filtrar por Mes</span>
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMonths([currentMonthName])
+                        setCurrentPage(1)
+                      }}
+                      className="text-primary hover:underline font-bold cursor-pointer"
+                    >
+                      Mes Actual
+                    </button>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMonths([...MONTHS])
+                        setCurrentPage(1)
+                      }}
+                      className="text-muted-foreground hover:text-foreground font-semibold cursor-pointer"
+                    >
+                      Todos
+                    </button>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMonths([])
+                        setCurrentPage(1)
+                      }}
+                      className="text-rose-500 hover:underline font-semibold cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 max-h-60 overflow-y-auto pr-1">
+                  {MONTHS.map((m) => {
+                    const isSelected = selectedMonths.includes(m)
+                    const isCurrent = m === currentMonthName
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          setSelectedMonths((prev) =>
+                            prev.includes(m) ? prev.filter((item) => item !== m) : [...prev, m]
+                          )
+                          setCurrentPage(1)
+                        }}
+                        className={cn(
+                          'flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-left cursor-pointer',
+                          isSelected
+                            ? 'bg-primary text-primary-foreground shadow-xs'
+                            : 'bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        <span>{MONTH_NAMES_TITLE[m] || m}</span>
+                        {isCurrent && (
+                          <span
+                            className={cn(
+                              'text-[8px] px-1 py-0.2 rounded font-black',
+                              isSelected
+                                ? 'bg-primary-foreground/20 text-primary-foreground'
+                                : 'bg-primary/10 text-primary'
+                            )}
+                          >
+                            HOY
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             )}
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+
+          {/* 2. Dropdown EMPRESA */}
+          <div className="relative">
             <button
               type="button"
-              onClick={() => handleMonthChange('TODOS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                filterMonth === 'TODOS'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'
-              }`}
+              onClick={() => setOpenDropdown(openDropdown === 'company' ? null : 'company')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs',
+                selectedCompanies.length > 0
+                  ? 'bg-primary/10 border-primary/40 text-primary ring-1 ring-primary/20'
+                  : 'bg-background border-border hover:bg-muted text-foreground'
+              )}
             >
-              TODOS
-            </button>
-            {MONTHS.map((m) => {
-              const isSelected = filterMonth === m
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => handleMonthChange(m)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground shadow-xs scale-102'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'
-                  }`}
-                >
-                  {m}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* 2. SLICER EMPRESA (SEGMENTADOR VISUAL ESTILO EXCEL) */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
               <Briefcase className="w-3.5 h-3.5 text-primary" />
-              <span>Nombre Empresa</span>
-            </span>
-            {filterCompany !== 'TODAS' && (
-              <button
-                type="button"
-                onClick={() => handleCompanyChange('TODAS')}
-                className="text-[10px] text-primary hover:underline font-semibold cursor-pointer"
-              >
-                Ver todas las empresas
-              </button>
+              <span>
+                {selectedCompanies.length === 0
+                  ? 'Empresa: Todas'
+                  : selectedCompanies.length === 1
+                  ? `Empresa: ${selectedCompanies[0]}`
+                  : `Empresas (${selectedCompanies.length})`}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+
+            {openDropdown === 'company' && (
+              <div className="absolute left-0 top-full mt-2 w-80 p-3 bg-card border border-border rounded-2xl shadow-xl z-50 space-y-2.5 animate-in fade-in-50 zoom-in-95 duration-100">
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <span className="text-xs font-bold text-foreground">Filtrar por Empresa</span>
+                  {selectedCompanies.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCompanies([])
+                        setCurrentPage(1)
+                      }}
+                      className="text-rose-500 hover:underline font-semibold text-[10px] cursor-pointer"
+                    >
+                      Limpiar ({selectedCompanies.length})
+                    </button>
+                  )}
+                </div>
+
+                {availableCompanies.length > 5 && (
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={companySearchTerm}
+                      onChange={(e) => setCompanySearchTerm(e.target.value)}
+                      placeholder="Buscar empresa..."
+                      className="w-full pl-8 pr-3 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                )}
+
+                <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+                  {availableCompanies
+                    .filter(
+                      (c) =>
+                        !companySearchTerm ||
+                        c.code.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
+                        c.name.toLowerCase().includes(companySearchTerm.toLowerCase())
+                    )
+                    .map((c) => {
+                      const isSelected = selectedCompanies.includes(c.code)
+                      return (
+                        <label
+                          key={c.id || c.code}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer text-xs"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                setSelectedCompanies((prev) =>
+                                  prev.includes(c.code)
+                                    ? prev.filter((item) => item !== c.code)
+                                    : [...prev, c.code]
+                                )
+                                setCurrentPage(1)
+                              }}
+                              className="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+                            />
+                            <span className="font-bold text-foreground truncate">{c.name}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono">({c.code})</span>
+                          </div>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted font-bold text-muted-foreground shrink-0">
+                            {c.count}
+                          </span>
+                        </label>
+                      )
+                    })}
+                </div>
+              </div>
             )}
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+
+          {/* 3. Dropdown PROPIETARIO (Nuevo Asignatario) */}
+          <div className="relative">
             <button
               type="button"
-              onClick={() => handleCompanyChange('TODAS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                filterCompany === 'TODAS'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'
-              }`}
+              onClick={() => setOpenDropdown(openDropdown === 'owner' ? null : 'owner')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs',
+                selectedOwners.length > 0
+                  ? 'bg-primary/10 border-primary/40 text-primary ring-1 ring-primary/20'
+                  : 'bg-background border-border hover:bg-muted text-foreground'
+              )}
             >
-              TODAS
+              <User className="w-3.5 h-3.5 text-primary" />
+              <span>
+                {selectedOwners.length === 0
+                  ? 'Propietario: Todos'
+                  : selectedOwners.length === 1
+                  ? `Propietario: ${selectedOwners[0]}`
+                  : `Propietarios (${selectedOwners.length})`}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
-            {availableCompanies.map((c) => {
-              const isSelected = filterCompany === c.code || filterCompany === c.id
-              return (
+
+            {openDropdown === 'owner' && (
+              <div className="absolute left-0 top-full mt-2 w-80 p-3 bg-card border border-border rounded-2xl shadow-xl z-50 space-y-2.5 animate-in fade-in-50 zoom-in-95 duration-100">
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <span className="text-xs font-bold text-foreground">Propietario / Asignatario</span>
+                  {selectedOwners.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedOwners([])
+                        setCurrentPage(1)
+                      }}
+                      className="text-rose-500 hover:underline font-semibold text-[10px] cursor-pointer"
+                    >
+                      Limpiar ({selectedOwners.length})
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={ownerSearchTerm}
+                    onChange={(e) => setOwnerSearchTerm(e.target.value)}
+                    placeholder="Buscar por nombre..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+                  {availableOwners
+                    .filter(
+                      (o) =>
+                        !ownerSearchTerm ||
+                        o.name.toLowerCase().includes(ownerSearchTerm.toLowerCase())
+                    )
+                    .map((o) => {
+                      const isSelected = selectedOwners.includes(o.name)
+                      return (
+                        <label
+                          key={o.name}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer text-xs"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                setSelectedOwners((prev) =>
+                                  prev.includes(o.name)
+                                    ? prev.filter((item) => item !== o.name)
+                                    : [...prev, o.name]
+                                )
+                                setCurrentPage(1)
+                              }}
+                              className="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+                            />
+                            <span className="font-bold text-foreground truncate">{o.name}</span>
+                          </div>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted font-bold text-muted-foreground shrink-0">
+                            {o.count}
+                          </span>
+                        </label>
+                      )
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 4. Dropdown EDIFICIO */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === 'building' ? null : 'building')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs',
+                filterBuilding !== 'TODOS'
+                  ? 'bg-primary/10 border-primary/40 text-primary ring-1 ring-primary/20'
+                  : 'bg-background border-border hover:bg-muted text-foreground'
+              )}
+            >
+              <Building className="w-3.5 h-3.5 text-primary" />
+              <span>{filterBuilding === 'TODOS' ? 'Edificio: Todos' : `Edificio: ${filterBuilding}`}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+
+            {openDropdown === 'building' && (
+              <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-card border border-border rounded-2xl shadow-xl z-50 space-y-2.5 animate-in fade-in-50 zoom-in-95 duration-100">
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <span className="text-xs font-bold text-foreground">Edificio</span>
+                  {filterBuilding !== 'TODOS' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterBuilding('TODOS')
+                        setCurrentPage(1)
+                      }}
+                      className="text-[10px] text-rose-500 hover:underline font-semibold cursor-pointer"
+                    >
+                      Quitar filtro
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={buildingSearchTerm}
+                    onChange={(e) => setBuildingSearchTerm(e.target.value)}
+                    placeholder="Buscar edificio..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterBuilding('TODOS')
+                      setOpenDropdown(null)
+                      setCurrentPage(1)
+                    }}
+                    className={cn(
+                      'w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                      filterBuilding === 'TODOS' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground'
+                    )}
+                  >
+                    Todos los Edificios
+                  </button>
+                  {availableBuildings
+                    .filter((b) => !buildingSearchTerm || b.toLowerCase().includes(buildingSearchTerm.toLowerCase()))
+                    .map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => {
+                          setFilterBuilding(b)
+                          setOpenDropdown(null)
+                          setCurrentPage(1)
+                        }}
+                        className={cn(
+                          'w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                          filterBuilding === b ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground'
+                        )}
+                      >
+                        {b}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 5. Dropdown ESTADO DE PAGO */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs',
+                filterStatus !== 'TODOS'
+                  ? 'bg-primary/10 border-primary/40 text-primary ring-1 ring-primary/20'
+                  : 'bg-background border-border hover:bg-muted text-foreground'
+              )}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+              <span>{filterStatus === 'TODOS' ? 'Estado: Todos' : `Estado: ${filterStatus}`}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+
+            {openDropdown === 'status' && (
+              <div className="absolute left-0 top-full mt-2 w-56 p-2 bg-card border border-border rounded-2xl shadow-xl z-50 space-y-1 animate-in fade-in-50 zoom-in-95 duration-100">
+                {['TODOS', 'Pagado', 'Pendiente', 'Sin Estado', 'Error'].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => {
+                      setFilterStatus(st)
+                      setOpenDropdown(null)
+                      setCurrentPage(1)
+                    }}
+                    className={cn(
+                      'w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                      filterStatus === st ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground'
+                    )}
+                  >
+                    {st === 'TODOS' ? 'Todos los Estados' : st}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 6. Dropdown AÑO */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === 'year' ? null : 'year')}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border border-border bg-background hover:bg-muted text-foreground transition-all cursor-pointer shadow-2xs"
+            >
+              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Año: {filterYear}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+
+            {openDropdown === 'year' && (
+              <div className="absolute left-0 top-full mt-2 w-36 p-1.5 bg-card border border-border rounded-xl shadow-xl z-50 space-y-1 animate-in fade-in-50 zoom-in-95 duration-100">
+                {[2026, 2025].map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    onClick={() => {
+                      setFilterYear(y)
+                      setOpenDropdown(null)
+                      setCurrentPage(1)
+                    }}
+                    className={cn(
+                      'w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                      filterYear === y ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground'
+                    )}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* CHIPS DE FILTROS ACTIVOS (CON BOTÓN X PARA DESMARCAR INDIVIDUALMENTE) */}
+        {isFiltered && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-border/60">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mr-1">
+              Filtros activos:
+            </span>
+
+            {/* Chips Meses */}
+            {selectedMonths.length > 0 && selectedMonths.length < 12 && selectedMonths.map((m) => (
+              <span
+                key={m}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20"
+              >
+                <span>{MONTH_NAMES_TITLE[m] || m}</span>
                 <button
-                  key={c.id || c.code}
                   type="button"
-                  onClick={() => handleCompanyChange(c.code)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground shadow-xs scale-102'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'
-                  }`}
+                  onClick={() => {
+                    setSelectedMonths((prev) => prev.filter((item) => item !== m))
+                    setCurrentPage(1)
+                  }}
+                  className="hover:text-destructive cursor-pointer font-black text-xs leading-none"
+                  title="Eliminar este mes"
                 >
-                  {c.name || c.code}
+                  &times;
                 </button>
-              )
-            })}
-          </div>
-        </div>
+              </span>
+            ))}
 
-        {/* 3. SELECTORES EN CUADRÍCULA (CASCADA COMO EN PROPIEDADES) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2.5 pt-2.5 border-t border-border">
-          {/* Empresa Select */}
-          <div>
-            <label className="text-[11px] font-bold text-muted-foreground block mb-1">Empresa</label>
-            <select
-              value={filterCompany}
-              onChange={(e) => handleCompanyChange(e.target.value)}
-              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
-            >
-              <option value="TODAS">Todas las Empresas</option>
-              {availableCompanies.map((c) => (
-                <option key={c.id || c.code} value={c.code}>
-                  {c.code} - {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Chips Empresas */}
+            {selectedCompanies.map((c) => (
+              <span
+                key={c}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+              >
+                <span>Empresa: {c}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCompanies((prev) => prev.filter((item) => item !== c))
+                    setCurrentPage(1)
+                  }}
+                  className="hover:text-destructive cursor-pointer font-black text-xs leading-none"
+                  title="Eliminar filtro de empresa"
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
 
-          {/* Edificio Select (en cascada) */}
-          <div>
-            <label className="text-[11px] font-bold text-muted-foreground block mb-1">
-              Edificio {availableBuildings.length > 0 && `(${availableBuildings.length})`}
-            </label>
-            <select
-              value={filterBuilding}
-              onChange={(e) => handleBuildingChange(e.target.value)}
-              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
-            >
-              <option value="TODOS">Todos los Edificios</option>
-              {availableBuildings.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Chips Propietarios */}
+            {selectedOwners.map((o) => (
+              <span
+                key={o}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+              >
+                <span>Prop: {o}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedOwners((prev) => prev.filter((item) => item !== o))
+                    setCurrentPage(1)
+                  }}
+                  className="hover:text-destructive cursor-pointer font-black text-xs leading-none"
+                  title="Eliminar filtro de propietario"
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
 
-          {/* Mes Select */}
-          <div>
-            <label className="text-[11px] font-bold text-muted-foreground block mb-1">Mes</label>
-            <select
-              value={filterMonth}
-              onChange={(e) => handleMonthChange(e.target.value)}
-              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
-            >
-              <option value="TODOS">Todos los Meses</option>
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>
-                  {MONTH_NAMES_TITLE[m] || m}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Chip Edificio */}
+            {filterBuilding !== 'TODOS' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                <span>Edificio: {filterBuilding}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterBuilding('TODOS')
+                    setCurrentPage(1)
+                  }}
+                  className="hover:text-destructive cursor-pointer font-black text-xs leading-none"
+                  title="Quitar filtro de edificio"
+                >
+                  &times;
+                </button>
+              </span>
+            )}
 
-          {/* Estado de Pago Select */}
-          <div>
-            <label className="text-[11px] font-bold text-muted-foreground block mb-1">Estado de Pago</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
-            >
-              <option value="TODOS">Todos los Estados</option>
-              <option value="Pagado">Pagado</option>
-              <option value="Pendiente">Pendiente</option>
-              <option value="Sin Estado">Sin Estado (Vacío)</option>
-              <option value="Error">Error</option>
-            </select>
-          </div>
+            {/* Chip Estado */}
+            {filterStatus !== 'TODOS' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                <span>Estado: {filterStatus}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterStatus('TODOS')
+                    setCurrentPage(1)
+                  }}
+                  className="hover:text-destructive cursor-pointer font-black text-xs leading-none"
+                  title="Quitar filtro de estado"
+                >
+                  &times;
+                </button>
+              </span>
+            )}
 
-          {/* Año Select */}
-          <div className="col-span-2 sm:col-span-1">
-            <label className="text-[11px] font-bold text-muted-foreground block mb-1">Año</label>
-            <select
-              value={filterYear}
-              onChange={(e) => {
-                setFilterYear(Number(e.target.value))
-                setCurrentPage(1)
-              }}
-              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 font-medium"
-            >
-              <option value={2026}>2026</option>
-              <option value={2025}>2025</option>
-            </select>
+            {/* Chip Búsqueda */}
+            {searchTerm.trim() && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-muted text-muted-foreground border border-border">
+                <span>&ldquo;{searchTerm}&rdquo;</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('')
+                    setCurrentPage(1)
+                  }}
+                  className="hover:text-destructive cursor-pointer font-black text-xs leading-none"
+                  title="Limpiar búsqueda"
+                >
+                  &times;
+                </button>
+              </span>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* SUB-BARRA DE METADATOS Y FORMATO */}
@@ -880,7 +1302,7 @@ export function VouchersManager({
       </div>
 
       {/* BANNER DE APERTURA DE MES SI NO HAY VOUCHERS REGISTRADOS EN ESTE PERÍODO */}
-      {filterMonth !== 'TODOS' && !monthHasVouchers && (
+      {!monthHasVouchers && (
         <div className="p-5 sm:p-6 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 dark:bg-primary/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left animate-in fade-in-50 duration-200">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 shadow-2xs">
@@ -889,7 +1311,7 @@ export function VouchersManager({
             <div>
               <div className="flex items-center justify-center sm:justify-start gap-2">
                 <h3 className="text-base sm:text-lg font-black text-foreground">
-                  El período de {MONTH_NAMES_TITLE[filterMonth] || filterMonth} {filterYear} aún no ha sido aperturado
+                  El período de {MONTH_NAMES_TITLE[targetApertureMonth] || targetApertureMonth} {filterYear} aún no ha sido aperturado
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                   Mes Nuevo
@@ -915,7 +1337,7 @@ export function VouchersManager({
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>Aperturar Mes de {MONTH_NAMES_TITLE[filterMonth] || filterMonth}</span>
+                <span>Aperturar Mes de {MONTH_NAMES_TITLE[targetApertureMonth] || targetApertureMonth}</span>
               </>
             )}
           </button>
@@ -957,13 +1379,13 @@ export function VouchersManager({
                   {paginatedVouchers.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="py-16 text-center">
-                        {!monthHasVouchers && filterMonth !== 'TODOS' ? (
+                        {!monthHasVouchers ? (
                           <div className="max-w-md mx-auto space-y-3 px-4">
                             <div className="w-12 h-12 mx-auto rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
                               <Calendar className="w-6 h-6" />
                             </div>
                             <h4 className="text-sm font-black text-foreground">
-                              Mes de {MONTH_NAMES_TITLE[filterMonth] || filterMonth} {filterYear} sin arriendos generados
+                              Mes de {MONTH_NAMES_TITLE[targetApertureMonth] || targetApertureMonth} {filterYear} sin arriendos generados
                             </h4>
                             <p className="text-xs text-muted-foreground">
                               Haz clic en el botón a continuación para aperturar este mes y replicar automáticamente todas las propiedades en estado pendiente de pago.
@@ -982,7 +1404,7 @@ export function VouchersManager({
                               ) : (
                                 <>
                                   <Plus className="w-4 h-4" />
-                                  <span>Aperturar Mes de {MONTH_NAMES_TITLE[filterMonth] || filterMonth}</span>
+                                  <span>Aperturar Mes de {MONTH_NAMES_TITLE[targetApertureMonth] || targetApertureMonth}</span>
                                 </>
                               )}
                             </button>
@@ -1003,6 +1425,10 @@ export function VouchersManager({
                       const monthFormatted = MONTH_NAMES_TITLE[v.month] || v.month
                       const isPaid = (v.paymentStatus || '').toLowerCase() === 'pagado'
                       const rentAmount = Math.round(v.totalRent || v.totalMonth || c.totalRent || v.baseRent || 0)
+                      const ownerDisplayName =
+                        (c.newAssignee && c.newAssignee.trim() !== '')
+                          ? c.newAssignee.trim()
+                          : (v.company?.name || c.company?.name || 'Sin Asignar')
 
                       return (
                         <tr
@@ -1047,7 +1473,7 @@ export function VouchersManager({
                               {c.parkingNumber && <span>Estac {c.parkingNumber}</span>}
                               {!c.storageNumber && !c.parkingNumber && <span>Talca, Maule</span>}
                             </div>
-                            <div className="mt-1">
+                            <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                               {hasAdjustment ? (
                                 <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                                   Reajuste {v.adjustmentPercent > 1 ? `${v.adjustmentPercent}%` : `${(v.adjustmentPercent * 100).toFixed(1)}%`}
@@ -1057,6 +1483,12 @@ export function VouchersManager({
                                   Arriendo Base
                                 </span>
                               )}
+                              <span
+                                className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
+                                title="Propietario / Asignatario Oficial"
+                              >
+                                Prop: {ownerDisplayName}
+                              </span>
                             </div>
                           </td>
 
