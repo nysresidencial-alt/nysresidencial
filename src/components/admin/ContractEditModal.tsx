@@ -22,6 +22,8 @@ import {
   Users,
   ShieldCheck,
   ChevronRight,
+  Clock,
+  Info,
 } from 'lucide-react'
 import { DatePickerField } from '@/components/ui/DatePickerField'
 import { ComboboxCustom } from '@/components/ui/ComboboxCustom'
@@ -83,6 +85,7 @@ interface ContractEditModalProps {
   companies: { id: string; code: string; name: string }[]
   buildings: string[]
   initialMode?: 'view' | 'edit'
+  initialTab?: 'inmueble' | 'arrendatario' | 'valores'
   onClose: () => void
   onSaved: (contract: any) => void
 }
@@ -118,6 +121,7 @@ export function ContractEditModal({
   companies,
   buildings,
   initialMode,
+  initialTab,
   onClose,
   onSaved,
 }: ContractEditModalProps) {
@@ -168,7 +172,9 @@ export function ContractEditModal({
   const [expensesPayment, setExpensesPayment] = useState(contract?.expensesPayment?.toString() || '')
   const [previousRent, setPreviousRent] = useState(contract?.previousRent?.toString() || '')
 
-  const [activeTab, setActiveTab] = useState<'inmueble' | 'arrendatario' | 'valores'>('inmueble')
+  const [activeTab, setActiveTab] = useState<'inmueble' | 'arrendatario' | 'valores'>(
+    initialTab || 'inmueble'
+  )
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -198,10 +204,27 @@ export function ContractEditModal({
       return
     }
 
-    if (!tenantName.trim()) {
-      setError('El nombre del arrendatario es obligatorio (puedes colocar Disponible si está vacante).')
-      setIsSaving(false)
-      return
+    const isVacantOrSold = status === 'Disponible' || status === 'Vendido'
+
+    if (status === 'Ocupado') {
+      const isPlaceholder =
+        !tenantName.trim() ||
+        ['disponible', 'vendido', 'por asignar', 'sin arrendatario'].includes(
+          tenantName.toLowerCase().trim()
+        )
+      if (isPlaceholder) {
+        setError(
+          'Para marcar una propiedad como Ocupada, debes registrar el nombre del nuevo arrendatario en la pestaña Arrendatario.'
+        )
+        setActiveTab('arrendatario')
+        setIsSaving(false)
+        return
+      }
+    }
+
+    let finalTenantName = tenantName.trim()
+    if (isVacantOrSold && (!finalTenantName || ['disponible', 'vendido', 'por asignar', ''].includes(finalTenantName.toLowerCase()))) {
+      finalTenantName = status === 'Vendido' ? 'VENDIDO' : 'DISPONIBLE'
     }
 
     const payload: ContractFormData = {
@@ -217,7 +240,7 @@ export function ContractEditModal({
       renewalPeriod: renewalPeriod.trim() || null,
       status: status.trim(),
       newAssignee: newAssignee.trim() || null,
-      tenantName: tenantName.trim(),
+      tenantName: finalTenantName,
       tenantRut: tenantRut.trim() || null,
       tenantPhone: tenantPhone.trim() || null,
       tenantEmail: tenantEmail.trim() || null,
@@ -573,9 +596,34 @@ export function ContractEditModal({
                   </div>
 
                   {contract.otherContactInfo && (
-                    <div className="pt-2 border-t border-border/50">
-                      <span className="text-muted-foreground block text-[11px]">Otros Datos de Contacto:</span>
-                      <p className="text-foreground">{contract.otherContactInfo}</p>
+                    <div className="pt-2 border-t border-border/50 space-y-2">
+                      <span className="text-muted-foreground block text-[11px]">Otros Datos de Contacto / Notas:</span>
+                      <p className="text-foreground">
+                        {contract.otherContactInfo
+                          .split('\n')
+                          .filter((l) => !l.includes('Historial previo'))
+                          .join('\n') || 'Sin notas adicionales'}
+                      </p>
+
+                      {/* Historial de arrendatarios anteriores */}
+                      {contract.otherContactInfo.includes('Historial previo') && (
+                        <div className="mt-2 p-3 rounded-xl bg-muted/40 border border-border space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                            <Clock className="w-3.5 h-3.5 text-primary" />
+                            <span>Historial de Arrendatarios Anteriores</span>
+                          </div>
+                          <div className="space-y-1">
+                            {contract.otherContactInfo
+                              .split('\n')
+                              .filter((l) => l.includes('Historial previo'))
+                              .map((line, idx) => (
+                                <div key={idx} className="p-2 rounded-lg bg-card border border-border/60 text-xs text-foreground">
+                                  {line.replace(/^\[|\]$/g, '')}
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -686,6 +734,72 @@ export function ContractEditModal({
                   <span>{error}</span>
                 </div>
               )}
+
+              {/* Selector Principal y Prominente de Estado de la Propiedad */}
+              <div className="p-4 rounded-2xl bg-muted/25 border border-border space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <Building className="w-3.5 h-3.5" />
+                    <span>Estado de la Propiedad</span>
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Define la disponibilidad del inmueble y el flujo de cobro
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'Ocupado', label: 'Ocupado', desc: 'Contrato y arrendatario activo', color: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-500' },
+                    { id: 'Disponible', label: 'Disponible', desc: 'Vacante / Lista para arriendo', color: 'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
+                    { id: 'Vendido', label: 'Vendido', desc: 'Propiedad enajenada / vendida', color: 'border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-300', dot: 'bg-purple-500' },
+                    { id: 'En Retiro', label: 'En Retiro', desc: 'En mantención o término', color: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setStatus(item.id)
+                        if (item.id === 'Ocupado') {
+                          if (['disponible', 'vendido', 'por asignar', ''].includes(tenantName.toLowerCase().trim())) {
+                            setTenantName('')
+                            setActiveTab('arrendatario')
+                          }
+                        }
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        status === item.id
+                          ? `${item.color} ring-2 ring-primary/40 font-bold shadow-xs`
+                          : 'border-border bg-card hover:bg-muted/60 text-muted-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-bold">
+                        <span className={`w-2 h-2 rounded-full ${item.dot} shrink-0`} />
+                        <span>{item.label}</span>
+                      </div>
+                      <div className="text-[10px] opacity-75 leading-tight mt-0.5">{item.desc}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Avisos dinámicos */}
+                {(status === 'Disponible' || status === 'Vendido') && (
+                  <div className="text-xs p-2.5 rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 flex items-start gap-2">
+                    <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      La propiedad quedará guardada como <strong>{status.toUpperCase()}</strong>. Si tenía un arrendatario activo ({tenantName || 'registrado'}), este se archivará automáticamente en el historial de la ficha para mantener los registros limpios.
+                    </span>
+                  </div>
+                )}
+
+                {status === 'Ocupado' && (!tenantName.trim() || ['disponible', 'vendido', 'por asignar'].includes(tenantName.toLowerCase().trim())) && (
+                  <div className="text-xs p-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      Para una propiedad <strong>OCUPADA</strong>, recuerda ingresar el nombre, RUT y contacto del nuevo arrendatario en la pestaña <strong>2. Arrendatario</strong>.
+                    </span>
+                  </div>
+                )}
+              </div>
 
               {/* TAB 1: INMUEBLE */}
               {activeTab === 'inmueble' && (
@@ -836,7 +950,7 @@ export function ContractEditModal({
                     </div>
 
                     <div className="space-y-1.5 md:col-span-2">
-                      <label className="text-xs font-semibold text-foreground">Otros Datos de Contacto</label>
+                      <label className="text-xs font-semibold text-foreground">Otros Datos de Contacto / Notas</label>
                       <textarea
                         value={otherContactInfo}
                         onChange={(e) => setOtherContactInfo(e.target.value)}
@@ -845,6 +959,26 @@ export function ContractEditModal({
                         className="w-full py-2 px-3 text-sm bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
+
+                    {/* Tarjeta de Historial de Arrendatarios Anteriores */}
+                    {otherContactInfo && otherContactInfo.includes('Historial previo') && (
+                      <div className="p-3.5 rounded-2xl bg-muted/40 border border-border space-y-2 md:col-span-2">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                          <Clock className="w-3.5 h-3.5 text-primary" />
+                          <span>Historial de Arrendatarios Anteriores (Archivado Automático)</span>
+                        </div>
+                        <div className="space-y-1.5 text-xs">
+                          {otherContactInfo
+                            .split('\n')
+                            .filter((l) => l.includes('Historial previo'))
+                            .map((line, idx) => (
+                              <div key={idx} className="p-2.5 rounded-xl bg-card border border-border/70 text-foreground">
+                                {line.replace(/^\[|\]$/g, '')}
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Sección Aval */}

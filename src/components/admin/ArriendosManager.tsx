@@ -42,7 +42,7 @@ import {
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { ContractEditModal, ContractItem } from './ContractEditModal'
-import { deleteContractRecord } from '@/app/admin/arriendos/actions'
+import { deleteContractRecord, changeContractStatus } from '@/app/admin/arriendos/actions'
 
 interface ArriendosManagerProps {
   initialContracts: ContractItem[]
@@ -119,6 +119,82 @@ export function ArriendosManager({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isActionsOpen, setIsActionsOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [modalInitialTab, setModalInitialTab] = useState<'inmueble' | 'arrendatario' | 'valores'>('inmueble')
+  const [statusMenuContractId, setStatusMenuContractId] = useState<string | null>(null)
+
+  useEffect(() => {
+    function handleClickOutside() {
+      if (statusMenuContractId) {
+        setStatusMenuContractId(null)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [statusMenuContractId])
+
+  async function handleQuickStatusChange(contract: ContractItem, newStatus: string) {
+    setStatusMenuContractId(null)
+    if (contract.status === newStatus) return
+
+    // Si pasa a Ocupado y la propiedad estaba vacante/disponible/vendida
+    if (newStatus === 'Ocupado') {
+      const isPlaceholder = ['disponible', 'vendido', 'por asignar', ''].includes(
+        (contract.tenantName || '').toLowerCase().trim()
+      )
+      if (isPlaceholder) {
+        setEditingContract({
+          ...contract,
+          status: 'Ocupado',
+          tenantName: '',
+        })
+        setModalInitialMode('edit')
+        setModalInitialTab('arrendatario')
+        showMessage(
+          `Para pasar ${contract.building} ${contract.unitNumber} a Ocupado, por favor ingresa los datos del nuevo arrendatario.`,
+          'success'
+        )
+        return
+      }
+    }
+
+    // Si pasa a Disponible o Vendido, confirmar que el arrendatario pasa al historial
+    if (newStatus === 'Disponible' || newStatus === 'Vendido') {
+      const hasRealTenant =
+        contract.tenantName &&
+        !['disponible', 'vendido', 'por asignar', ''].includes(
+          contract.tenantName.toLowerCase().trim()
+        )
+
+      const confirmText = hasRealTenant
+        ? `¿Deseas marcar la propiedad ${contract.building} ${contract.unitNumber} como ${newStatus.toUpperCase()}?\n\nEl arrendatario actual (${contract.tenantName}) pasará automáticamente al historial de la ficha para que la propiedad quede limpia.`
+        : `¿Deseas marcar la propiedad ${contract.building} ${contract.unitNumber} como ${newStatus.toUpperCase()}?`
+
+      if (!window.confirm(confirmText)) {
+        return
+      }
+    }
+
+    const res = await changeContractStatus(contract.id, newStatus)
+    if (res.error) {
+      showMessage(res.error, 'error')
+    } else if (res.requiresTenantForm) {
+      setEditingContract({
+        ...contract,
+        status: 'Ocupado',
+        tenantName: '',
+      })
+      setModalInitialMode('edit')
+      setModalInitialTab('arrendatario')
+    } else if (res.contract) {
+      setContracts((prev) =>
+        prev.map((item) => (item.id === contract.id ? { ...item, ...res.contract } : item))
+      )
+      showMessage(
+        `Propiedad ${contract.building} ${contract.unitNumber} actualizada a ${newStatus.toUpperCase()} exitosamente.`,
+        'success'
+      )
+    }
+  }
 
   function toggleSelectAll() {
     if (selectedIds.size === paginatedContracts.length) {
@@ -1269,24 +1345,60 @@ export function ArriendosManager({
 
                       {/* Estado Propiedad */}
                       {visibleColumns.estadoPropiedad && (
-                        <td className="py-3 px-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => setEditingContract(c)}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase transition-all hover:scale-105 cursor-pointer shadow-xs ${
-                              c.status === 'Ocupado'
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-                                : c.status === 'Disponible'
-                                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20'
-                                : c.status === 'Vendido'
-                                ? 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20 hover:bg-zinc-500/20'
-                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
-                            }`}
-                            title="Editar estado del inmueble"
-                          >
-                            <span>{c.status}</span>
-                            <Edit className="w-2.5 h-2.5 opacity-60" />
-                          </button>
+                        <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="relative inline-block text-left">
+                            <button
+                              type="button"
+                              onClick={() => setStatusMenuContractId(statusMenuContractId === c.id ? null : c.id)}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide uppercase transition-all hover:scale-105 cursor-pointer shadow-xs ${
+                                c.status === 'Ocupado'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                                  : c.status === 'Disponible'
+                                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20'
+                                  : c.status === 'Vendido'
+                                  ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20'
+                                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+                              }`}
+                              title="Haz clic para cambiar el estado de la propiedad"
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                c.status === 'Ocupado' ? 'bg-emerald-500' :
+                                c.status === 'Disponible' ? 'bg-blue-500' :
+                                c.status === 'Vendido' ? 'bg-purple-500' : 'bg-amber-500'
+                              }`} />
+                              <span>{c.status}</span>
+                              <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                            </button>
+
+                            {statusMenuContractId === c.id && (
+                              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-52 p-1.5 bg-card border border-border rounded-xl shadow-2xl z-50 space-y-1 animate-in fade-in-50 zoom-in-95 duration-100 text-left">
+                                <div className="text-[10px] font-bold text-muted-foreground uppercase px-2 py-1 border-b border-border/50">
+                                  Cambiar Estado
+                                </div>
+                                {[
+                                  { id: 'Ocupado', label: 'Ocupado', desc: 'Contrato y arrendatario activo', color: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
+                                  { id: 'Disponible', label: 'Disponible', desc: 'Vacante / Limpia para arriendo', color: 'text-blue-600 dark:text-blue-400', dot: 'bg-blue-500' },
+                                  { id: 'Vendido', label: 'Vendido', desc: 'Inmueble vendido / enajenado', color: 'text-purple-600 dark:text-purple-400', dot: 'bg-purple-500' },
+                                  { id: 'En Retiro', label: 'En Retiro', desc: 'Fuera de uso / remodelación', color: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
+                                ].map((item) => (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => handleQuickStatusChange(c, item.id)}
+                                    className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold flex items-start gap-2 transition-colors cursor-pointer ${
+                                      c.status === item.id ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                                    }`}
+                                  >
+                                    <span className={`w-2 h-2 rounded-full ${item.dot} mt-1 shrink-0`} />
+                                    <div>
+                                      <div className={`font-bold ${item.color}`}>{item.label}</div>
+                                      <div className="text-[10px] text-muted-foreground leading-tight">{item.desc}</div>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </td>
                       )}
 
@@ -1515,9 +1627,11 @@ export function ArriendosManager({
           companies={companies}
           buildings={buildings}
           initialMode={isCreating ? 'edit' : modalInitialMode}
+          initialTab={modalInitialTab}
           onClose={() => {
             setEditingContract(null)
             setIsCreating(false)
+            setModalInitialTab('inmueble')
           }}
           onSaved={handleSaved}
         />
