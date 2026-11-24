@@ -157,6 +157,7 @@ export default async function VouchersAdminPage() {
       guarantorEmail: v.contract.guarantorEmail,
       baseRent: v.contract.baseRent,
       totalRent: v.contract.totalRent,
+      newAssignee: v.contract.newAssignee,
       vouchersHistory: (v.contract as any).vouchers || [],
       company: v.contract.company || null,
     },
