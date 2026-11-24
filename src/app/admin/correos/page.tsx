@@ -3,7 +3,7 @@ import prisma from '@/lib/db'
 import { requireAdminAuth } from '@/lib/admin-auth'
 import { redirect } from 'next/navigation'
 import { CorreosManager, TenantContractItem } from '@/components/admin/CorreosManager'
-import { getEmailConfig } from './actions'
+import { getEmailConfig } from '@/lib/email-config'
 
 export const dynamic = 'force-dynamic'
 

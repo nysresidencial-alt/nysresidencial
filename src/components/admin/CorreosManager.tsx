@@ -30,9 +30,11 @@ import {
   updateTenantContact,
   sendTestEmailAction,
   saveEmailConfig,
+} from '@/app/admin/correos/actions'
+import {
   EmailConfigData,
   DEFAULT_EMAIL_CONFIG,
-} from '@/app/admin/correos/actions'
+} from '@/lib/email-config-types'
 
 export interface TenantContractItem {
   id: string

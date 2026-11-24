@@ -4,6 +4,7 @@ import prisma from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import { requireAdminAuth } from '@/lib/admin-auth'
 import nodemailer from 'nodemailer'
+import { getEmailConfig, type EmailConfigData } from '@/lib/email-config'
 
 async function checkAuth(action: 'view' | 'edit') {
   const session = await requireAdminAuth('vouchers', action)
@@ -43,49 +44,7 @@ export async function updateTenantContact(
   }
 }
 
-export interface EmailConfigData {
-  isTestMode: boolean
-  testEmail: string
-  subject: string
-  companyHeader: string
-  companySubtitle: string
-  introMessage: string
-  footerNote: string
-  companyFooter: string
-}
 
-export const DEFAULT_EMAIL_CONFIG: EmailConfigData = {
-  isTestMode: true,
-  testEmail: 'administracion@sunrisechile.cl',
-  subject: 'Comprobante de Pago Arriendo Nº {RECIBO} - {EDIFICIO} {UNIDAD} ({MES} {ANO})',
-  companyHeader: 'NyS Negocios y Soluciones Inmobiliarias',
-  companySubtitle: 'Comprobante Oficial de Pago de Arriendo',
-  introMessage: 'Estimado(a) {ARRENDATARIO},\n\nConfirmamos la recepción de tu pago correspondiente al periodo de {MES} {ANO}. A continuación detallamos los datos de la operación:',
-  footerNote: 'Se adjunta a este correo el Recibo Oficial de Arriendo timbrado con PAGADO en formato PDF (1 plana).',
-  companyFooter: 'NyS Negocios y Soluciones Inmobiliarias / Administración Sunrise\n1 Sur Nº885, Talca | administracion@sunrisechile.cl',
-}
-
-/**
- * Obtiene la configuración de correo y plantilla activa almacenada en la base de datos
- */
-export async function getEmailConfig(): Promise<EmailConfigData> {
-  try {
-    const record = await prisma.siteContent.findUnique({
-      where: { key: 'email_config' },
-    })
-
-    if (record?.content) {
-      const parsed = JSON.parse(record.content)
-      return {
-        ...DEFAULT_EMAIL_CONFIG,
-        ...parsed,
-      }
-    }
-  } catch (err) {
-    console.error('Error cargando configuración de correo:', err)
-  }
-  return DEFAULT_EMAIL_CONFIG
-}
 
 /**
  * Guarda los cambios en la configuración del correo (modo test, casilla y textos de plantilla)

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/admin-auth'
 import nodemailer from 'nodemailer'
-import { getEmailConfig } from '@/app/admin/correos/actions'
+import { getEmailConfig } from '@/lib/email-config'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
