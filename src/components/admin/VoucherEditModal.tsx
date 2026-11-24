@@ -308,6 +308,7 @@ export function VoucherEditModal({ voucher, onClose, onSaved }: VoucherEditModal
                     <option value="Transferencia">Transferencia</option>
                     <option value="Efectivo">Efectivo</option>
                     <option value="Documento">Documento</option>
+                    <option value="No Aplica">No Aplica (dejar casillas en blanco)</option>
                   </select>
                 </div>
               </div>

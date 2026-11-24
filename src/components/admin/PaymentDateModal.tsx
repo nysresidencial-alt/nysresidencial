@@ -270,6 +270,7 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
       }
 
       if (res?.voucher) {
+        const isNA = paymentMethod === 'No Aplica' || paymentMethod.toLowerCase().includes('no aplica')
         const updatedVoucher: VoucherDetail = {
           ...voucher,
           contract: {
@@ -281,6 +282,9 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
           paymentDate: isoDate,
           paymentStatus: 'Pagado',
           collectedAmount: numCollected,
+          transferAmount: isNA ? 0 : paymentMethod === 'Transferencia' ? numCollected : 0,
+          cashAmount: isNA ? 0 : paymentMethod === 'Efectivo' ? numCollected : 0,
+          depositAmount: isNA ? 0 : paymentMethod === 'Documento' ? numCollected : 0,
           pendingBalance: Math.max(0, expectedRent - numCollected),
           invoiceNumber: invoiceNumber.trim() || null,
           bank,
@@ -802,19 +806,20 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
               {/* Medio de Pago */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground block">
-                  Medio de Pago
+                  Medio de Pago en Voucher
                 </label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="w-full px-3 py-2.5 text-xs font-semibold bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
-                  <option value="Transferencia">Transferencia Electrónica</option>
-                  <option value="Efectivo">Efectivo en Oficina</option>
-                  <option value="Documento">Depósito / Cheque</option>
+                  <option value="Transferencia">Transferencia Electrónica (Marca casilla Transferencia)</option>
+                  <option value="Efectivo">Efectivo en Oficina (Marca casilla Efectivo)</option>
+                  <option value="Documento">Depósito / Cheque (Marca casilla Documento)</option>
+                  <option value="No Aplica">No Aplica (Dejar casillas en blanco sin marcar)</option>
                 </select>
                 <p className="text-[10px] text-muted-foreground leading-snug">
-                  Marca la casilla correspondiente en el recibo timbrado oficial.
+                  Selecciona &quot;No Aplica&quot; si deseas que el recibo de arriendo quede sin casillas marcadas.
                 </p>
               </div>
             </div>

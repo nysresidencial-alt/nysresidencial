@@ -80,9 +80,17 @@ export function generateVoucherVectorPdf(voucher: VoucherDetail, customDate?: st
   const month = (voucher.month || 'NOVIEMBRE').toUpperCase()
   const year = voucher.year || 2026
 
-  const isTransfer = voucher.transferAmount > 0 || (voucher.paymentMethod || '').toLowerCase().includes('transf')
-  const isCash = voucher.cashAmount > 0 || (voucher.paymentMethod || '').toLowerCase().includes('efect')
-  const isDoc = (voucher.paymentMethod || '').toLowerCase().includes('doc')
+  const methodLower = (voucher.paymentMethod || '').toLowerCase()
+  const isNoneOrNA =
+    !methodLower ||
+    methodLower.includes('no aplica') ||
+    methodLower.includes('ningun') ||
+    methodLower.includes('sin espec') ||
+    methodLower === 'en blanco'
+
+  const isTransfer = !isNoneOrNA && (voucher.transferAmount > 0 || methodLower.includes('transf'))
+  const isCash = !isNoneOrNA && (voucher.cashAmount > 0 || methodLower.includes('efect'))
+  const isDoc = !isNoneOrNA && methodLower.includes('doc')
 
   const totalAmount = Math.round(voucher.totalMonth || voucher.totalRent || 0)
   const formattedVal = totalAmount.toLocaleString('es-CL')

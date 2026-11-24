@@ -234,6 +234,7 @@ export function VoucherStatusModal({ voucher, onClose, onUpdated }: VoucherStatu
                     <option value="Transferencia">Transferencia Bancaria</option>
                     <option value="Efectivo">Efectivo</option>
                     <option value="Documento">Documento / Depósito</option>
+                    <option value="No Aplica">No Aplica (dejar casillas en blanco)</option>
                   </select>
                 </div>
 

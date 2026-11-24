@@ -152,9 +152,16 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
   const month = voucher.month || 'OCTUBRE'
   const year = voucher.year || 2026
 
-  const isTransfer = voucher.transferAmount > 0 || voucher.paymentMethod === 'Transferencia'
-  const isCash = voucher.cashAmount > 0 || voucher.paymentMethod === 'Efectivo'
-  const isDoc = voucher.paymentMethod === 'Documento'
+  const isNoneOrNA =
+    !voucher.paymentMethod ||
+    voucher.paymentMethod === 'No Aplica' ||
+    voucher.paymentMethod === 'Ninguno' ||
+    voucher.paymentMethod === 'Sin Especificar' ||
+    voucher.paymentMethod.toLowerCase().includes('no aplica')
+
+  const isTransfer = !isNoneOrNA && (voucher.transferAmount > 0 || voucher.paymentMethod === 'Transferencia')
+  const isCash = !isNoneOrNA && (voucher.cashAmount > 0 || voucher.paymentMethod === 'Efectivo')
+  const isDoc = !isNoneOrNA && voucher.paymentMethod === 'Documento'
 
   const formattedAmount = voucher.totalMonth.toLocaleString('es-CL')
 

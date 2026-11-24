@@ -56,10 +56,11 @@ export async function updateVoucher(
   const guarantee = data.guaranteeAmount !== undefined ? Number(data.guaranteeAmount) : (existing.guaranteeAmount || 0)
   const totalMonth = totalRent + guarantee
 
-  const transfer = data.transferAmount !== undefined ? Number(data.transferAmount) : existing.transferAmount
-  const cash = data.cashAmount !== undefined ? Number(data.cashAmount) : existing.cashAmount
-  const deposit = data.depositAmount !== undefined ? Number(data.depositAmount) : existing.depositAmount
-  const collected = data.collectedAmount !== undefined ? Number(data.collectedAmount) : (transfer + cash + deposit)
+  const isNA = Boolean(data.paymentMethod && (data.paymentMethod === 'No Aplica' || data.paymentMethod.toLowerCase().includes('no aplica')))
+  const transfer = isNA ? 0 : (data.transferAmount !== undefined ? Number(data.transferAmount) : existing.transferAmount)
+  const cash = isNA ? 0 : (data.cashAmount !== undefined ? Number(data.cashAmount) : existing.cashAmount)
+  const deposit = isNA ? 0 : (data.depositAmount !== undefined ? Number(data.depositAmount) : existing.depositAmount)
+  const collected = data.collectedAmount !== undefined ? Number(data.collectedAmount) : (isNA ? (existing.collectedAmount || 0) : (transfer + cash + deposit))
   const pending = data.pendingBalance !== undefined ? Number(data.pendingBalance) : (totalMonth - collected)
 
   const amountInWords = numberToWordsCLP(totalMonth)
@@ -87,7 +88,7 @@ export async function updateVoucher(
         accountsReceivable: data.accountsReceivable !== undefined ? Number(data.accountsReceivable) : existing.accountsReceivable,
         bank: data.bank !== undefined ? data.bank.trim() : existing.bank,
         comment: data.comment !== undefined ? data.comment.trim() : existing.comment,
-        paymentMethod: data.paymentMethod || (cash > 0 ? 'Efectivo' : 'Transferencia'),
+        paymentMethod: data.paymentMethod !== undefined ? data.paymentMethod : (cash > 0 ? 'Efectivo' : 'Transferencia'),
       },
       include: {
         contract: {
@@ -400,9 +401,10 @@ export async function registerVoucherPayment(
   const isPaid = hasPaymentDate && (collected > 0 || total === 0)
 
   const paymentMethod = data.paymentMethod || 'Transferencia'
-  const transfer = paymentMethod === 'Transferencia' ? collected : 0
-  const cash = paymentMethod === 'Efectivo' ? collected : 0
-  const deposit = paymentMethod === 'Documento' ? collected : 0
+  const isNA = paymentMethod === 'No Aplica' || paymentMethod.toLowerCase().includes('no aplica')
+  const transfer = isNA ? 0 : paymentMethod === 'Transferencia' ? collected : 0
+  const cash = isNA ? 0 : paymentMethod === 'Efectivo' ? collected : 0
+  const deposit = isNA ? 0 : paymentMethod === 'Documento' ? collected : 0
 
   // Si aún no tiene número de recibo, asignar automáticamente el correlativo para su empresa
   let receiptNumberToSet = existing.receiptNumber
