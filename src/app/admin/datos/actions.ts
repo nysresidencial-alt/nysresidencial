@@ -198,7 +198,13 @@ export async function analyzeExcelFile(base64Data: string): Promise<{ success?: 
       totalVouchers++
 
       // Regla de Oro: La presencia de FECHA INGRESO determina si está pagado o pendiente
-      const paymentStatus = paymentDate ? 'Pagado' : 'Pendiente'
+      const paymentStatus = paymentDate
+        ? 'Pagado'
+        : status === 'Vendido'
+        ? 'Vendido'
+        : status === 'Disponible'
+        ? 'Disponible'
+        : 'Pendiente'
 
       if (i < 50) {
         previewRows.push({
@@ -346,7 +352,14 @@ export async function executeExcelImport(
       const assigneeRut = String(r['RUT PROPIETARIO'] || r['RUT ASIGNATARIO'] || '').trim()
 
       const rawStatus = String(r['ESTADO'] || '').trim()
-      const status = rawStatus.toLowerCase() === 'disponible' || (!tenantName && rawStatus !== 'Ocupado') ? 'Disponible' : 'Ocupado'
+      let status = 'Ocupado'
+      if (/vend/i.test(rawStatus)) {
+        status = 'Vendido'
+      } else if (/dispon/i.test(rawStatus) || (!tenantName && rawStatus !== 'Ocupado')) {
+        status = 'Disponible'
+      } else if (/retiro/i.test(rawStatus)) {
+        status = 'En Retiro'
+      }
 
       // Valores financieros
       const baseRent = parseNum(r['ARRIENDO 2026'] || r['ARRIENDO BASE'] || 0)
@@ -385,7 +398,7 @@ export async function executeExcelImport(
             contractDate: contractDate || null,
             renewalPeriod: renewalPeriod || null,
             status,
-            tenantName: tenantName || (status === 'Disponible' ? 'DISPONIBLE' : 'POR ASIGNAR'),
+            tenantName: tenantName || (status === 'Vendido' ? 'VENDIDO' : status === 'Disponible' ? 'DISPONIBLE' : 'POR ASIGNAR'),
             tenantRut: tenantRut || null,
             tenantPhone: tenantPhone || null,
             tenantEmail: tenantEmail || null,
@@ -456,7 +469,13 @@ export async function executeExcelImport(
       const comment = String(r['COMENTARIO'] || r['COMENTARIOS'] || '').trim()
 
       // Regla de Oro: La presencia de FECHA INGRESO determina si está pagado o pendiente
-      const paymentStatus = paymentDate ? 'Pagado' : 'Pendiente'
+      const paymentStatus = paymentDate
+        ? 'Pagado'
+        : status === 'Vendido'
+        ? 'Vendido'
+        : status === 'Disponible'
+        ? 'Disponible'
+        : 'Pendiente'
 
       const voucherKey = `${contractId}|${month}|${year}`
       const existingVoucher = voucherCache.get(voucherKey)

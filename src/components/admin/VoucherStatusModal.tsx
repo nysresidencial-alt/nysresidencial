@@ -40,6 +40,12 @@ const STATUS_CONFIG: Record<
     desc: 'Inmueble desocupado; no se espera recaudación contractual para este mes.',
     icon: <Clock className="w-4 h-4 text-blue-500" />,
   },
+  Vendido: {
+    label: 'Vendido',
+    color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
+    desc: 'Propiedad enajenada / vendida; no corresponde generar cobros de arriendo.',
+    icon: <AlertTriangle className="w-4 h-4 text-purple-500" />,
+  },
   Nulo: {
     label: 'Nulo / Anulado',
     color: 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/30',

@@ -1032,7 +1032,7 @@ export function ArriendosManager({
                   const pendingBalance = c.latestVoucher?.pendingBalance ?? 0
                   const paymentStatus =
                     c.latestVoucher?.paymentStatus ??
-                    (c.status === 'Disponible' ? 'Disponible' : 'Pendiente')
+                    (c.status === 'Disponible' ? 'Disponible' : c.status === 'Vendido' ? 'Vendido' : 'Pendiente')
 
                   return (
                     <tr
@@ -1041,7 +1041,9 @@ export function ArriendosManager({
                         setEditingContract(c)
                         setModalInitialMode('view')
                       }}
-                      className="hover:bg-muted/30 transition-colors group cursor-pointer"
+                      className={`hover:bg-muted/30 transition-colors group cursor-pointer ${
+                        c.status === 'Disponible' || c.status === 'Vendido' ? 'opacity-65 hover:opacity-100' : ''
+                      }`}
                     >
                       {/* Inmueble */}
                       {visibleColumns.inmueble && (
@@ -1301,6 +1303,8 @@ export function ArriendosManager({
                                 ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20'
                                 : paymentStatus === 'Disponible'
                                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                                : paymentStatus === 'Vendido'
+                                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
                                 : 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20'
                             }`}
                           >

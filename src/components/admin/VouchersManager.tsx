@@ -323,11 +323,26 @@ export function VouchersManager({
       // Filtro Año
       if (filterYear && v.year !== filterYear) return false
 
-      // Filtro Estado de Pago
+      // Filtro Estado de Pago / Propiedad
       if (filterStatus !== 'TODOS') {
-        if (filterStatus === 'Sin Estado') {
+        const cStatus = (c.status || '').toLowerCase()
+        const pStatus = (v.paymentStatus || '').toLowerCase()
+
+        if (filterStatus === 'Pagado') {
+          if (!pStatus.includes('pag')) return false
+        } else if (filterStatus === 'Pendiente') {
+          if (cStatus === 'disponible' || cStatus === 'vendido') return false
+          if (pStatus === 'disponible' || pStatus === 'vendido') return false
+          if (pStatus !== 'pendiente') return false
+        } else if (filterStatus === 'Disponible') {
+          const isDispo = cStatus === 'disponible' || pStatus === 'disponible'
+          if (!isDispo) return false
+        } else if (filterStatus === 'Vendido') {
+          const isSold = cStatus === 'vendido' || pStatus === 'vendido'
+          if (!isSold) return false
+        } else if (filterStatus === 'Sin Estado') {
           if (v.paymentStatus && v.paymentStatus.trim() !== '') return false
-        } else if (v.paymentStatus?.toLowerCase() !== filterStatus.toLowerCase()) {
+        } else if (pStatus !== filterStatus.toLowerCase()) {
           return false
         }
       }
@@ -351,13 +366,22 @@ export function VouchersManager({
       return true
     })
 
-    // Ordenar: PENDIENTES de pago primero para agilizar el registro diario de contabilidad
+    // Ordenar: PENDIENTES activos primero para agilizar el registro diario de contabilidad,
+    // seguidos de pagados, y al final disponibles y vendidos para no generar ruido visual
     return [...list].sort((a, b) => {
-      const aIsPending = (a.paymentStatus || '').toLowerCase() === 'pendiente' ? 0 : 1
-      const bIsPending = (b.paymentStatus || '').toLowerCase() === 'pendiente' ? 0 : 1
-      if (aIsPending !== bIsPending) {
-        return aIsPending - bIsPending
+      const getPriority = (item: VoucherDetail) => {
+        const cSt = (item.contract?.status || '').toLowerCase()
+        const pSt = (item.paymentStatus || '').toLowerCase()
+        if (cSt === 'vendido' || pSt === 'vendido') return 4
+        if (cSt === 'disponible' || pSt === 'disponible') return 3
+        if (pSt.includes('pag')) return 1
+        if (pSt === 'pendiente') return 0
+        return 2
       }
+      const aPri = getPriority(a)
+      const bPri = getPriority(b)
+      if (aPri !== bPri) return aPri - bPri
+
       const bComp = (a.contract.building || '').localeCompare(b.contract.building || '')
       if (bComp !== 0) return bComp
       return (a.contract.unitNumber || '').localeCompare(b.contract.unitNumber || '')
@@ -405,8 +429,31 @@ export function VouchersManager({
   const stats = useMemo(() => {
     const totalCount = filteredVouchers.length
     const paidCount = filteredVouchers.filter((v) => (v.paymentStatus || '').toLowerCase().includes('pag')).length
-    const pendingCount = filteredVouchers.filter((v) => (v.paymentStatus || '').toLowerCase() === 'pendiente').length
-    const emptyCount = filteredVouchers.filter((v) => !v.paymentStatus || v.paymentStatus.trim() === '').length
+    const soldCount = filteredVouchers.filter((v) => {
+      const cStatus = (v.contract?.status || '').toLowerCase()
+      const pStatus = (v.paymentStatus || '').toLowerCase()
+      return cStatus === 'vendido' || pStatus === 'vendido'
+    }).length
+    const availableCount = filteredVouchers.filter((v) => {
+      const cStatus = (v.contract?.status || '').toLowerCase()
+      const pStatus = (v.paymentStatus || '').toLowerCase()
+      if (cStatus === 'vendido' || pStatus === 'vendido') return false
+      return cStatus === 'disponible' || pStatus === 'disponible'
+    }).length
+    const pendingCount = filteredVouchers.filter((v) => {
+      const cStatus = (v.contract?.status || '').toLowerCase()
+      const pStatus = (v.paymentStatus || '').toLowerCase()
+      if (cStatus === 'disponible' || cStatus === 'vendido') return false
+      if (pStatus === 'disponible' || pStatus === 'vendido') return false
+      return pStatus === 'pendiente'
+    }).length
+    const emptyCount = filteredVouchers.filter((v) => {
+      const cStatus = (v.contract?.status || '').toLowerCase()
+      const pStatus = (v.paymentStatus || '').toLowerCase()
+      if (cStatus === 'disponible' || cStatus === 'vendido') return false
+      if (pStatus === 'disponible' || pStatus === 'vendido') return false
+      return !v.paymentStatus || v.paymentStatus.trim() === ''
+    }).length
     const totalAmount = filteredVouchers.reduce((acc, v) => acc + v.totalMonth, 0)
     const collectedAmount = filteredVouchers.reduce((acc, v) => acc + v.collectedAmount, 0)
 
@@ -414,6 +461,8 @@ export function VouchersManager({
       totalCount,
       paidCount,
       pendingCount,
+      availableCount,
+      soldCount,
       emptyCount,
       totalAmount,
       collectedAmount,
@@ -486,8 +535,21 @@ export function VouchersManager({
   }
 
   // Helper para estado estilo pill con punto (Imagen 3)
-  function renderPaymentBadge(status: string) {
+  function renderPaymentBadge(status: string, contractStatus?: string) {
     const s = (status || '').toLowerCase().trim()
+    const cs = (contractStatus || '').toLowerCase().trim()
+
+    // 1. Vendido
+    if (cs === 'vendido' || s === 'vendido') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800 shadow-2xs">
+          <span className="w-2 h-2 rounded-full bg-purple-600 shrink-0" />
+          <span>VENDIDO</span>
+        </span>
+      )
+    }
+
+    // 2. Pagado (siempre tiene prioridad si hay pago)
     if (s.includes('manual') || s.includes('pagado') || s.includes('pag')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
@@ -496,6 +558,18 @@ export function VouchersManager({
         </span>
       )
     }
+
+    // 3. Disponible
+    if (cs === 'disponible' || s === 'disponible') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-900/60 dark:text-slate-300 border border-slate-200 dark:border-slate-800 shadow-2xs">
+          <span className="w-2 h-2 rounded-full bg-slate-500 shrink-0" />
+          <span>DISPONIBLE</span>
+        </span>
+      )
+    }
+
+    // 4. Pendiente
     if (s === 'pendiente') {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs">
@@ -504,6 +578,7 @@ export function VouchersManager({
         </span>
       )
     }
+
     if (s === 'error' || s.includes('ref')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shadow-2xs">
@@ -512,6 +587,7 @@ export function VouchersManager({
         </span>
       )
     }
+
     // Sin estado / Vacío
     return (
       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium text-muted-foreground bg-muted/60 border border-border/60">
@@ -535,7 +611,20 @@ export function VouchersManager({
             Vouchers
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Tienes <span className="text-foreground font-bold">{stats.totalCount}</span> arriendos en el período (<span className="text-emerald-600 dark:text-emerald-400 font-bold">{stats.paidCount} pagados</span>, <span className="text-amber-600 dark:text-amber-400 font-bold">{stats.pendingCount} pendientes</span>{stats.emptyCount > 0 ? `, ${stats.emptyCount} sin estado` : ''})
+            Tienes <span className="text-foreground font-bold">{stats.totalCount}</span> arriendos en el período (
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">{stats.paidCount} pagados</span>,{' '}
+            <span className="text-amber-600 dark:text-amber-400 font-bold">{stats.pendingCount} pendientes</span>
+            {stats.availableCount > 0 ? (
+              <>
+                , <span className="text-slate-600 dark:text-slate-400 font-bold">{stats.availableCount} disponibles</span>
+              </>
+            ) : null}
+            {stats.soldCount > 0 ? (
+              <>
+                , <span className="text-purple-600 dark:text-purple-400 font-bold">{stats.soldCount} vendidos</span>
+              </>
+            ) : null}
+            {stats.emptyCount > 0 ? `, ${stats.emptyCount} sin estado` : ''})
           </p>
         </div>
 
@@ -1110,7 +1199,7 @@ export function VouchersManager({
 
             {openDropdown === 'status' && (
               <div className="absolute left-0 top-full mt-2 w-56 p-2 bg-card border border-border rounded-2xl shadow-xl z-50 space-y-1 animate-in fade-in-50 zoom-in-95 duration-100">
-                {['TODOS', 'Pagado', 'Pendiente', 'Sin Estado', 'Error'].map((st) => (
+                {['TODOS', 'Pagado', 'Pendiente', 'Disponible', 'Vendido', 'Sin Estado', 'Error'].map((st) => (
                   <button
                     key={st}
                     type="button"
@@ -1462,7 +1551,12 @@ export function VouchersManager({
                       const isRowActive = selectedVoucherId === v.id
                       const hasAdjustment = (v.adjustmentPercent && v.adjustmentPercent > 0) || (v.adjustmentAmount && v.adjustmentAmount > 0)
                       const monthFormatted = MONTH_NAMES_TITLE[v.month] || v.month
-                      const isPaid = (v.paymentStatus || '').toLowerCase() === 'pagado'
+                      const isPaid = (v.paymentStatus || '').toLowerCase().includes('pag')
+                      const isVacantOrSold =
+                        (c.status || '').toLowerCase() === 'disponible' ||
+                        (c.status || '').toLowerCase() === 'vendido' ||
+                        (v.paymentStatus || '').toLowerCase() === 'disponible' ||
+                        (v.paymentStatus || '').toLowerCase() === 'vendido'
                       const rentAmount = Math.round(v.totalRent || v.totalMonth || c.totalRent || v.baseRent || 0)
                       const ownerDisplayName =
                         (c.newAssignee && c.newAssignee.trim() !== '')
@@ -1475,9 +1569,11 @@ export function VouchersManager({
                           onClick={() => {
                             setSelectedVoucherId(v.id)
                           }}
-                          className={`hover:bg-muted/30 transition-colors cursor-pointer group ${
+                          className={`hover:bg-muted/30 transition-all cursor-pointer group ${
                             isSelected ? 'bg-primary/5' : ''
-                          } ${isRowActive && viewMode === 'split' ? 'border-l-4 border-l-primary' : ''}`}
+                          } ${isRowActive && viewMode === 'split' ? 'border-l-4 border-l-primary' : ''} ${
+                            isVacantOrSold ? 'opacity-60 hover:opacity-100' : ''
+                          }`}
                         >
                           {/* Checkbox */}
                           <td
@@ -1643,7 +1739,7 @@ export function VouchersManager({
 
                           {/* Estado Pill */}
                           <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            {renderPaymentBadge(v.paymentStatus)}
+                            {renderPaymentBadge(v.paymentStatus, c.status)}
                           </td>
 
                           {/* Acciones */}
@@ -1659,6 +1755,8 @@ export function VouchersManager({
                                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs shadow-xs transition-all cursor-pointer ${
                                   isPaid
                                     ? 'bg-muted hover:bg-muted/80 text-foreground border border-border'
+                                    : isVacantOrSold
+                                    ? 'bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/70'
                                     : 'bg-primary hover:bg-primary/90 text-primary-foreground hover:scale-102'
                                 }`}
                                 title={isPaid ? 'Ver y modificar pago registrado' : 'Registrar pago de arriendo en cartola'}
@@ -1788,7 +1886,7 @@ export function VouchersManager({
                   </div>
 
                   <div className="flex flex-col items-end gap-1.5">
-                    {renderPaymentBadge(selectedVoucher.paymentStatus)}
+                    {renderPaymentBadge(selectedVoucher.paymentStatus, selectedVoucher.contract?.status)}
                     <button
                       type="button"
                       onClick={() => setStatusChangingVoucher(selectedVoucher)}

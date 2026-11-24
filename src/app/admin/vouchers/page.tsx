@@ -66,6 +66,7 @@ export default async function VouchersAdminPage() {
           totalRent: true,
           newAssignee: true,
           assigneeRut: true,
+          status: true,
           vouchers: {
             select: {
               id: true,

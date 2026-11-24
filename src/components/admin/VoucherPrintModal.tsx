@@ -52,6 +52,7 @@ export interface VoucherDetail {
     assigneeRut?: string | null
     baseRent?: number
     totalRent?: number
+    status?: string
     vouchersHistory?: Array<{
       id: string
       month: string
