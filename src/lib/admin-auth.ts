@@ -255,6 +255,14 @@ export function hasPermission(
   if (!session) return false
   if (session.isSuperadmin) return true
 
+  // Rol Contabilidad tiene acceso completo a los módulos financieros y de recaudación
+  const roleLower = session.roleName?.toLowerCase() || ''
+  if (roleLower.includes('contabilidad')) {
+    if (['dashboard', 'vouchers', 'arriendos', 'propietarios', 'datos', 'correos'].includes(moduleKey)) {
+      return true
+    }
+  }
+
   const mod = session.permissions[moduleKey]
   if (!mod) return false
   return Boolean(mod[action])

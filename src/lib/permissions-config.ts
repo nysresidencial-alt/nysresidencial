@@ -10,6 +10,7 @@ export type AdminModule =
   | 'usuarios'
   | 'vouchers'
   | 'arriendos'
+  | 'propietarios'
   | 'contabilidad' // Reservado para futura fase
 
 export type ActionType = 'view' | 'create' | 'edit' | 'delete'
@@ -105,6 +106,13 @@ export const ADMIN_MODULES: {
     name: 'Vouchers / Recibos',
     href: '/admin/vouchers',
     description: 'Liquidaciones de arriendo, recibos mensuales y recaudación',
+    hasCrud: true,
+  },
+  {
+    key: 'propietarios',
+    name: 'Propietarios / Asignatarios',
+    href: '/admin/propietarios',
+    description: 'Gestión de Nuevo Asignatario, RUT oficial y cartera de inmuebles',
     hasCrud: true,
   },
   {

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 }
 
 export default async function PropietariosAdminPage() {
-  const session = await requireAdminAuth('vouchers', 'view')
+  const session = await requireAdminAuth('propietarios', 'view')
 
   // Acceso exclusivo: rol Contabilidad o Superadmin
   const isContabilidad = session.roleName?.toLowerCase().includes('contabilidad')

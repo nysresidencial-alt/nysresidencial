@@ -296,13 +296,15 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
 
         {/* NAVEGACIÓN DESKTOP COMPACTA & ORGANIZADA (PANTALLAS >= LG) */}
         <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-          {/* Si es rol Contabilidad, mostrar sus 4 módulos directamente como pestañas ejecutivas */}
+          {/* Si es rol Contabilidad, mostrar sus módulos directamente como pestañas ejecutivas */}
           {currentUser?.roleName?.toLowerCase().includes('contabilidad') ? (
             [
               { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
               { name: 'Propiedades', href: '/admin/arriendos', icon: Building },
               { name: 'Vouchers', href: '/admin/vouchers', icon: Receipt },
+              { name: 'Propietarios', href: '/admin/propietarios', icon: ShieldCheck },
               { name: 'Carga de Datos', href: '/admin/datos', icon: FileSpreadsheet },
+              { name: 'Correos', href: '/admin/correos', icon: Mail },
             ].map((tab) => {
               const isActive = pathname.startsWith(tab.href);
               const Icon = tab.icon;
@@ -547,7 +549,9 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
                 { name: 'Propiedades', href: '/admin/arriendos', icon: Building },
                 { name: 'Vouchers', href: '/admin/vouchers', icon: Receipt },
+                { name: 'Propietarios', href: '/admin/propietarios', icon: ShieldCheck },
                 { name: 'Carga de Datos', href: '/admin/datos', icon: FileSpreadsheet },
+                { name: 'Correos', href: '/admin/correos', icon: Mail },
               ].map((tab) => {
                 const isActive = pathname.startsWith(tab.href);
                 const Icon = tab.icon;
