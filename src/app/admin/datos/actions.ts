@@ -197,21 +197,8 @@ export async function analyzeExcelFile(base64Data: string): Promise<{ success?: 
 
       totalVouchers++
 
-      let paymentStatus = 'Pendiente'
-      const rawEpago = String(r['EPAGO'] !== undefined ? r['EPAGO'] : '').trim().toUpperCase()
-      if (rawEpago === 'PAGADO') {
-        paymentStatus = 'Pagado'
-      } else if (rawEpago === 'PENDIENTE') {
-        paymentStatus = 'Pendiente'
-      } else if (rawEpago === '') {
-        paymentStatus = ''
-      } else if (rawEpago.includes('#') || rawEpago.includes('REF') || rawEpago.includes('VALOR')) {
-        paymentStatus = 'Error'
-      } else if (paymentDate) {
-        paymentStatus = 'Pagado'
-      } else if (r['ESTADO PAGO']) {
-        paymentStatus = String(r['ESTADO PAGO']).trim()
-      }
+      // Regla de Oro: La presencia de FECHA INGRESO determina si está pagado o pendiente
+      const paymentStatus = paymentDate ? 'Pagado' : 'Pendiente'
 
       if (i < 50) {
         previewRows.push({
@@ -468,28 +455,8 @@ export async function executeExcelImport(
       const bank = String(r['BANCO'] || '').trim()
       const comment = String(r['COMENTARIO'] || r['COMENTARIOS'] || '').trim()
 
-      let paymentStatus = 'Pendiente'
-      const rawEpago = String(r['EPAGO'] !== undefined ? r['EPAGO'] : '').trim().toUpperCase()
-      if (rawEpago === 'PAGADO') {
-        paymentStatus = 'Pagado'
-      } else if (rawEpago === 'PENDIENTE') {
-        paymentStatus = 'Pendiente'
-      } else if (rawEpago === '') {
-        paymentStatus = ''
-      } else if (rawEpago.includes('#') || rawEpago.includes('REF') || rawEpago.includes('VALOR')) {
-        paymentStatus = 'Error'
-      } else {
-        const rawPaymentStatus = String(r['ESTADO PAGO'] || '').trim().toLowerCase()
-        if (rawPaymentStatus.includes('pag')) {
-          paymentStatus = 'Pagado'
-        } else if (rawPaymentStatus.includes('pend')) {
-          paymentStatus = 'Pendiente'
-        } else if (paymentDate || transferAmount > 0 || cashAmount > 0 || depositAmount > 0 || (collectedAmount >= totalMonth && totalMonth > 0)) {
-          paymentStatus = 'Pagado'
-        } else {
-          paymentStatus = 'Pendiente'
-        }
-      }
+      // Regla de Oro: La presencia de FECHA INGRESO determina si está pagado o pendiente
+      const paymentStatus = paymentDate ? 'Pagado' : 'Pendiente'
 
       const voucherKey = `${contractId}|${month}|${year}`
       const existingVoucher = voucherCache.get(voucherKey)
