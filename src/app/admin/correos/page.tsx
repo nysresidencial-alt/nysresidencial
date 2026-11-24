@@ -3,6 +3,7 @@ import prisma from '@/lib/db'
 import { requireAdminAuth } from '@/lib/admin-auth'
 import { redirect } from 'next/navigation'
 import { CorreosManager, TenantContractItem } from '@/components/admin/CorreosManager'
+import { getEmailConfig } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,24 +15,27 @@ export default async function AdminCorreosPage() {
     redirect('/admin')
   }
 
-  // Obtener contratos activos y sus empresas (solo propietarios activos)
-  const contracts = await prisma.rentalContract.findMany({
-    where: { isOwnerActive: true },
-    include: {
-      company: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
+  // Carga concurrente de contratos y configuración de plantilla/modo test
+  const [contracts, initialConfig] = await Promise.all([
+    prisma.rentalContract.findMany({
+      where: { isOwnerActive: true },
+      include: {
+        company: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
         },
       },
-    },
-    orderBy: [
-      { building: 'asc' },
-      { unitNumber: 'asc' },
-      { tenantName: 'asc' },
-    ],
-  })
+      orderBy: [
+        { building: 'asc' },
+        { unitNumber: 'asc' },
+        { tenantName: 'asc' },
+      ],
+    }),
+    getEmailConfig(),
+  ])
 
   const formattedContracts: TenantContractItem[] = contracts.map((c) => ({
     id: c.id,
@@ -46,5 +50,5 @@ export default async function AdminCorreosPage() {
     company: c.company,
   }))
 
-  return <CorreosManager initialContracts={formattedContracts} />
+  return <CorreosManager initialContracts={formattedContracts} initialConfig={initialConfig} />
 }

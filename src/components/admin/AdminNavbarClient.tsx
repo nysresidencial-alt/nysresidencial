@@ -153,7 +153,7 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
           name: 'Correos y Notificaciones',
           href: '/admin/correos',
           icon: Mail,
-          description: 'Directorio de correos de arrendatarios, plantillas y marcha blanca',
+          description: 'Directorio de correos de arrendatarios, plantillas dinámicas y modo de envío',
         },
         {
           key: 'datos',

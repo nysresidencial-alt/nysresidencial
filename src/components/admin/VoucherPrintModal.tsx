@@ -287,7 +287,7 @@ export function VoucherPrintModal({ voucher: initialVoucher, onClose, onReceiptN
           type="button"
           onClick={() => setIsEmailModalOpen(true)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm rounded-xl shadow-lg transition-all cursor-pointer"
-          title="Enviar este recibo por correo electrónico (Marcha blanca / Arrendatario)"
+          title="Enviar este recibo por correo electrónico"
         >
           <Mail className="w-4 h-4" />
           <span>Enviar por Correo</span>

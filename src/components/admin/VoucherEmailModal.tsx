@@ -39,8 +39,8 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
   const receiptNo = voucher.receiptNumber || 'S/N'
   const expectedRent = Math.round(voucher.totalMonth || voucher.totalRent || 0)
 
-  // Casilla de destino (en marcha blanca prellena con la casilla de la empresa, pero editable para pruebas)
-  const [targetEmail, setTargetEmail] = useState('administracion@sunrisechile.cl')
+  // Casilla de destino editable
+  const [targetEmail, setTargetEmail] = useState(c.tenantEmail || 'administracion@sunrisechile.cl')
 
   // Fecha seleccionada para emitir y timbrar el comprobante
   const initialDateStr = voucher.paymentDate
@@ -159,14 +159,14 @@ export function VoucherEmailModal({ voucher: initialVoucher, onClose, onSent }: 
 
         {/* BODY */}
         <div className="p-5 space-y-4 text-xs">
-          {/* AVISO MARCHA BLANCA */}
-          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          {/* INFO DESTINATARIO */}
+          <div className="p-3.5 rounded-2xl bg-muted/50 border border-border flex items-start gap-2.5">
+            <Mail className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <div className="space-y-0.5">
-              <span className="font-bold block">Modo Marcha Blanca Activo</span>
-              <p className="leading-snug text-[11px] text-amber-700/90 dark:text-amber-400/90">
-                El comprobante oficial adjunto se enviará a la casilla interna de la empresa. El correo registrado del cliente es:{' '}
-                <strong className="font-mono text-foreground">{c.tenantEmail || 'Sin correo registrado'}</strong>.
+              <span className="font-bold text-foreground block">Despacho de Comprobante Oficial</span>
+              <p className="leading-snug text-[11px] text-muted-foreground">
+                Correo registrado del arrendatario:{' '}
+                <strong className="font-mono text-foreground">{c.tenantEmail || 'Sin correo registrado'}</strong>. Puedes modificar la casilla de destino para este despacho si es necesario.
               </p>
             </div>
           </div>

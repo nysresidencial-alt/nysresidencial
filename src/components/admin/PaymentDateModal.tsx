@@ -131,7 +131,7 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
   const [paymentMethod, setPaymentMethod] = useState<string>(voucher.paymentMethod || 'Transferencia')
   const [comment, setComment] = useState<string>(voucher.comment || '')
 
-  // Enviar comprobante por correo (Activo por defecto en marcha blanca hacia correo de la empresa)
+  // Enviar comprobante por correo (Activo por defecto)
   const [sendEmail, setSendEmail] = useState<boolean>(true)
   const [voucherForPdf, setVoucherForPdf] = useState<VoucherDetail | null>(null)
   const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false)
@@ -824,18 +824,15 @@ export function PaymentDateModal({ voucher, onClose, onSaved }: PaymentDateModal
               </div>
             </div>
 
-            {/* SWITCH ENVÍO DE COMPROBANTE POR CORREO (MARCHA BLANCA) */}
+            {/* SWITCH ENVÍO DE COMPROBANTE POR CORREO */}
             <div className="p-3.5 rounded-xl bg-card border border-border flex items-center justify-between gap-3 shadow-2xs">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                   <Mail className="w-4 h-4 text-primary" />
                   <span>Enviar comprobante por correo (Voucher PDF)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">
-                    Marcha Blanca
-                  </span>
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                  El recibo oficial timbrado con <strong className="text-emerald-600 dark:text-emerald-400">PAGADO</strong> se enviará a la casilla de la empresa (<span className="font-mono text-foreground font-semibold">administracion@sunrisechile.cl</span>).
+                  El recibo oficial timbrado con <strong className="text-emerald-600 dark:text-emerald-400">PAGADO</strong> se enviará automáticamente en formato PDF según la configuración activa.
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0">
