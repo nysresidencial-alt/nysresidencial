@@ -171,6 +171,7 @@ export async function GET(request: NextRequest) {
           'EMPRESA': comp?.code || '',
           'NOMBRE EMPRESA': comp?.name || '',
           'Nuevo asignatario': c.newAssignee || '',
+          'RUT PROPIETARIO': c.assigneeRut || comp?.rut || '',
           'MES': v.month,
           'N° RECIBO': v.receiptNumber || '',
           'FACTURA': v.invoiceNumber || '',
@@ -294,6 +295,27 @@ export async function GET(request: NextRequest) {
     }))
     wsMain['!cols'] = colWidths
     XLSX.utils.book_append_sheet(wb, wsMain, 'Hoja1')
+
+    // Hoja 2: PROPIETARIOS Y ASIGNATARIOS
+    try {
+      const owners = await prisma.propertyOwner.findMany({ orderBy: { name: 'asc' } })
+      const ownersRows = owners.map((o) => ({
+        'PROPIETARIO / ASIGNATARIO': o.name,
+        'RUT OFICIAL': o.rut || '',
+        'TIPO': o.isCompany ? 'Empresa' : 'Nuevo Asignatario',
+        'EMPRESA ASOCIADA': o.companyName || '',
+        'CÓDIGO': o.companyCode || '',
+        'TELÉFONO': o.phone || '',
+        'CORREO': o.email || '',
+        'DIRECCIÓN': o.address || '',
+        'OBSERVACIONES': o.notes || '',
+      }))
+      const wsOwners = XLSX.utils.json_to_sheet(ownersRows)
+      wsOwners['!cols'] = [{ wch: 25 }, { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 10 }, { wch: 18 }, { wch: 25 }, { wch: 30 }, { wch: 30 }]
+      XLSX.utils.book_append_sheet(wb, wsOwners, 'PROPIETARIOS')
+    } catch (ownerErr) {
+      console.error('Error exportando hoja de propietarios:', ownerErr)
+    }
 
     // Hoja secundaria: GUIA DE LLENADO
     const wsInstructions = XLSX.utils.json_to_sheet(instructionRows)

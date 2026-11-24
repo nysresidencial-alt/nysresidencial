@@ -28,6 +28,7 @@ import {
   Globe,
   LayoutDashboard,
   Mail,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/ThemeProvider';
@@ -88,8 +89,8 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
     }
     if (currentUser.isSuperadmin) return true;
 
-    // Dashboard, Vouchers, Arriendos, Correos y Carga de Datos exclusivo para Contabilidad (o quien tenga permiso explícito)
-    if (key === 'dashboard' || key === 'vouchers' || key === 'arriendos' || key === 'datos' || key === 'correos') {
+    // Dashboard, Vouchers, Arriendos, Propietarios, Correos y Carga de Datos exclusivo para Contabilidad (o quien tenga permiso explícito)
+    if (key === 'dashboard' || key === 'vouchers' || key === 'arriendos' || key === 'propietarios' || key === 'datos' || key === 'correos') {
       const isContabilidad = currentUser.roleName?.toLowerCase().includes('contabilidad');
       return Boolean(isContabilidad || (currentUser.permissions?.[key]?.view ?? false));
     }
@@ -139,6 +140,13 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
           href: '/admin/vouchers',
           icon: Receipt,
           description: 'Liquidaciones mensuales, control de recaudación y pagos',
+        },
+        {
+          key: 'propietarios',
+          name: 'Propietarios',
+          href: '/admin/propietarios',
+          icon: ShieldCheck,
+          description: 'Gestión de Nuevo Asignatario, RUT oficial y cartera de inmuebles',
         },
         {
           key: 'correos',

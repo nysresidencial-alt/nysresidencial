@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
         'EMPRESA': comp?.code || '',
         'NOMBRE EMPRESA': comp?.name || '',
         'Nuevo asignatario': c.newAssignee || '',
+        'RUT PROPIETARIO': c.assigneeRut || comp?.rut || '',
         'MES': v.month,
         'N° RECIBO': v.receiptNumber || '',
         'FACTURA': v.invoiceNumber || '',

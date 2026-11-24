@@ -157,6 +157,7 @@ model RentalContract {
   companyId             String?
   company               OwnerCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   newAssignee           String?       // "Patricia Retamal", "Jose Manuel Retamal", etc.
+  assigneeRut           String?       // RUT oficial del nuevo asignatario / propietario real
   building              String        // "AMALFI", "LIBERTADOR", "COSTA AZUL", etc.
   unitNumber            String        // "E-502", "1316", "708", etc.
   propertyType          String        @default("Departamento") // "Departamento", "Casas", "Bodega", "Estacionamiento", "Local Comercial"
@@ -233,6 +234,21 @@ model LeaseVoucher {
   
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+}
+
+model PropertyOwner {
+  id            String   @id @default(cuid())
+  name          String   @unique // "Patricia Retamal", "Grand Prix", "Cristian Retamal", etc.
+  rut           String?          // RUT oficial chileno (ej: "12.345.678-9")
+  phone         String?          // Teléfono de contacto
+  email         String?          // Correo electrónico
+  address       String?          // Dirección
+  notes         String?          // Observaciones o notas internas
+  companyCode   String?          // Código de empresa vinculada si aplica ("JR", "GP", etc.)
+  companyName   String?          // Nombre de empresa vinculada si aplica
+  isCompany     Boolean  @default(false) // Indica si el propietario es una empresa o persona natural
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 

@@ -356,6 +356,7 @@ export async function executeExcelImport(
       const contractDate = parseDate(r['FECHA CONTRATO'])
       const renewalPeriod = String(r['RENOVACIÓN'] || '').trim()
       const newAssignee = String(r['NUEVO ASIGNATARIO'] || r['Nuevo asignatario'] || '').trim()
+      const assigneeRut = String(r['RUT PROPIETARIO'] || r['RUT ASIGNATARIO'] || '').trim()
 
       const rawStatus = String(r['ESTADO'] || '').trim()
       const status = rawStatus.toLowerCase() === 'disponible' || (!tenantName && rawStatus !== 'Ocupado') ? 'Disponible' : 'Ocupado'
@@ -386,6 +387,7 @@ export async function executeExcelImport(
           data: {
             companyId,
             newAssignee: newAssignee || null,
+            assigneeRut: assigneeRut || null,
             building,
             unitNumber: unitNo,
             propertyType,
@@ -424,6 +426,7 @@ export async function executeExcelImport(
           data: {
             companyId: companyId || undefined,
             newAssignee: newAssignee || undefined,
+            assigneeRut: assigneeRut || undefined,
             propertyType,
             rol: rol || undefined,
             address: address || undefined,

@@ -61,6 +61,7 @@ export default async function VouchersAdminPage() {
           baseRent: true,
           totalRent: true,
           newAssignee: true,
+          assigneeRut: true,
           vouchers: {
             select: {
               id: true,
@@ -158,6 +159,7 @@ export default async function VouchersAdminPage() {
       baseRent: v.contract.baseRent,
       totalRent: v.contract.totalRent,
       newAssignee: v.contract.newAssignee,
+      assigneeRut: v.contract.assigneeRut,
       vouchersHistory: (v.contract as any).vouchers || [],
       company: v.contract.company || null,
     },
