@@ -136,26 +136,68 @@ export function generateVoucherVectorPdf(voucher: VoucherDetail, customDate?: st
   doc.setTextColor(9, 9, 11)
   doc.text(landlordName, contentX, curY)
 
-  // Recibo Nº en el lado derecho
-  const receiptBoxW = 28
-  const receiptBoxH = 13
-  const receiptBoxX = contentX + contentW - receiptBoxW
-  const receiptBoxY = curY - 2
+  // Recuadro(s) en la esquina superior derecha (Nº Recibo y opcional Nº Factura)
+  const invoiceNo = voucher.invoiceNumber && voucher.invoiceNumber.trim() !== '' ? voucher.invoiceNumber.trim() : null
+  const boxH = 13
+  const boxY = curY - 2
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
-  doc.setTextColor(82, 82, 91)
-  doc.text('Nº', receiptBoxX + receiptBoxW - 4, receiptBoxY - 2, { align: 'right' })
+  if (invoiceNo) {
+    const boxW = 26
+    const gap = 3
+    const receiptBoxX = contentX + contentW - boxW
+    const invoiceBoxX = receiptBoxX - gap - boxW
 
-  doc.setDrawColor(24, 24, 27)
-  doc.setLineWidth(0.6)
-  doc.setFillColor(255, 255, 255)
-  doc.roundedRect(receiptBoxX, receiptBoxY, receiptBoxW, receiptBoxH, 2, 2, 'FD')
+    // --- Recuadro Nº FACTURA ---
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7)
+    doc.setTextColor(82, 82, 91)
+    doc.text('Nº FACTURA', invoiceBoxX + boxW - 2, boxY - 2, { align: 'right' })
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(16)
-  doc.setTextColor(9, 9, 11)
-  doc.text(String(receiptNo), receiptBoxX + receiptBoxW / 2, receiptBoxY + 8.5, { align: 'center' })
+    doc.setDrawColor(24, 24, 27)
+    doc.setLineWidth(0.6)
+    doc.setFillColor(255, 255, 255)
+    doc.roundedRect(invoiceBoxX, boxY, boxW, boxH, 2, 2, 'FD')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.setTextColor(9, 9, 11)
+    doc.text(String(invoiceNo), invoiceBoxX + boxW / 2, boxY + 8.5, { align: 'center' })
+
+    // --- Recuadro Nº RECIBO ---
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7)
+    doc.setTextColor(82, 82, 91)
+    doc.text('Nº RECIBO', receiptBoxX + boxW - 2, boxY - 2, { align: 'right' })
+
+    doc.setDrawColor(24, 24, 27)
+    doc.setLineWidth(0.6)
+    doc.setFillColor(255, 255, 255)
+    doc.roundedRect(receiptBoxX, boxY, boxW, boxH, 2, 2, 'FD')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.setTextColor(9, 9, 11)
+    doc.text(String(receiptNo), receiptBoxX + boxW / 2, boxY + 8.5, { align: 'center' })
+  } else {
+    // Recuadro único de Nº Recibo estándar
+    const receiptBoxW = 28
+    const receiptBoxX = contentX + contentW - receiptBoxW
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(82, 82, 91)
+    doc.text('Nº', receiptBoxX + receiptBoxW - 4, boxY - 2, { align: 'right' })
+
+    doc.setDrawColor(24, 24, 27)
+    doc.setLineWidth(0.6)
+    doc.setFillColor(255, 255, 255)
+    doc.roundedRect(receiptBoxX, boxY, receiptBoxW, boxH, 2, 2, 'FD')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.setTextColor(9, 9, 11)
+    doc.text(String(receiptNo), receiptBoxX + receiptBoxW / 2, boxY + 8.5, { align: 'center' })
+  }
 
   // Datos del arrendador
   curY += 5

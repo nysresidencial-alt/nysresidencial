@@ -42,6 +42,7 @@ export function VoucherCard({
   const landlordEmail = comp?.email || 'administracion@sunrisechile.cl'
 
   const receiptNo = voucher.receiptNumber || 'S/N'
+  const invoiceNo = voucher.invoiceNumber && voucher.invoiceNumber.trim() !== '' ? voucher.invoiceNumber.trim() : null
   const month = voucher.month || 'OCTUBRE'
   const year = voucher.year || 2026
 
@@ -106,52 +107,89 @@ export function VoucherCard({
             </div>
           </div>
 
-          {/* Número de Recibo */}
-          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span
-              style={{
-                color: '#52525b',
-                fontSize: '11px',
-                fontWeight: 800,
-                display: 'block',
-                margin: '0 0 2px 0',
-                lineHeight: '1',
-              }}
-            >
-              Nº
-            </span>
-            <div
-              style={{
-                color: '#09090b',
-                border: '2px solid #18181b',
-                backgroundColor: '#ffffff',
-                minWidth: '85px',
-                padding: '4px 14px',
-                borderRadius: '6px',
-                textAlign: 'center',
-                fontSize: '26px',
-                fontWeight: 900,
-                lineHeight: '1.2',
-              }}
-            >
-              {isAssigning ? (
+          {/* Número de Recibo y Número de Factura */}
+          <div style={{ textAlign: 'right', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            {invoiceNo && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                 <span
                   style={{
-                    color: '#71717a',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    padding: '4px 0',
+                    color: '#52525b',
+                    fontSize: '10px',
+                    fontWeight: 800,
+                    display: 'block',
+                    margin: '0 0 2px 0',
+                    lineHeight: '1',
+                    letterSpacing: '0.02em',
                   }}
                 >
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Asignando...</span>
+                  Nº FACTURA
                 </span>
-              ) : (
-                receiptNo
-              )}
+                <div
+                  style={{
+                    color: '#09090b',
+                    border: '2px solid #18181b',
+                    backgroundColor: '#ffffff',
+                    minWidth: '85px',
+                    padding: '4px 14px',
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                    fontSize: '24px',
+                    fontWeight: 900,
+                    lineHeight: '1.2',
+                  }}
+                >
+                  {invoiceNo}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <span
+                style={{
+                  color: '#52525b',
+                  fontSize: invoiceNo ? '10px' : '11px',
+                  fontWeight: 800,
+                  display: 'block',
+                  margin: '0 0 2px 0',
+                  lineHeight: '1',
+                  letterSpacing: invoiceNo ? '0.02em' : 'normal',
+                }}
+              >
+                {invoiceNo ? 'Nº RECIBO' : 'Nº'}
+              </span>
+              <div
+                style={{
+                  color: '#09090b',
+                  border: '2px solid #18181b',
+                  backgroundColor: '#ffffff',
+                  minWidth: '85px',
+                  padding: '4px 14px',
+                  borderRadius: '6px',
+                  textAlign: 'center',
+                  fontSize: invoiceNo ? '24px' : '26px',
+                  fontWeight: 900,
+                  lineHeight: '1.2',
+                }}
+              >
+                {isAssigning ? (
+                  <span
+                    style={{
+                      color: '#71717a',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      padding: '4px 0',
+                    }}
+                  >
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Asignando...</span>
+                  </span>
+                ) : (
+                  receiptNo
+                )}
+              </div>
             </div>
           </div>
         </div>

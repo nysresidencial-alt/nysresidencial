@@ -273,6 +273,84 @@ export async function assignVoucherReceiptNumber(voucherId: string) {
 }
 
 /**
+ * Auto-asigna correlativos de N° de Recibo a todos los vouchers de un mes que aún no tienen número.
+ * Mantiene orden consecutivo por empresa para garantizar trazabilidad.
+ */
+export async function autoAssignMissingReceipts(month?: string, year?: number) {
+  await checkAuth('edit')
+
+  try {
+    const whereClause: any = {
+      OR: [
+        { receiptNumber: null },
+        { receiptNumber: '' },
+        { receiptNumber: 'S/N' },
+      ],
+    }
+
+    if (month && month !== 'TODOS') {
+      whereClause.month = month.trim().toUpperCase()
+    }
+    if (year) {
+      whereClause.year = year
+    }
+
+    const vouchersToAssign = await prisma.leaseVoucher.findMany({
+      where: whereClause,
+      include: {
+        contract: {
+          include: { company: true },
+        },
+        company: true,
+      },
+      orderBy: [
+        { contract: { building: 'asc' } },
+        { contract: { unitNumber: 'asc' } },
+      ],
+    })
+
+    if (vouchersToAssign.length === 0) {
+      return { success: true, count: 0, message: 'Todos los arriendos ya tienen su N° de Recibo asignado.' }
+    }
+
+    const companyRunningNumMap = new Map<string, number>()
+    let assignedCount = 0
+
+    for (const voucher of vouchersToAssign) {
+      const compId = voucher.companyId || voucher.contract?.companyId || null
+      const compIdKey = compId || 'GENERAL'
+
+      let currentNum = companyRunningNumMap.get(compIdKey)
+      if (currentNum === undefined) {
+        const nextStr = await getNextReceiptNumberForCompany(compId)
+        currentNum = parseInt(nextStr, 10) || 1
+      }
+
+      const assignedNo = String(currentNum)
+      companyRunningNumMap.set(compIdKey, currentNum + 1)
+
+      await prisma.leaseVoucher.update({
+        where: { id: voucher.id },
+        data: { receiptNumber: assignedNo },
+      })
+      assignedCount++
+    }
+
+    revalidatePath('/admin/vouchers')
+    revalidatePath('/admin/arriendos')
+
+    return {
+      success: true,
+      count: assignedCount,
+      message: `Se asignaron ${assignedCount} números de recibo correlativos exitosamente.`,
+    }
+  } catch (error: any) {
+    console.error('Error auto-asignando recibos faltantes:', error)
+    return { success: false, error: error.message || 'Error al asignar números de recibo' }
+  }
+}
+
+/**
  * Genera automáticamente en lote los vouchers de un mes para todos los contratos activos
  */
 export async function generateMonthVouchers(month: string, year: number) {

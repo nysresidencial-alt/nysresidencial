@@ -45,7 +45,7 @@ import { VoucherStatusModal } from './VoucherStatusModal'
 import { PaymentDateModal } from './PaymentDateModal'
 import { InvoiceEditModal } from './InvoiceEditModal'
 import { VoucherEmailModal } from './VoucherEmailModal'
-import { generateMonthVouchers, assignVoucherReceiptNumber } from '@/app/admin/vouchers/actions'
+import { generateMonthVouchers, assignVoucherReceiptNumber, autoAssignMissingReceipts } from '@/app/admin/vouchers/actions'
 
 interface VouchersManagerProps {
   initialVouchers: VoucherDetail[]
@@ -457,6 +457,34 @@ export function VouchersManager({
     }
   }
 
+  // Auto-asignar N° de recibos correlativos faltantes en el periodo seleccionado
+  async function handleBatchAssignReceipts() {
+    if (
+      !confirm(
+        '¿Deseas auto-asignar número de recibo correlativo a todos los arriendos que aún no tengan número de recibo asignado en este periodo?'
+      )
+    ) {
+      return
+    }
+
+    setIsGenerating(true)
+    setMessage(null)
+
+    const targetMonth = selectedMonths.length === 1 ? selectedMonths[0] : undefined
+    const res = await autoAssignMissingReceipts(targetMonth, filterYear)
+    setIsGenerating(false)
+
+    if (res.error) {
+      setMessage({ text: res.error, type: 'error' })
+    } else {
+      setMessage({
+        text: res.message || `Se asignaron ${res.count} números de recibo correlativos exitosamente.`,
+        type: 'success',
+      })
+      window.location.reload()
+    }
+  }
+
   // Helper para estado estilo pill con punto (Imagen 3)
   function renderPaymentBadge(status: string) {
     const s = (status || '').toLowerCase().trim()
@@ -577,6 +605,17 @@ export function VouchersManager({
                 >
                   <Plus className="w-3.5 h-3.5 text-primary" />
                   <span>Generar mes actual</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleBatchAssignReceipts()
+                    setIsActionsOpen(false)
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-muted text-foreground flex items-center gap-2 cursor-pointer"
+                >
+                  <Tag className="w-3.5 h-3.5 text-primary" />
+                  <span>Asignar recibos faltantes</span>
                 </button>
                 <button
                   type="button"
