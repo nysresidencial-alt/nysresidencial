@@ -280,9 +280,10 @@ export async function generateMonthVouchers(month: string, year: number) {
   const upperMonth = month.trim().toUpperCase()
 
   try {
-    // 1. Obtener todos los contratos con estado Ocupado / En Retiro
+    // 1. Obtener todos los contratos con estado Ocupado / En Retiro y de propietarios activos
     const contracts = await prisma.rentalContract.findMany({
       where: {
+        isOwnerActive: true,
         status: { in: ['Ocupado', 'OCUPADO', 'ocupado', 'EN RETIRO', 'En Retiro', 'en retiro'] },
       },
       include: { company: true },

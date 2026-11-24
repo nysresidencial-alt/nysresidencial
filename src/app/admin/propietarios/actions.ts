@@ -32,6 +32,7 @@ export interface PropietarioDetail {
   companyCode: string | null
   companyName: string | null
   isCompany: boolean
+  isActive: boolean
   propertiesCount: number
   buildings: string[]
   createdAt: Date
@@ -45,7 +46,7 @@ export async function getPropietarios(): Promise<PropietarioDetail[]> {
   await checkAuth('view')
 
   // 1. Obtener todos los propietarios registrados
-  const owners = await prisma.propertyOwner.findMany({
+  let owners = await prisma.propertyOwner.findMany({
     orderBy: { name: 'asc' },
   })
 
@@ -53,10 +54,13 @@ export async function getPropietarios(): Promise<PropietarioDetail[]> {
   const contracts = await prisma.rentalContract.findMany({
     select: {
       newAssignee: true,
+      assigneeRut: true,
       building: true,
       company: {
         select: {
+          code: true,
           name: true,
+          rut: true,
         },
       },
     },
@@ -64,6 +68,8 @@ export async function getPropietarios(): Promise<PropietarioDetail[]> {
 
   // Mapa de conteo y edificios
   const statsMap = new Map<string, { count: number; buildings: Set<string> }>()
+  const ownerMetaMap = new Map<string, { isCompany: boolean; companyCode?: string; companyName?: string; rut?: string }>()
+
   for (const c of contracts) {
     const isAssignee = Boolean(c.newAssignee && c.newAssignee.trim() !== '')
     const ownerName = isAssignee
@@ -72,10 +78,46 @@ export async function getPropietarios(): Promise<PropietarioDetail[]> {
 
     if (!statsMap.has(ownerName)) {
       statsMap.set(ownerName, { count: 0, buildings: new Set() })
+      ownerMetaMap.set(ownerName, {
+        isCompany: !isAssignee,
+        companyCode: c.company?.code || undefined,
+        companyName: c.company?.name || undefined,
+        rut: (isAssignee ? c.assigneeRut : c.company?.rut) || undefined,
+      })
     }
     const stat = statsMap.get(ownerName)!
     stat.count++
     if (c.building) stat.buildings.add(c.building)
+  }
+
+  // Si hay propietarios de contratos que no están registrados aún en PropertyOwner, sincronizarlos
+  const existingNames = new Set(owners.map((o) => o.name.trim().toUpperCase()))
+  const missingOwners = Array.from(statsMap.keys()).filter(
+    (name) => name !== 'Sin Asignar' && !existingNames.has(name.trim().toUpperCase())
+  )
+
+  if (missingOwners.length > 0) {
+    for (const name of missingOwners) {
+      const meta = ownerMetaMap.get(name)
+      try {
+        await prisma.propertyOwner.create({
+          data: {
+            name,
+            rut: meta?.rut || null,
+            isCompany: meta?.isCompany || false,
+            companyCode: meta?.companyCode || null,
+            companyName: meta?.companyName || null,
+            isActive: true,
+          },
+        })
+      } catch {
+        // Ignorar si ya fue creado por otra petición concurrente
+      }
+    }
+
+    owners = await prisma.propertyOwner.findMany({
+      orderBy: { name: 'asc' },
+    })
   }
 
   return owners.map((o) => {
@@ -91,6 +133,7 @@ export async function getPropietarios(): Promise<PropietarioDetail[]> {
       companyCode: o.companyCode,
       companyName: o.companyName,
       isCompany: o.isCompany,
+      isActive: o.isActive,
       propertiesCount: stat.count,
       buildings: Array.from(stat.buildings),
       createdAt: o.createdAt,
@@ -176,6 +219,62 @@ export async function updatePropietario(
   } catch (err: any) {
     console.error('Error actualizando propietario:', err)
     return { error: err.message || 'Error al actualizar propietario' }
+  }
+}
+
+/**
+ * Alterna la visibilidad de un propietario (Activo vs Histórico/Oculto)
+ * y actualiza isOwnerActive en cascada para todos los contratos asociados
+ */
+export async function toggleOwnerVisibility(id: string): Promise<{ success?: boolean; isActive?: boolean; error?: string }> {
+  await checkAuth('edit')
+
+  const existing = await prisma.propertyOwner.findUnique({
+    where: { id },
+  })
+
+  if (!existing) {
+    return { error: 'Propietario no encontrado' }
+  }
+
+  const nextActive = !existing.isActive
+
+  try {
+    // 1. Actualizar PropertyOwner
+    const updated = await prisma.propertyOwner.update({
+      where: { id },
+      data: { isActive: nextActive },
+    })
+
+    // 2. Sincronizar contratos asociados (tanto si es nuevo asignatario o por empresa)
+    await prisma.rentalContract.updateMany({
+      where: {
+        OR: [
+          { newAssignee: existing.name },
+          {
+            AND: [
+              { OR: [{ newAssignee: null }, { newAssignee: '' }] },
+              { company: { name: existing.name } },
+            ],
+          },
+        ],
+      },
+      data: {
+        isOwnerActive: nextActive,
+      },
+    })
+
+    revalidatePath('/admin/propietarios')
+    revalidatePath('/admin/vouchers')
+    revalidatePath('/admin/arriendos')
+    revalidatePath('/admin/dashboard')
+    revalidatePath('/admin/correos')
+    revalidatePath('/admin/datos')
+
+    return { success: true, isActive: updated.isActive }
+  } catch (err: any) {
+    console.error('Error alternando visibilidad de propietario:', err)
+    return { error: err.message || 'Error al cambiar visibilidad del propietario' }
   }
 }
 

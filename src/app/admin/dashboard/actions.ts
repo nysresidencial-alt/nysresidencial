@@ -55,9 +55,16 @@ export async function getAccountingDashboardData(): Promise<DashboardMetricData>
     }
 
     const [totalContracts, allVouchers] = await Promise.all([
-      prisma.rentalContract.count(),
+      prisma.rentalContract.count({
+        where: { isOwnerActive: true },
+      }),
       prisma.leaseVoucher.findMany({
-        where: { year: 2026 },
+        where: {
+          year: 2026,
+          contract: {
+            isOwnerActive: true,
+          },
+        },
         include: {
           contract: {
             select: {

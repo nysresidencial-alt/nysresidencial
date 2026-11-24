@@ -24,16 +24,18 @@ export default async function ArriendosAdminPage() {
     orderBy: { code: 'asc' },
   })
 
-  // 2. Obtener lista de edificios únicos
+  // 2. Obtener lista de edificios únicos (solo de contratos con propietarios activos)
   const buildingRecords = await prisma.rentalContract.findMany({
+    where: { isOwnerActive: true },
     select: { building: true },
     distinct: ['building'],
     orderBy: { building: 'asc' },
   })
   const buildings = buildingRecords.map((b) => b.building).filter(Boolean)
 
-  // 3. Obtener todos los contratos con su empresa y última liquidación/voucher
+  // 3. Obtener todos los contratos activos con su empresa y última liquidación/voucher
   const contracts = await prisma.rentalContract.findMany({
+    where: { isOwnerActive: true },
     include: {
       company: {
         select: { id: true, code: true, name: true },

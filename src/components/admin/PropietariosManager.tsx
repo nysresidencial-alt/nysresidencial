@@ -17,10 +17,14 @@ import {
   ExternalLink,
   ChevronRight,
   Filter,
+  Eye,
+  EyeOff,
+  Loader2,
 } from 'lucide-react'
-import { PropietarioDetail } from '@/app/admin/propietarios/actions'
+import { PropietarioDetail, toggleOwnerVisibility } from '@/app/admin/propietarios/actions'
 import { OwnerEditModal } from './OwnerEditModal'
 import { OwnerPropertiesModal } from './OwnerPropertiesModal'
+import { cn } from '@/lib/utils'
 
 interface PropietariosManagerProps {
   initialOwners: PropietarioDetail[]
@@ -36,10 +40,14 @@ export function PropietariosManager({
   const [owners, setOwners] = useState<PropietarioDetail[]>(initialOwners)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRutStatus, setFilterRutStatus] = useState<'ALL' | 'WITH_RUT' | 'WITHOUT_RUT'>('ALL')
+  const [filterVisibility, setFilterVisibility] = useState<'ALL' | 'ACTIVE' | 'HIDDEN'>('ALL')
 
   // Modales
   const [editingOwner, setEditingOwner] = useState<PropietarioDetail | null>(null)
   const [viewingPropertiesOwner, setViewingPropertiesOwner] = useState<string | null>(null)
+
+  // Estado para acción de ocultar/mostrar con ojo
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   // Mensaje temporal de éxito
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -53,6 +61,8 @@ export function PropietariosManager({
 
   // Métricas
   const totalOwners = owners.length
+  const activeOwners = owners.filter((o) => o.isActive).length
+  const hiddenOwners = owners.filter((o) => !o.isActive).length
   const ownersWithRut = owners.filter((o) => o.rut && o.rut.trim() !== '').length
   const ownersPendingRut = totalOwners - ownersWithRut
   const totalProperties = owners.reduce((acc, o) => acc + o.propertiesCount, 0)
@@ -60,6 +70,10 @@ export function PropietariosManager({
   // Filtrado reactivo
   const filteredOwners = useMemo(() => {
     return owners.filter((o) => {
+      // Filtro de Visibilidad (Ojo)
+      if (filterVisibility === 'ACTIVE' && !o.isActive) return false
+      if (filterVisibility === 'HIDDEN' && o.isActive) return false
+
       // Filtro de RUT
       if (filterRutStatus === 'WITH_RUT' && (!o.rut || o.rut.trim() === '')) return false
       if (filterRutStatus === 'WITHOUT_RUT' && Boolean(o.rut && o.rut.trim() !== '')) return false
@@ -76,12 +90,46 @@ export function PropietariosManager({
 
       return true
     })
-  }, [owners, searchTerm, filterRutStatus])
+  }, [owners, searchTerm, filterRutStatus, filterVisibility])
 
   function handleOwnerSaved(updated: PropietarioDetail) {
     setOwners((prev) => prev.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)))
     setEditingOwner(null)
     showToast(`RUT y datos de "${updated.name}" actualizados con éxito. Sincronizado en contratos y vouchers.`)
+  }
+
+  async function handleToggleVisibility(owner: PropietarioDetail) {
+    const nextState = !owner.isActive
+    setTogglingId(owner.id)
+
+    // Actualización optimista inmediata en UI
+    setOwners((prev) =>
+      prev.map((o) => (o.id === owner.id ? { ...o, isActive: nextState } : o))
+    )
+
+    try {
+      const res = await toggleOwnerVisibility(owner.id)
+      if (res.error) {
+        // Revertir en caso de error
+        setOwners((prev) =>
+          prev.map((o) => (o.id === owner.id ? { ...o, isActive: !nextState } : o))
+        )
+        showToast(`Error al cambiar visibilidad: ${res.error}`)
+      } else {
+        showToast(
+          nextState
+            ? `Propietario "${owner.name}" activado y visible nuevamente en Vouchers y Propiedades.`
+            : `Propietario "${owner.name}" ocultado de Vouchers y Propiedades. Sus datos se conservan en el historial.`
+        )
+      }
+    } catch (err: any) {
+      setOwners((prev) =>
+        prev.map((o) => (o.id === owner.id ? { ...o, isActive: !nextState } : o))
+      )
+      showToast(`Error: ${err.message || 'No se pudo alternar la visibilidad'}`)
+    } finally {
+      setTogglingId(null)
+    }
   }
 
   return (
@@ -109,7 +157,7 @@ export function PropietariosManager({
                 Administración de Propietarios
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Gestión de RUT oficial para Nuevo Asignatario y Empresas (reflejado en Vouchers y Recibos)
+                Gestión de RUT oficial y control de visibilidad (ocultar de vouchers sin eliminar del historial)
               </p>
             </div>
           </div>
@@ -127,22 +175,37 @@ export function PropietariosManager({
             <Users className="w-4 h-4 text-primary" />
           </div>
           <span className="text-[11px] text-muted-foreground mt-1 block">
-            Cartera consolidada de asignatarios
+            {activeOwners} activos • {hiddenOwners} ocultos
           </span>
         </div>
 
         <div className="p-4 rounded-2xl bg-card border border-border shadow-xs">
           <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
-            Con RUT Oficial
+            Activos / Administrados
           </span>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-              {ownersWithRut}
+              {activeOwners}
             </span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <Eye className="w-4 h-4 text-emerald-500" />
           </div>
           <span className="text-[11px] text-muted-foreground mt-1 block">
-            RUTs validados e impresos en vouchers
+            Visibles en Vouchers y Propiedades
+          </span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-card border border-border shadow-xs">
+          <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">
+            Históricos / Ocultos
+          </span>
+          <div className="flex items-baseline justify-between mt-2">
+            <span className="text-2xl font-black text-zinc-600 dark:text-zinc-300">
+              {hiddenOwners}
+            </span>
+            <EyeOff className="w-4 h-4 text-zinc-400" />
+          </div>
+          <span className="text-[11px] text-muted-foreground mt-1 block">
+            Ocultos de Vouchers (guardados en BD)
           </span>
         </div>
 
@@ -160,24 +223,11 @@ export function PropietariosManager({
             Requieren ingresar RUT real
           </span>
         </div>
-
-        <div className="p-4 rounded-2xl bg-card border border-border shadow-xs">
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
-            Inmuebles Asignados
-          </span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-black text-foreground">{totalProperties}</span>
-            <Building className="w-4 h-4 text-blue-500" />
-          </div>
-          <span className="text-[11px] text-muted-foreground mt-1 block">
-            Unidades activas asociadas
-          </span>
-        </div>
       </div>
 
       {/* Barra de Filtros y Búsqueda */}
       <div className="p-4 rounded-2xl bg-card border border-border shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Buscador */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -198,41 +248,76 @@ export function PropietariosManager({
             )}
           </div>
 
-          {/* Filtros de estado de RUT */}
-          <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto pb-1 sm:pb-0">
-            <button
-              type="button"
-              onClick={() => setFilterRutStatus('ALL')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                filterRutStatus === 'ALL'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              Todos ({totalOwners})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterRutStatus('WITH_RUT')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                filterRutStatus === 'WITH_RUT'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              Con RUT ({ownersWithRut})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterRutStatus('WITHOUT_RUT')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                filterRutStatus === 'WITHOUT_RUT'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              Sin RUT ({ownersPendingRut})
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filtros de Visibilidad (Ojo) */}
+            <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/60">
+              <button
+                type="button"
+                onClick={() => setFilterVisibility('ALL')}
+                className={cn(
+                  'px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                  filterVisibility === 'ALL'
+                    ? 'bg-primary text-primary-foreground shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Todos ({totalOwners})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterVisibility('ACTIVE')}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                  filterVisibility === 'ACTIVE'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Activos ({activeOwners})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterVisibility('HIDDEN')}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                  filterVisibility === 'HIDDEN'
+                    ? 'bg-zinc-600 text-white shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <EyeOff className="w-3.5 h-3.5" />
+                <span>Ocultos ({hiddenOwners})</span>
+              </button>
+            </div>
+
+            {/* Filtros de estado de RUT */}
+            <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/60">
+              <button
+                type="button"
+                onClick={() => setFilterRutStatus('WITH_RUT')}
+                className={cn(
+                  'px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                  filterRutStatus === 'WITH_RUT'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Con RUT ({ownersWithRut})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterRutStatus('WITHOUT_RUT')}
+                className={cn(
+                  'px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                  filterRutStatus === 'WITHOUT_RUT'
+                    ? 'bg-amber-600 text-white shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Sin RUT ({ownersPendingRut})
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -243,19 +328,22 @@ export function PropietariosManager({
           <table className="w-full text-left text-xs">
             <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold uppercase text-[10px] tracking-wider">
               <tr>
+                <th className="py-3.5 px-4 w-12 text-center" title="Visibilidad en Vouchers y Propiedades">
+                  Estado
+                </th>
                 <th className="py-3.5 px-4">Propietario / Asignatario</th>
                 <th className="py-3.5 px-4">RUT Oficial</th>
                 <th className="py-3.5 px-4 text-center">Inmuebles</th>
                 <th className="py-3.5 px-4">Edificios</th>
                 <th className="py-3.5 px-4">Empresa Asociada</th>
                 <th className="py-3.5 px-4">Contacto</th>
-                <th className="py-3.5 px-4 text-right">Acción</th>
+                <th className="py-3.5 px-4 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filteredOwners.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-12 text-center text-muted-foreground">
                     <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
                     <p className="font-semibold text-sm">No se encontraron propietarios</p>
                     <p className="text-xs mt-1">Prueba cambiando los términos de búsqueda o filtros.</p>
@@ -264,27 +352,65 @@ export function PropietariosManager({
               ) : (
                 filteredOwners.map((owner) => {
                   const hasRut = Boolean(owner.rut && owner.rut.trim() !== '')
+                  const isHidden = !owner.isActive
 
                   return (
                     <tr
                       key={owner.id}
-                      className="hover:bg-muted/30 transition-colors group"
+                      className={cn(
+                        'hover:bg-muted/30 transition-colors group',
+                        isHidden && 'bg-muted/15 opacity-65'
+                      )}
                     >
+                      {/* Botón de Ojo: Alternar Visibilidad */}
+                      <td className="py-3.5 px-3 text-center">
+                        <button
+                          type="button"
+                          disabled={togglingId === owner.id}
+                          onClick={() => handleToggleVisibility(owner)}
+                          className={cn(
+                            'p-2 rounded-xl border transition-all cursor-pointer',
+                            owner.isActive
+                              ? 'text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30'
+                              : 'text-zinc-500 bg-muted/60 hover:bg-muted hover:text-foreground border-border'
+                          )}
+                          title={
+                            owner.isActive
+                              ? 'Propietario ACTIVO (Visible en Vouchers y Propiedades). Haz clic para Ocultar.'
+                              : 'Propietario HISTÓRICO (Oculto de Vouchers y Propiedades). Haz clic para Reactivar.'
+                          }
+                        >
+                          {togglingId === owner.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : owner.isActive ? (
+                            <Eye className="w-3.5 h-3.5" />
+                          ) : (
+                            <EyeOff className="w-3.5 h-3.5 text-zinc-500" />
+                          )}
+                        </button>
+                      </td>
+
                       {/* Nombre y Tipo */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-foreground text-sm">
+                          <span className={cn('font-bold text-sm', isHidden ? 'text-muted-foreground line-through decoration-zinc-400' : 'text-foreground')}>
                             {owner.name}
                           </span>
                           <span
-                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                            className={cn(
+                              'text-[9px] font-bold px-1.5 py-0.5 rounded-md',
                               owner.isCompany
                                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                                 : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            }`}
+                            )}
                           >
                             {owner.isCompany ? 'Empresa' : 'Nuevo Asignatario'}
                           </span>
+                          {isHidden && (
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
+                              Oculto / Histórico
+                            </span>
+                          )}
                         </div>
                         {owner.notes && (
                           <span className="text-[10px] text-muted-foreground truncate block max-w-xs mt-0.5">
@@ -378,14 +504,16 @@ export function PropietariosManager({
 
                       {/* Acción */}
                       <td className="py-3.5 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setEditingOwner(owner)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-muted hover:bg-primary hover:text-primary-foreground text-foreground transition-all cursor-pointer shadow-2xs"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          <span>Editar RUT</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setEditingOwner(owner)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-muted hover:bg-primary hover:text-primary-foreground text-foreground transition-all cursor-pointer shadow-2xs"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>Editar RUT</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )

@@ -27,18 +27,22 @@ export default async function VouchersAdminPage() {
     orderBy: { code: 'asc' },
   })
 
-  // 2. Obtener lista de edificios únicos
+  // 2. Obtener lista de edificios únicos (solo de contratos con propietarios activos)
   const contracts = await prisma.rentalContract.findMany({
+    where: { isOwnerActive: true },
     select: { building: true },
     distinct: ['building'],
     orderBy: { building: 'asc' },
   })
   const buildings = contracts.map((c) => c.building).filter(Boolean)
 
-  // 3. Obtener vouchers del año activo (2026) con su contrato y empresa
+  // 3. Obtener vouchers del año activo (2026) con su contrato y empresa (solo contratos de propietarios activos)
   const vouchers = await prisma.leaseVoucher.findMany({
     where: {
       year: 2026,
+      contract: {
+        isOwnerActive: true,
+      },
     },
     include: {
       contract: {

@@ -14,8 +14,9 @@ export default async function AdminCorreosPage() {
     redirect('/admin')
   }
 
-  // Obtener contratos activos y sus empresas
+  // Obtener contratos activos y sus empresas (solo propietarios activos)
   const contracts = await prisma.rentalContract.findMany({
+    where: { isOwnerActive: true },
     include: {
       company: {
         select: {
