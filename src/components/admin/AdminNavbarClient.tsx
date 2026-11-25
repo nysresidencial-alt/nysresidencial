@@ -141,7 +141,6 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
           href: '/admin/contratos',
           icon: CalendarClock,
           description: 'Control de vigencias, contratos por vencer y cláusulas',
-          badge: 'Nuevo',
         },
         {
           key: 'vouchers',

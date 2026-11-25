@@ -151,7 +151,6 @@ export function AdminSidebarClient({ children, currentUser }: AdminSidebarProps)
           href: '/admin/contratos',
           icon: CalendarClock,
           description: 'Control preventivo de vigencias y cláusulas',
-          badge: 'Nuevo',
         },
         {
           key: 'vouchers',
