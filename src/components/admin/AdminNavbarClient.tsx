@@ -29,6 +29,7 @@ import {
   LayoutDashboard,
   Mail,
   ShieldCheck,
+  CalendarClock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/ThemeProvider';
@@ -85,12 +86,12 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
   // Comprobar si el usuario actual tiene permiso de visualización para un módulo
   function hasPermission(key: string): boolean {
     if (!currentUser) {
-      return key !== 'usuarios' && key !== 'vouchers' && key !== 'arriendos';
+      return key !== 'usuarios' && key !== 'vouchers' && key !== 'arriendos' && key !== 'contratos';
     }
     if (currentUser.isSuperadmin) return true;
 
-    // Dashboard, Vouchers, Arriendos, Propietarios, Correos y Carga de Datos exclusivo para Contabilidad (o quien tenga permiso explícito)
-    if (key === 'dashboard' || key === 'vouchers' || key === 'arriendos' || key === 'propietarios' || key === 'datos' || key === 'correos') {
+    // Dashboard, Vouchers, Arriendos, Contratos, Propietarios, Correos y Carga de Datos exclusivo para Contabilidad (o quien tenga permiso explícito)
+    if (key === 'dashboard' || key === 'vouchers' || key === 'arriendos' || key === 'contratos' || key === 'propietarios' || key === 'datos' || key === 'correos') {
       const isContabilidad = currentUser.roleName?.toLowerCase().includes('contabilidad');
       return Boolean(isContabilidad || (currentUser.permissions?.[key]?.view ?? false));
     }
@@ -133,6 +134,14 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
           href: '/admin/arriendos',
           icon: Building,
           description: 'Contratos, valores base, reajustes y cartera activa',
+        },
+        {
+          key: 'contratos',
+          name: 'Contratos y Renovaciones',
+          href: '/admin/contratos',
+          icon: CalendarClock,
+          description: 'Control de vigencias, contratos por vencer y cláusulas',
+          badge: 'Nuevo',
         },
         {
           key: 'vouchers',
@@ -301,6 +310,7 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
             [
               { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
               { name: 'Propiedades', href: '/admin/arriendos', icon: Building },
+              { name: 'Contratos', href: '/admin/contratos', icon: CalendarClock },
               { name: 'Vouchers', href: '/admin/vouchers', icon: Receipt },
               { name: 'Propietarios', href: '/admin/propietarios', icon: ShieldCheck },
               { name: 'Carga de Datos', href: '/admin/datos', icon: FileSpreadsheet },
@@ -439,6 +449,11 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-bold leading-tight flex items-center gap-1.5">
                                 <span className="truncate">{item.name}</span>
+                                {item.badge && (
+                                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                    {item.badge}
+                                  </span>
+                                )}
                                 {isItemActive && (
                                   <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                                 )}
@@ -548,6 +563,7 @@ export function AdminNavbarClient({ currentUser }: AdminNavProps) {
               [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
                 { name: 'Propiedades', href: '/admin/arriendos', icon: Building },
+                { name: 'Contratos', href: '/admin/contratos', icon: CalendarClock },
                 { name: 'Vouchers', href: '/admin/vouchers', icon: Receipt },
                 { name: 'Propietarios', href: '/admin/propietarios', icon: ShieldCheck },
                 { name: 'Carga de Datos', href: '/admin/datos', icon: FileSpreadsheet },
