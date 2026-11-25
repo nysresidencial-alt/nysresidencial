@@ -1068,7 +1068,7 @@ export function ContractEditModal({
                     <label htmlFor="autoRenewalCheckbox" className="text-xs font-bold text-foreground cursor-pointer select-none">
                       <span>Renovación Automática / Prórroga Tácita Sucesiva</span>
                       <span className="block text-[11px] font-normal text-muted-foreground mt-0.5">
-                        Si está activo, el contrato se prorroga automáticamente por cada período cumplido y entra en alerta &ldquo;Por Vencer&rdquo; solo durante los 30 días previos al término de cada ciclo.
+                        Si está activo, el contrato se prorroga automáticamente por cada período cumplido y entra en alerta &ldquo;Por Vencer&rdquo; solo durante los 35 días previos al término de cada ciclo.
                       </span>
                     </label>
                   </div>

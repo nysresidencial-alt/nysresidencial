@@ -408,14 +408,14 @@ export function ContratosRenovacionesManager({
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              Por Vencer (≤ 30d)
+              Por Vencer (≤ 35d)
             </span>
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-2">
             {stats.porVencer}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">En ventana de preaviso de 30 días</p>
+          <p className="text-[10px] text-muted-foreground mt-1">En ventana de preaviso de 35 días</p>
         </button>
 
         {/* Datos Incompletos */}
@@ -458,14 +458,14 @@ export function ContratosRenovacionesManager({
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Vigentes (&gt; 30d)
+              Vigentes (&gt; 35d)
             </span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2">
             {stats.vigentes}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Ciclo activo con más de 30 días</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Ciclo activo con más de 35 días</p>
         </button>
 
         {/* Indefinidos o Total */}
@@ -706,7 +706,7 @@ export function ContratosRenovacionesManager({
                   </div>
                 </th>
                 <th className="py-3.5 px-4 text-center min-w-[140px]">
-                  <div className="flex items-center justify-center gap-1" title="Si está activo, el contrato se prorroga automáticamente por cada período sucesivo y avisa 30 días antes">
+                  <div className="flex items-center justify-center gap-1" title="Si está activo, el contrato se prorroga automáticamente por cada período sucesivo y avisa 35 días antes">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Prórroga Auto.</span>
                   </div>
@@ -924,7 +924,7 @@ export function ContratosRenovacionesManager({
                           }`}
                           title={
                             (c.autoRenewal ?? true)
-                              ? 'Prórroga automática activa. El contrato se renueva sucesivamente cada período y avisa 30 días antes. Clic para cambiar a Plazo Fijo.'
+                              ? 'Prórroga automática activa. El contrato se renueva sucesivamente cada período y avisa 35 días antes. Clic para cambiar a Plazo Fijo.'
                               : 'Plazo fijo sin prórroga automática. Clic para activar Prórroga Automática.'
                           }
                         >
@@ -969,7 +969,7 @@ export function ContratosRenovacionesManager({
                               Aviso desde: {a.noticeDateFormatted}
                             </span>
                             {a.autoRenewal && (
-                              <span className="text-muted-foreground/80 ml-1">(-30d)</span>
+                              <span className="text-muted-foreground/80 ml-1">(-35d)</span>
                             )}
                           </div>
                         )}

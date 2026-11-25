@@ -227,8 +227,9 @@ export function analyzeContractRenewal(
     }
   }
 
-  // Fecha límite de notificación / aviso previo (30 días antes del vencimiento del ciclo)
-  const noticeDate = new Date(cycleEnd.getTime() - 30 * 24 * 60 * 60 * 1000)
+  // Fecha límite de notificación / aviso previo (35 días de anticipación según requerimiento de notificación)
+  const NOTICE_DAYS = 35
+  const noticeDate = new Date(cycleEnd.getTime() - NOTICE_DAYS * 24 * 60 * 60 * 1000)
 
   // Diferencia en días respecto a hoy
   const diffTime = cycleEnd.getTime() - today.getTime()
@@ -256,11 +257,11 @@ export function analyzeContractRenewal(
     }
   }
 
-  // Ventana de aviso crítico: 30 días o menos antes de vencer / renovar
-  if (daysRemaining <= 30 && daysRemaining >= 0) {
+  // Ventana de aviso crítico: 35 días o menos antes de vencer / renovar
+  if (daysRemaining <= NOTICE_DAYS && daysRemaining >= 0) {
     return {
       status: 'POR_VENCER',
-      statusLabel: 'Por Vencer (Aviso 30d)',
+      statusLabel: 'Por Vencer (Aviso 35d)',
       autoRenewal,
       cycleNumber,
       cycleStartDate: cycleStart,
@@ -282,7 +283,7 @@ export function analyzeContractRenewal(
     }
   }
 
-  // Contrato vigente en curso (más de 30 días restantes para el vencimiento de su ciclo)
+  // Contrato vigente en curso (más de 35 días restantes para el vencimiento de su ciclo)
   return {
     status: 'VIGENTE',
     statusLabel: 'Vigente',
