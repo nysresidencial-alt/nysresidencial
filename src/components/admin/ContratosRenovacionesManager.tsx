@@ -716,31 +716,31 @@ export function ContratosRenovacionesManager({
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <div className="inline-flex flex-col items-center gap-1">
                           {a.status === 'VENCIDO' && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200 border border-rose-200 dark:border-rose-800 shadow-2xs">
                               <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
                               <span>{a.daysText}</span>
                             </span>
                           )}
                           {a.status === 'POR_VENCER' && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shadow-2xs">
-                              <span className="w-2 h-2 rounded-full bg-amber-600" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-2xs">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
                               <span>{a.daysText}</span>
                             </span>
                           )}
                           {a.status === 'VIGENTE' && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-2xs">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
                               <span className="w-2 h-2 rounded-full bg-emerald-600" />
                               <span>Vigente ({a.daysRemaining}d)</span>
                             </span>
                           )}
                           {a.status === 'INCOMPLETO' && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 border border-orange-300 dark:border-orange-800 shadow-2xs">
-                              <HelpCircle className="w-3 h-3 text-orange-600" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200 border border-amber-300 dark:border-amber-700/80 shadow-2xs">
+                              <HelpCircle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                               <span>{a.statusLabel}</span>
                             </span>
                           )}
                           {a.status === 'INDEFINIDO' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-700 dark:bg-slate-900/60 dark:text-slate-300 border border-slate-300 dark:border-slate-800">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-slate-50 text-slate-700 dark:bg-slate-900/60 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
                               <span>Indefinido</span>
                             </span>
                           )}
@@ -810,10 +810,10 @@ export function ContratosRenovacionesManager({
                               type="date"
                               value={inputDateVal}
                               onChange={(e) => handleDateChange(c.id, e.target.value)}
-                              className={`w-full px-2 py-1 text-xs font-semibold rounded-lg border bg-background transition-all focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer ${
+                              className={`w-full px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer ${
                                 !c.contractDate
-                                  ? 'border-dashed border-orange-400 bg-orange-50/50 text-orange-800 dark:bg-orange-950/20 dark:text-orange-300'
-                                  : 'border-border text-foreground hover:border-primary/50'
+                                  ? 'border-amber-400 bg-amber-50/80 text-slate-900 placeholder:text-slate-400 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-600'
+                                  : 'border-border bg-background text-foreground hover:border-primary/50'
                               }`}
                               title="Haz clic para modificar la fecha de inicio del contrato"
                             />
@@ -828,8 +828,12 @@ export function ContratosRenovacionesManager({
                               </span>
                             )}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {c.contractDate ? `Base: ${a.contractDateFormatted}` : '⚠️ Sin fecha registrada'}
+                          <div className="text-[10px]">
+                            {c.contractDate ? (
+                              <span className="text-muted-foreground">Base: {a.contractDateFormatted}</span>
+                            ) : (
+                              <span className="text-amber-700 dark:text-amber-400 font-medium">⚠️ Sin fecha registrada</span>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -840,25 +844,33 @@ export function ContratosRenovacionesManager({
                           <select
                             value={c.renewalPeriod || ''}
                             onChange={(e) => handlePeriodChange(c.id, e.target.value)}
-                            className={`w-full px-2 py-1 text-xs font-semibold rounded-lg border bg-background transition-all focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer ${
+                            className={`w-full px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer ${
                               !c.renewalPeriod
-                                ? 'border-dashed border-orange-400 bg-orange-50/50 text-orange-800 dark:bg-orange-950/20 dark:text-orange-300'
-                                : 'border-border text-foreground hover:border-primary/50'
+                                ? 'border-amber-400 bg-amber-50/80 text-slate-900 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-600'
+                                : 'border-border bg-background text-foreground hover:border-primary/50'
                             }`}
                             title="Selecciona el período de renovación"
                           >
-                            <option value="">-- Seleccionar período --</option>
+                            <option value="" className="bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-400">
+                              -- Seleccionar período --
+                            </option>
                             {RENEWAL_OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>
+                              <option key={opt} value={opt} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 py-1 font-medium">
                                 {opt}
                               </option>
                             ))}
                             {c.renewalPeriod && !RENEWAL_OPTIONS.includes(c.renewalPeriod) && (
-                              <option value={c.renewalPeriod}>{c.renewalPeriod}</option>
+                              <option value={c.renewalPeriod} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 py-1 font-medium">
+                                {c.renewalPeriod}
+                              </option>
                             )}
                           </select>
-                          <div className="text-[10px] text-muted-foreground">
-                            {c.renewalPeriod ? `Cláusula: ${c.renewalPeriod}` : '⚠️ Sin período definido'}
+                          <div className="text-[10px]">
+                            {c.renewalPeriod ? (
+                              <span className="text-muted-foreground">Cláusula: {c.renewalPeriod}</span>
+                            ) : (
+                              <span className="text-amber-700 dark:text-amber-400 font-medium">⚠️ Sin período definido</span>
+                            )}
                           </div>
                         </div>
                       </td>

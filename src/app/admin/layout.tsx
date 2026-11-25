@@ -1,5 +1,5 @@
 import { getAdminSession } from '@/lib/admin-auth'
-import { AdminNavbarClient } from '@/components/admin/AdminNavbarClient'
+import { AdminSidebarClient } from '@/components/admin/AdminSidebarClient'
 
 export default async function AdminLayout({
   children,
@@ -9,23 +9,20 @@ export default async function AdminLayout({
   const session = await getAdminSession()
 
   return (
-    <div className="min-h-screen bg-background flex flex-col" suppressHydrationWarning>
-      <AdminNavbarClient
-        currentUser={
-          session
-            ? {
-                name: session.name,
-                email: session.email,
-                roleName: session.roleName,
-                isSuperadmin: session.isSuperadmin,
-                permissions: session.permissions,
-              }
-            : null
-        }
-      />
-
-      {/* Admin Content */}
-      <main className="flex-1">{children}</main>
-    </div>
+    <AdminSidebarClient
+      currentUser={
+        session
+          ? {
+              name: session.name,
+              email: session.email,
+              roleName: session.roleName,
+              isSuperadmin: session.isSuperadmin,
+              permissions: session.permissions,
+            }
+          : null
+      }
+    >
+      {children}
+    </AdminSidebarClient>
   )
 }
