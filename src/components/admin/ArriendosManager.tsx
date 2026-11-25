@@ -495,6 +495,7 @@ export function ArriendosManager({
         'CORREO': c.tenantEmail || '',
         'FECHA CONTRATO': c.contractDate || '',
         'RENOVACIÓN': c.renewalPeriod || '',
+        'PRÓRROGA AUTOMÁTICA': (c as any).autoRenewal !== false ? 'SÍ' : 'NO',
         'ARRIENDO BASE': c.baseRent,
         '% REAJUSTE': c.adjustmentPercentage,
         'REAJUSTE $': c.adjustmentAmount,

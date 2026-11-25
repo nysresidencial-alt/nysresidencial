@@ -46,6 +46,7 @@ export interface ContractItem {
   parkingNumber: string | null
   contractDate: string | null
   renewalPeriod: string | null
+  autoRenewal?: boolean
   status: string
   tenantName: string
   tenantRut: string | null
@@ -155,6 +156,7 @@ export function ContractEditModal({
   // Contrato
   const [contractDate, setContractDate] = useState(contract?.contractDate || '')
   const [renewalPeriod, setRenewalPeriod] = useState(contract?.renewalPeriod || '1 AÑO')
+  const [autoRenewal, setAutoRenewal] = useState(contract?.autoRenewal ?? true)
   const [status, setStatus] = useState(contract?.status || 'Ocupado')
   const [newAssignee, setNewAssignee] = useState(contract?.newAssignee || '')
 
@@ -238,6 +240,7 @@ export function ContractEditModal({
       parkingNumber: parkingNumber.trim() || null,
       contractDate: contractDate.trim() || null,
       renewalPeriod: renewalPeriod.trim() || null,
+      autoRenewal,
       status: status.trim(),
       newAssignee: newAssignee.trim() || null,
       tenantName: finalTenantName,
@@ -1051,6 +1054,23 @@ export function ContractEditModal({
                       options={STATUS_OPTIONS}
                       placeholder="Selecciona estado..."
                     />
+                  </div>
+
+                  {/* Checkbox Prórroga Automática */}
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/40 border border-border">
+                    <input
+                      type="checkbox"
+                      id="autoRenewalCheckbox"
+                      checked={autoRenewal}
+                      onChange={(e) => setAutoRenewal(e.target.checked)}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+                    />
+                    <label htmlFor="autoRenewalCheckbox" className="text-xs font-bold text-foreground cursor-pointer select-none">
+                      <span>Renovación Automática / Prórroga Tácita Sucesiva</span>
+                      <span className="block text-[11px] font-normal text-muted-foreground mt-0.5">
+                        Si está activo, el contrato se prorroga automáticamente por cada período cumplido y entra en alerta &ldquo;Por Vencer&rdquo; solo durante los 30 días previos al término de cada ciclo.
+                      </span>
+                    </label>
                   </div>
 
                   {/* Valores Financieros */}

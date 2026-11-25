@@ -74,13 +74,11 @@ export default async function ContratosAdminPage() {
   }))
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <ContratosRenovacionesManager
-        initialContracts={formattedContracts as any}
-        companies={companies}
-        buildings={buildings}
-        isSuperadmin={session.isSuperadmin}
-      />
-    </div>
+    <ContratosRenovacionesManager
+      initialContracts={formattedContracts as any}
+      companies={companies}
+      buildings={buildings}
+      isSuperadmin={session.isSuperadmin}
+    />
   )
 }

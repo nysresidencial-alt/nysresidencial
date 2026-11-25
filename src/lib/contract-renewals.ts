@@ -5,8 +5,14 @@
 export interface RenewalAnalysis {
   status: 'VENCIDO' | 'POR_VENCER' | 'VIGENTE' | 'INCOMPLETO' | 'INDEFINIDO'
   statusLabel: string
+  autoRenewal: boolean
+  cycleNumber: number
+  cycleStartDate: Date | null
+  cycleStartDateFormatted: string
   expirationDate: Date | null
   expirationDateFormatted: string
+  noticeDate: Date | null
+  noticeDateFormatted: string
   contractDateFormatted: string
   daysRemaining: number | null
   daysText: string
@@ -135,12 +141,28 @@ export function toInputDate(d: Date | null): string {
 }
 
 /**
- * Analiza un contrato y calcula su próximo vencimiento, días restantes y urgencia.
+ * Helper que suma un período a una fecha
+ */
+export function addRenewalPeriod(
+  date: Date,
+  period: { years: number; months: number; days: number }
+): Date {
+  const d = new Date(date.getTime())
+  if (period.years > 0) d.setFullYear(d.getFullYear() + period.years)
+  if (period.months > 0) d.setMonth(d.getMonth() + period.months)
+  if (period.days > 0) d.setDate(d.getDate() + period.days)
+  return d
+}
+
+/**
+ * Analiza un contrato y calcula su próximo vencimiento, días restantes y urgencia,
+ * soportando prórroga automática sucesiva (ciclos) y ventana de aviso previo de 30 días.
  */
 export function analyzeContractRenewal(
   contractDateStr: string | null | undefined,
   renewalPeriodStr: string | null | undefined,
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  autoRenewal: boolean = true
 ): RenewalAnalysis {
   const parsedDate = parseContractDate(contractDateStr)
   const periodInfo = parseRenewalPeriod(renewalPeriodStr)
@@ -154,8 +176,14 @@ export function analyzeContractRenewal(
         : !parsedDate
         ? 'Falta Fecha Contrato'
         : 'Falta Período',
+      autoRenewal,
+      cycleNumber: 1,
+      cycleStartDate: null,
+      cycleStartDateFormatted: '-',
       expirationDate: null,
       expirationDateFormatted: 'Sin fecha de vencimiento',
+      noticeDate: null,
+      noticeDateFormatted: '-',
       contractDateFormatted: parsedDate ? formatDisplayDate(parsedDate) : 'No registrada',
       daysRemaining: null,
       daysText: 'Incompleto',
@@ -169,8 +197,14 @@ export function analyzeContractRenewal(
     return {
       status: 'INDEFINIDO',
       statusLabel: 'Indefinido',
+      autoRenewal,
+      cycleNumber: 1,
+      cycleStartDate: parsedDate,
+      cycleStartDateFormatted: formatDisplayDate(parsedDate),
       expirationDate: null,
       expirationDateFormatted: 'Plazo Indefinido',
+      noticeDate: null,
+      noticeDateFormatted: '-',
       contractDateFormatted: formatDisplayDate(parsedDate),
       daysRemaining: null,
       daysText: 'Indefinido',
@@ -179,32 +213,41 @@ export function analyzeContractRenewal(
     }
   }
 
-  // 3. Calcular fecha de vencimiento sumando la duración
-  const expDate = new Date(parsedDate.getTime())
-  if (periodInfo.years > 0) {
-    expDate.setFullYear(expDate.getFullYear() + periodInfo.years)
-  }
-  if (periodInfo.months > 0) {
-    expDate.setMonth(expDate.getMonth() + periodInfo.months)
-  }
-  if (periodInfo.days > 0) {
-    expDate.setDate(expDate.getDate() + periodInfo.days)
+  const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate())
+  let cycleStart = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate())
+  let cycleEnd = addRenewalPeriod(cycleStart, periodInfo)
+  let cycleNumber = 1
+
+  if (autoRenewal) {
+    // Si tiene renovación automática, avanzamos de ciclo mientras el ciclo ya haya concluido en el pasado (cycleEnd < today)
+    while (cycleEnd.getTime() < today.getTime()) {
+      cycleStart = new Date(cycleEnd.getTime())
+      cycleEnd = addRenewalPeriod(cycleStart, periodInfo)
+      cycleNumber++
+    }
   }
 
-  // Calcular diferencia en días exactos respecto a la fecha actual
-  const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate())
-  const expOnly = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate())
-  const diffTime = expOnly.getTime() - today.getTime()
+  // Fecha límite de notificación / aviso previo (30 días antes del vencimiento del ciclo)
+  const noticeDate = new Date(cycleEnd.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+  // Diferencia en días respecto a hoy
+  const diffTime = cycleEnd.getTime() - today.getTime()
   const daysRemaining = Math.round(diffTime / (1000 * 60 * 60 * 24))
 
-  // Clasificación
-  if (daysRemaining < 0) {
+  // Si no es renovación automática y ya expiró su plazo original
+  if (!autoRenewal && daysRemaining < 0) {
     const absDays = Math.abs(daysRemaining)
     return {
       status: 'VENCIDO',
-      statusLabel: 'Vencido',
-      expirationDate: expDate,
-      expirationDateFormatted: formatDisplayDate(expDate),
+      statusLabel: 'Vencido (Plazo Fijo)',
+      autoRenewal,
+      cycleNumber: 1,
+      cycleStartDate: parsedDate,
+      cycleStartDateFormatted: formatDisplayDate(parsedDate),
+      expirationDate: cycleEnd,
+      expirationDateFormatted: formatDisplayDate(cycleEnd),
+      noticeDate,
+      noticeDateFormatted: formatDisplayDate(noticeDate),
       contractDateFormatted: formatDisplayDate(parsedDate),
       daysRemaining,
       daysText: absDays === 1 ? 'Venció ayer' : `Vencido hace ${absDays} días`,
@@ -213,28 +256,47 @@ export function analyzeContractRenewal(
     }
   }
 
-  if (daysRemaining <= 60) {
+  // Ventana de aviso crítico: 30 días o menos antes de vencer / renovar
+  if (daysRemaining <= 30 && daysRemaining >= 0) {
     return {
       status: 'POR_VENCER',
-      statusLabel: 'Por Vencer',
-      expirationDate: expDate,
-      expirationDateFormatted: formatDisplayDate(expDate),
+      statusLabel: 'Por Vencer (Aviso 30d)',
+      autoRenewal,
+      cycleNumber,
+      cycleStartDate: cycleStart,
+      cycleStartDateFormatted: formatDisplayDate(cycleStart),
+      expirationDate: cycleEnd,
+      expirationDateFormatted: formatDisplayDate(cycleEnd),
+      noticeDate,
+      noticeDateFormatted: formatDisplayDate(noticeDate),
       contractDateFormatted: formatDisplayDate(parsedDate),
       daysRemaining,
-      daysText: daysRemaining === 0 ? 'Vence hoy' : daysRemaining === 1 ? 'Vence mañana' : `Vence en ${daysRemaining} días`,
+      daysText:
+        daysRemaining === 0
+          ? 'Vence/Renueva hoy'
+          : daysRemaining === 1
+          ? 'Vence mañana (1 día)'
+          : `Vence en ${daysRemaining} días`,
       urgency: 'warning',
       normalizedPeriod: periodInfo.label,
     }
   }
 
+  // Contrato vigente en curso (más de 30 días restantes para el vencimiento de su ciclo)
   return {
     status: 'VIGENTE',
     statusLabel: 'Vigente',
-    expirationDate: expDate,
-    expirationDateFormatted: formatDisplayDate(expDate),
+    autoRenewal,
+    cycleNumber,
+    cycleStartDate: cycleStart,
+    cycleStartDateFormatted: formatDisplayDate(cycleStart),
+    expirationDate: cycleEnd,
+    expirationDateFormatted: formatDisplayDate(cycleEnd),
+    noticeDate,
+    noticeDateFormatted: formatDisplayDate(noticeDate),
     contractDateFormatted: formatDisplayDate(parsedDate),
     daysRemaining,
-    daysText: `Vence en ${daysRemaining} días`,
+    daysText: `Vigente (vence en ${daysRemaining}d)`,
     urgency: 'normal',
     normalizedPeriod: periodInfo.label,
   }

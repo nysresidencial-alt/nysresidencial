@@ -35,7 +35,11 @@ import {
   parseContractDate,
   RenewalAnalysis,
 } from '@/lib/contract-renewals'
-import { updateContractRenewalDates, renewContractPeriod } from '@/app/admin/contratos/actions'
+import {
+  updateContractRenewalDates,
+  renewContractPeriod,
+  toggleContractAutoRenewal,
+} from '@/app/admin/contratos/actions'
 import { ContractEditModal, ContractItem } from './ContractEditModal'
 
 interface ContratosRenovacionesProps {
@@ -108,7 +112,12 @@ export function ContratosRenovacionesManager({
   // Contratos con su análisis de renovación precalculado
   const contractsWithAnalysis = useMemo(() => {
     return contracts.map((c) => {
-      const analysis = analyzeContractRenewal(c.contractDate, c.renewalPeriod)
+      const analysis = analyzeContractRenewal(
+        c.contractDate,
+        c.renewalPeriod,
+        new Date(),
+        c.autoRenewal ?? true
+      )
       return {
         ...c,
         analysis,
@@ -243,6 +252,28 @@ export function ContratosRenovacionesManager({
     }
   }
 
+  async function handleToggleAutoRenewal(contractId: string, currentAutoRenewal: boolean) {
+    const nextVal = !currentAutoRenewal
+    setContracts((prev) =>
+      prev.map((c) => (c.id === contractId ? { ...c, autoRenewal: nextVal } : c))
+    )
+    setSavingRowId(contractId)
+    setRowError(null)
+
+    const res = await toggleContractAutoRenewal(contractId, nextVal)
+    setSavingRowId(null)
+
+    if (res.error) {
+      setContracts((prev) =>
+        prev.map((c) => (c.id === contractId ? { ...c, autoRenewal: currentAutoRenewal } : c))
+      )
+      setRowError({ id: contractId, msg: res.error })
+    } else {
+      setSavedRowId(contractId)
+      setTimeout(() => setSavedRowId(null), 2500)
+    }
+  }
+
   async function handleQuickRenew(c: typeof contractsWithAnalysis[0]) {
     const analysis = c.analysis
     const promptMsg = `¿Deseas prorrogar el contrato de ${c.building} ${c.unitNumber} (${c.tenantName})?\n\nPeríodo configurado: ${c.renewalPeriod || '1 AÑO'}\nSe actualizará la fecha base del contrato y se dejará registro en el historial de la propiedad.`
@@ -352,14 +383,14 @@ export function ContratosRenovacionesManager({
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-              Vencidos
+              Plazo Fijo Vencido
             </span>
             <Clock className="w-4 h-4 text-rose-600 dark:text-rose-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 mt-2">
             {stats.vencidos}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Requieren regularización inmediata</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Sin prórroga que expiraron</p>
         </button>
 
         {/* Por Vencer */}
@@ -377,14 +408,14 @@ export function ContratosRenovacionesManager({
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              Por Vencer (≤ 60d)
+              Por Vencer (≤ 30d)
             </span>
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-2">
             {stats.porVencer}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Próximos a reajuste o prórroga</p>
+          <p className="text-[10px] text-muted-foreground mt-1">En ventana de preaviso de 30 días</p>
         </button>
 
         {/* Datos Incompletos */}
@@ -427,14 +458,14 @@ export function ContratosRenovacionesManager({
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Vigentes (&gt; 60d)
+              Vigentes (&gt; 30d)
             </span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2">
             {stats.vigentes}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Al día con vigencia extendida</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Ciclo activo con más de 30 días</p>
         </button>
 
         {/* Indefinidos o Total */}
@@ -674,7 +705,13 @@ export function ContratosRenovacionesManager({
                     <span>Período Renovación</span>
                   </div>
                 </th>
-                <th className="py-3.5 px-4">Próximo Vencimiento</th>
+                <th className="py-3.5 px-4 text-center min-w-[140px]">
+                  <div className="flex items-center justify-center gap-1" title="Si está activo, el contrato se prorroga automáticamente por cada período sucesivo y avisa 30 días antes">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Prórroga Auto.</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-4 min-w-[160px]">Próximo Vencimiento</th>
                 <th className="py-3.5 px-4 text-right">Canon Arriendo</th>
                 <th className="py-3.5 px-4 text-center">Acciones</th>
               </tr>
@@ -682,7 +719,7 @@ export function ContratosRenovacionesManager({
             <tbody className="divide-y divide-border/60">
               {paginatedContracts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={9} className="py-12 text-center text-muted-foreground">
                     <div className="max-w-sm mx-auto space-y-2">
                       <Calendar className="w-8 h-8 mx-auto text-muted-foreground/50" />
                       <p className="font-semibold text-foreground">No se encontraron contratos con estos filtros.</p>
@@ -875,10 +912,45 @@ export function ContratosRenovacionesManager({
                         </div>
                       </td>
 
-                      {/* Próximo Vencimiento */}
+                      {/* Prórroga Automática Toggle (EDITABLE EN 1 CLIC) */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAutoRenewal(c.id, c.autoRenewal ?? true)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-102 ${
+                            (c.autoRenewal ?? true)
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
+                              : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+                          }`}
+                          title={
+                            (c.autoRenewal ?? true)
+                              ? 'Prórroga automática activa. El contrato se renueva sucesivamente cada período y avisa 30 días antes. Clic para cambiar a Plazo Fijo.'
+                              : 'Plazo fijo sin prórroga automática. Clic para activar Prórroga Automática.'
+                          }
+                        >
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              (c.autoRenewal ?? true) ? 'bg-emerald-600' : 'bg-slate-400'
+                            }`}
+                          />
+                          <span>{(c.autoRenewal ?? true) ? 'Automática' : 'Plazo Fijo'}</span>
+                        </button>
+                        {a.autoRenewal && a.cycleNumber > 1 && (
+                          <div className="text-[10px] text-muted-foreground mt-0.5 font-medium">
+                            Ciclo #{a.cycleNumber}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Próximo Vencimiento y Fechas de Ciclo */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-extrabold text-foreground text-xs">
-                          {a.expirationDateFormatted}
+                        <div className="font-extrabold text-foreground text-xs flex items-center gap-1.5">
+                          <span>{a.expirationDateFormatted}</span>
+                          {a.autoRenewal && a.cycleNumber > 1 && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-primary/10 text-primary border border-primary/20">
+                              Ciclo {a.cycleNumber}
+                            </span>
+                          )}
                         </div>
                         <div
                           className={`text-[11px] font-semibold mt-0.5 ${
@@ -891,6 +963,16 @@ export function ContratosRenovacionesManager({
                         >
                           {a.daysText}
                         </div>
+                        {a.noticeDate && a.status !== 'INCOMPLETO' && a.status !== 'INDEFINIDO' && (
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            <span className="text-amber-700 dark:text-amber-400 font-medium">
+                              Aviso desde: {a.noticeDateFormatted}
+                            </span>
+                            {a.autoRenewal && (
+                              <span className="text-muted-foreground/80 ml-1">(-30d)</span>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* Canon Arriendo */}

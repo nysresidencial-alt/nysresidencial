@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     const rows = contracts
       .map((c) => {
-        const analysis = analyzeContractRenewal(c.contractDate, c.renewalPeriod)
+        const analysis = analyzeContractRenewal(c.contractDate, c.renewalPeriod, new Date(), c.autoRenewal)
 
         // Filtro por edificio
         if (filterBuilding !== 'TODOS' && c.building.toUpperCase() !== filterBuilding.toUpperCase()) {
@@ -69,10 +69,13 @@ export async function GET(request: NextRequest) {
 
         return {
           'ESTADO CONTRATO': analysis.statusLabel,
+          'RENOVACIÓN AUTOMÁTICA': c.autoRenewal ? 'SÍ' : 'NO',
+          'CICLO ACTUAL': c.autoRenewal ? `Ciclo ${analysis.cycleNumber}` : '1 (Plazo Fijo)',
           'DÍAS RESTANTES': analysis.daysRemaining !== null ? analysis.daysRemaining : '-',
           'DETALLE VIGENCIA': analysis.daysText,
           'PRÓXIMO VENCIMIENTO': analysis.expirationDateFormatted,
-          'FECHA CONTRATO': analysis.contractDateFormatted,
+          'FECHA LÍMITE AVISO': analysis.noticeDateFormatted,
+          'FECHA CONTRATO INICIAL': analysis.contractDateFormatted,
           'PERÍODO RENOVACIÓN': c.renewalPeriod || 'SIN ESPECIFICAR',
           'EDIFICIO': c.building,
           'UNIDAD': c.unitNumber,

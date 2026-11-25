@@ -168,6 +168,7 @@ model RentalContract {
   parkingNumber         String?       // Estacionamiento N°
   contractDate          String?       // Fecha Contrato (texto o ISO)
   renewalPeriod         String?       // "6 MESES", "1 AÑO", etc.
+  autoRenewal           Boolean       @default(true) // Prórroga automática o tácita reconducción
   status                String        @default("Ocupado") // "Ocupado", "Disponible", "Vendido", "En Retiro"
   
   // Datos del arrendatario

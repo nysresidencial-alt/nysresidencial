@@ -25,6 +25,7 @@ export interface ContractFormData {
   parkingNumber?: string | null
   contractDate?: string | null
   renewalPeriod?: string | null
+  autoRenewal?: boolean
   status: string
   tenantName: string
   tenantRut?: string | null
@@ -85,6 +86,7 @@ export async function updateContractRecord(contractId: string, data: ContractFor
         parkingNumber: data.parkingNumber?.trim() || null,
         contractDate: data.contractDate?.trim() || null,
         renewalPeriod: data.renewalPeriod?.trim() || null,
+        autoRenewal: data.autoRenewal !== undefined ? data.autoRenewal : undefined,
         status: data.status.trim(),
         tenantName: finalTenantName,
         tenantRut: finalTenantRut,
@@ -240,6 +242,7 @@ export async function createContractRecord(data: ContractFormData) {
         parkingNumber: data.parkingNumber?.trim() || null,
         contractDate: data.contractDate?.trim() || null,
         renewalPeriod: data.renewalPeriod?.trim() || null,
+        autoRenewal: data.autoRenewal !== undefined ? data.autoRenewal : true,
         status: data.status.trim() || 'Ocupado',
         tenantName: data.tenantName.trim(),
         tenantRut: data.tenantRut?.trim() || null,
