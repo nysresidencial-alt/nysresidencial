@@ -40,6 +40,7 @@ import {
   renewContractPeriod,
   toggleContractAutoRenewal,
 } from '@/app/admin/contratos/actions'
+import { DatePickerField } from '@/components/ui/DatePickerField'
 import { ContractEditModal, ContractItem } from './ContractEditModal'
 
 interface ContratosRenovacionesProps {
@@ -758,7 +759,6 @@ export function ContratosRenovacionesManager({
                   const isSavingThis = savingRowId === c.id
                   const isSavedThis = savedRowId === c.id
                   const hasErrorThis = rowError?.id === c.id
-                  const inputDateVal = c.contractDate ? toInputDate(parseContractDate(c.contractDate)) : ''
                   const rentAmount = Math.round(c.totalRent || (c.baseRent + c.adjustmentAmount) || c.baseRent || 0)
 
                   return (
@@ -868,16 +868,12 @@ export function ContratosRenovacionesManager({
                       <td className="py-3.5 px-4">
                         <div className="space-y-1">
                           <div className="relative flex items-center gap-1.5">
-                            <input
-                              type="date"
-                              value={inputDateVal}
-                              onChange={(e) => handleDateChange(c.id, e.target.value)}
-                              className={`w-full px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer ${
-                                !c.contractDate
-                                  ? 'border-amber-400 bg-amber-50/80 text-slate-900 placeholder:text-slate-400 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-600'
-                                  : 'border-border bg-background text-foreground hover:border-primary/50'
-                              }`}
-                              title="Haz clic para modificar la fecha de inicio del contrato"
+                            <DatePickerField
+                              value={c.contractDate}
+                              onChange={(newIso) => handleDateChange(c.id, newIso)}
+                              compact
+                              showStatusIndicator={!c.contractDate}
+                              placeholder="DD/MM/AAAA"
                             />
                             {isSavedThis && (
                               <span className="text-emerald-600 font-black text-xs shrink-0 animate-in fade-in" title="Guardado en base de datos">

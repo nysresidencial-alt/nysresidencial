@@ -226,7 +226,7 @@ export function VoucherStatusModal({ voucher, onClose, onUpdated }: VoucherStatu
                   label="Fecha de Pago / Ingreso"
                   value={paymentDate}
                   onChange={setPaymentDate}
-                  placeholder="YYYY-MM-DD"
+                  placeholder="DD/MM/AAAA"
                   required
                 />
 

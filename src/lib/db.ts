@@ -14,9 +14,9 @@ const pool =
   globalForPrisma.pgPool ??
   new Pool({
     connectionString,
-    max: 2, // Límite estricto de conexiones para serverless lambdas
+    max: process.env.NODE_ENV === 'production' ? 10 : 5,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 20000,
   })
 
 globalForPrisma.pgPool = pool

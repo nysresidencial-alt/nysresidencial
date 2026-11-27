@@ -1047,7 +1047,7 @@ export function ContractEditModal({
                       label="Fecha de Contrato"
                       value={contractDate}
                       onChange={setContractDate}
-                      placeholder="YYYY-MM-DD o DD-MM-YYYY"
+                      placeholder="DD/MM/AAAA"
                     />
 
                     <ComboboxCustom
