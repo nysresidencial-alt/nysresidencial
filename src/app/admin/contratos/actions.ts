@@ -15,7 +15,7 @@ async function checkAuth(action: 'view' | 'create' | 'edit' | 'delete') {
 }
 
 /**
- * Actualiza en tiempo real la fecha de contrato, período de renovación y/o prórroga automática
+ * Actualiza en tiempo real la fecha de contrato, período de renovación, días de aviso y/o prórroga automática
  */
 export async function updateContractRenewalDates(
   contractId: string,
@@ -23,6 +23,7 @@ export async function updateContractRenewalDates(
     contractDate?: string | null
     renewalPeriod?: string | null
     autoRenewal?: boolean
+    noticeDays?: number
   }
 ) {
   await checkAuth('edit')
@@ -42,6 +43,7 @@ export async function updateContractRenewalDates(
         contractDate: data.contractDate !== undefined ? (data.contractDate?.trim() || null) : existing.contractDate,
         renewalPeriod: data.renewalPeriod !== undefined ? (data.renewalPeriod?.trim().toUpperCase() || null) : existing.renewalPeriod,
         autoRenewal: data.autoRenewal !== undefined ? data.autoRenewal : existing.autoRenewal,
+        noticeDays: data.noticeDays !== undefined ? Number(data.noticeDays) : existing.noticeDays,
       },
       include: {
         company: true,
@@ -56,6 +58,44 @@ export async function updateContractRenewalDates(
   } catch (err: any) {
     console.error('Error updating contract renewal dates:', err)
     return { error: err.message || 'Error al actualizar las fechas del contrato' }
+  }
+}
+
+/**
+ * Actualiza los días de aviso antes de término de contrato (30, 60, 90, 120 días)
+ */
+export async function updateContractNoticeDays(
+  contractId: string,
+  noticeDays: number
+) {
+  await checkAuth('edit')
+
+  try {
+    const existing = await prisma.rentalContract.findUnique({
+      where: { id: contractId },
+    })
+
+    if (!existing) {
+      return { error: 'Propiedad / Contrato no encontrado' }
+    }
+
+    const updated = await prisma.rentalContract.update({
+      where: { id: contractId },
+      data: {
+        noticeDays: Number(noticeDays) || 30,
+      },
+      include: {
+        company: true,
+      },
+    })
+
+    revalidatePath('/admin/contratos')
+    revalidatePath('/admin/arriendos')
+
+    return { success: true, contract: updated, noticeDays: updated.noticeDays }
+  } catch (err: any) {
+    console.error('Error updating notice days:', err)
+    return { error: err.message || 'Error al actualizar los días de aviso' }
   }
 }
 
@@ -121,7 +161,8 @@ export async function renewContractPeriod(
       existing.contractDate,
       existing.renewalPeriod,
       new Date(),
-      existing.autoRenewal
+      existing.autoRenewal,
+      existing.noticeDays ?? 30
     )
 
     // La nueva fecha de inicio del ciclo será la fecha de vencimiento anterior o la fecha de hoy

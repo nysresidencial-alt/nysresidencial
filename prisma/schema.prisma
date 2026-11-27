@@ -169,6 +169,7 @@ model RentalContract {
   contractDate          String?       // Fecha Contrato (texto o ISO)
   renewalPeriod         String?       // "6 MESES", "1 AÑO", etc.
   autoRenewal           Boolean       @default(true) // Prórroga automática o tácita reconducción
+  noticeDays            Int           @default(30) // Días de aviso antes de término de contrato (Leasity: 30, 60, 90, 120)
   status                String        @default("Ocupado") // "Ocupado", "Disponible", "Vendido", "En Retiro"
   
   // Datos del arrendatario

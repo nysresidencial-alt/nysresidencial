@@ -11,8 +11,12 @@ export interface RenewalAnalysis {
   cycleStartDateFormatted: string
   expirationDate: Date | null
   expirationDateFormatted: string
+  noticeDays: number
+  effectiveNoticeDays: number
   noticeDate: Date | null
   noticeDateFormatted: string
+  alertStartDate: Date | null
+  alertStartDateFormatted: string
   contractDateFormatted: string
   daysRemaining: number | null
   daysText: string
@@ -156,16 +160,21 @@ export function addRenewalPeriod(
 
 /**
  * Analiza un contrato y calcula su próximo vencimiento, días restantes y urgencia,
- * soportando prórroga automática sucesiva (ciclos) y ventana de aviso previo de 30 días.
+ * soportando prórroga automática sucesiva (ciclos) y ventana de aviso contractual (noticeDays: 30, 60, 90, 120)
+ * más una holgura preventiva de 5 días para que la administración prepare y envíe las notificaciones.
  */
 export function analyzeContractRenewal(
   contractDateStr: string | null | undefined,
   renewalPeriodStr: string | null | undefined,
   referenceDate: Date = new Date(),
-  autoRenewal: boolean = true
+  autoRenewal: boolean = true,
+  noticeDays: number = 30
 ): RenewalAnalysis {
   const parsedDate = parseContractDate(contractDateStr)
   const periodInfo = parseRenewalPeriod(renewalPeriodStr)
+  const safeNoticeDays = Number(noticeDays) > 0 ? Number(noticeDays) : 30
+  const bufferDays = 5
+  const effectiveNoticeDays = safeNoticeDays + bufferDays
 
   // 1. Datos incompletos
   if (!parsedDate || (!periodInfo.isIndefinite && periodInfo.years === 0 && periodInfo.months === 0 && periodInfo.days === 0)) {
@@ -182,8 +191,12 @@ export function analyzeContractRenewal(
       cycleStartDateFormatted: '-',
       expirationDate: null,
       expirationDateFormatted: 'Sin fecha de vencimiento',
+      noticeDays: safeNoticeDays,
+      effectiveNoticeDays,
       noticeDate: null,
       noticeDateFormatted: '-',
+      alertStartDate: null,
+      alertStartDateFormatted: '-',
       contractDateFormatted: parsedDate ? formatDisplayDate(parsedDate) : 'No registrada',
       daysRemaining: null,
       daysText: 'Incompleto',
@@ -203,8 +216,12 @@ export function analyzeContractRenewal(
       cycleStartDateFormatted: formatDisplayDate(parsedDate),
       expirationDate: null,
       expirationDateFormatted: 'Plazo Indefinido',
+      noticeDays: safeNoticeDays,
+      effectiveNoticeDays,
       noticeDate: null,
       noticeDateFormatted: '-',
+      alertStartDate: null,
+      alertStartDateFormatted: '-',
       contractDateFormatted: formatDisplayDate(parsedDate),
       daysRemaining: null,
       daysText: 'Indefinido',
@@ -227,9 +244,11 @@ export function analyzeContractRenewal(
     }
   }
 
-  // Fecha límite de notificación / aviso previo (35 días de anticipación según requerimiento de notificación)
-  const NOTICE_DAYS = 35
-  const noticeDate = new Date(cycleEnd.getTime() - NOTICE_DAYS * 24 * 60 * 60 * 1000)
+  // Fecha límite contractual de aviso previo (ej: 30, 60, 90, 120 días antes del término)
+  const noticeDate = new Date(cycleEnd.getTime() - safeNoticeDays * 24 * 60 * 60 * 1000)
+
+  // Fecha de inicio de alerta preventiva en sistema (5 días antes de la fecha límite contractual)
+  const alertStartDate = new Date(cycleEnd.getTime() - effectiveNoticeDays * 24 * 60 * 60 * 1000)
 
   // Diferencia en días respecto a hoy
   const diffTime = cycleEnd.getTime() - today.getTime()
@@ -247,8 +266,12 @@ export function analyzeContractRenewal(
       cycleStartDateFormatted: formatDisplayDate(parsedDate),
       expirationDate: cycleEnd,
       expirationDateFormatted: formatDisplayDate(cycleEnd),
+      noticeDays: safeNoticeDays,
+      effectiveNoticeDays,
       noticeDate,
       noticeDateFormatted: formatDisplayDate(noticeDate),
+      alertStartDate,
+      alertStartDateFormatted: formatDisplayDate(alertStartDate),
       contractDateFormatted: formatDisplayDate(parsedDate),
       daysRemaining,
       daysText: absDays === 1 ? 'Venció ayer' : `Vencido hace ${absDays} días`,
@@ -257,19 +280,23 @@ export function analyzeContractRenewal(
     }
   }
 
-  // Ventana de aviso crítico: 35 días o menos antes de vencer / renovar
-  if (daysRemaining <= NOTICE_DAYS && daysRemaining >= 0) {
+  // Ventana de aviso preventivo: días restantes <= días de aviso pactados + 5 días de holgura
+  if (daysRemaining <= effectiveNoticeDays && daysRemaining >= 0) {
     return {
       status: 'POR_VENCER',
-      statusLabel: 'Por Vencer (Aviso 35d)',
+      statusLabel: `Por Vencer (${safeNoticeDays}d)`,
       autoRenewal,
       cycleNumber,
       cycleStartDate: cycleStart,
       cycleStartDateFormatted: formatDisplayDate(cycleStart),
       expirationDate: cycleEnd,
       expirationDateFormatted: formatDisplayDate(cycleEnd),
+      noticeDays: safeNoticeDays,
+      effectiveNoticeDays,
       noticeDate,
       noticeDateFormatted: formatDisplayDate(noticeDate),
+      alertStartDate,
+      alertStartDateFormatted: formatDisplayDate(alertStartDate),
       contractDateFormatted: formatDisplayDate(parsedDate),
       daysRemaining,
       daysText:
@@ -278,12 +305,12 @@ export function analyzeContractRenewal(
           : daysRemaining === 1
           ? 'Vence mañana (1 día)'
           : `Vence en ${daysRemaining} días`,
-      urgency: 'warning',
+      urgency: daysRemaining <= safeNoticeDays ? 'critical' : 'warning',
       normalizedPeriod: periodInfo.label,
     }
   }
 
-  // Contrato vigente en curso (más de 35 días restantes para el vencimiento de su ciclo)
+  // Contrato vigente en curso (más días restantes que la ventana de aviso + holgura)
   return {
     status: 'VIGENTE',
     statusLabel: 'Vigente',
@@ -293,8 +320,12 @@ export function analyzeContractRenewal(
     cycleStartDateFormatted: formatDisplayDate(cycleStart),
     expirationDate: cycleEnd,
     expirationDateFormatted: formatDisplayDate(cycleEnd),
+    noticeDays: safeNoticeDays,
+    effectiveNoticeDays,
     noticeDate,
     noticeDateFormatted: formatDisplayDate(noticeDate),
+    alertStartDate,
+    alertStartDateFormatted: formatDisplayDate(alertStartDate),
     contractDateFormatted: formatDisplayDate(parsedDate),
     daysRemaining,
     daysText: `Vigente (vence en ${daysRemaining}d)`,

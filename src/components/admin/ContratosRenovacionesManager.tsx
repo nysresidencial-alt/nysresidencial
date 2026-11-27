@@ -116,7 +116,8 @@ export function ContratosRenovacionesManager({
         c.contractDate,
         c.renewalPeriod,
         new Date(),
-        c.autoRenewal ?? true
+        c.autoRenewal ?? true,
+        c.noticeDays ?? 30
       )
       return {
         ...c,
@@ -239,6 +240,24 @@ export function ContratosRenovacionesManager({
     setRowError(null)
 
     const res = await updateContractRenewalDates(contractId, { renewalPeriod: newPeriod })
+    setSavingRowId(null)
+
+    if (res.error) {
+      setRowError({ id: contractId, msg: res.error })
+    } else if (res.contract) {
+      setContracts((prev) =>
+        prev.map((c) => (c.id === contractId ? { ...c, ...res.contract } : c))
+      )
+      setSavedRowId(contractId)
+      setTimeout(() => setSavedRowId(null), 2500)
+    }
+  }
+
+  async function handleNoticeDaysChange(contractId: string, newDays: number) {
+    setSavingRowId(contractId)
+    setRowError(null)
+
+    const res = await updateContractRenewalDates(contractId, { noticeDays: newDays })
     setSavingRowId(null)
 
     if (res.error) {
@@ -408,14 +427,14 @@ export function ContratosRenovacionesManager({
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              Por Vencer (≤ 35d)
+              Por Vencer
             </span>
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-2">
             {stats.porVencer}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">En ventana de preaviso de 35 días</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Ventana contractual + 5d holgura</p>
         </button>
 
         {/* Datos Incompletos */}
@@ -705,8 +724,14 @@ export function ContratosRenovacionesManager({
                     <span>Período Renovación</span>
                   </div>
                 </th>
+                <th className="py-3.5 px-4 min-w-[145px]">
+                  <div className="flex items-center gap-1" title="Días contractuales de aviso previo (Leasity: 30, 60, 90, 120 días). El sistema alerta 5 días antes con fines de preparación y gestión operativa.">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                    <span>Días de Aviso</span>
+                  </div>
+                </th>
                 <th className="py-3.5 px-4 text-center min-w-[140px]">
-                  <div className="flex items-center justify-center gap-1" title="Si está activo, el contrato se prorroga automáticamente por cada período sucesivo y avisa 35 días antes">
+                  <div className="flex items-center justify-center gap-1" title="Si está activo, el contrato se prorroga automáticamente por cada período sucesivo y activa la alerta según los días de aviso pactados + 5 días">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Prórroga Auto.</span>
                   </div>
@@ -719,7 +744,7 @@ export function ContratosRenovacionesManager({
             <tbody className="divide-y divide-border/60">
               {paginatedContracts.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={10} className="py-12 text-center text-muted-foreground">
                     <div className="max-w-sm mx-auto space-y-2">
                       <Calendar className="w-8 h-8 mx-auto text-muted-foreground/50" />
                       <p className="font-semibold text-foreground">No se encontraron contratos con estos filtros.</p>
@@ -912,6 +937,49 @@ export function ContratosRenovacionesManager({
                         </div>
                       </td>
 
+                      {/* Días de Aviso (EDITABLE DIRECTO EN LA CELDA) */}
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1">
+                          <div className="relative flex items-center gap-1.5">
+                            <select
+                              value={c.noticeDays ?? 30}
+                              onChange={(e) => handleNoticeDaysChange(c.id, Number(e.target.value))}
+                              className="w-full px-2 py-1 text-xs font-semibold rounded-lg border border-border bg-background text-foreground hover:border-primary/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                              title="Selecciona los días contractuales de aviso previo (Leasity: 30, 60, 90, 120 días). La alerta del sistema se activará 5 días antes."
+                            >
+                              <option value={30} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 py-1 font-medium">
+                                30 días
+                              </option>
+                              <option value={60} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 py-1 font-medium">
+                                60 días
+                              </option>
+                              <option value={90} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 py-1 font-medium">
+                                90 días
+                              </option>
+                              <option value={120} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 py-1 font-medium">
+                                120 días
+                              </option>
+                            </select>
+                            {isSavedThis && (
+                              <span className="text-emerald-600 font-black text-xs shrink-0 animate-in fade-in" title="Guardado en base de datos">
+                                ✓
+                              </span>
+                            )}
+                            {isSavingThis && (
+                              <span className="text-primary text-[10px] shrink-0 font-medium animate-pulse">
+                                ...
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground flex items-center justify-between">
+                            <span title="Días contractuales de aviso">Aviso: {c.noticeDays ?? 30}d</span>
+                            <span className="text-amber-600 dark:text-amber-400 font-semibold" title="Inicio de alerta preventiva (5 días antes)">
+                              Alerta: -{(c.noticeDays ?? 30) + 5}d
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
                       {/* Prórroga Automática Toggle (EDITABLE EN 1 CLIC) */}
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <button
@@ -924,7 +992,7 @@ export function ContratosRenovacionesManager({
                           }`}
                           title={
                             (c.autoRenewal ?? true)
-                              ? 'Prórroga automática activa. El contrato se renueva sucesivamente cada período y avisa 35 días antes. Clic para cambiar a Plazo Fijo.'
+                              ? `Prórroga automática activa. El contrato se renueva sucesivamente cada período y avisa ${(c.noticeDays ?? 30) + 5} días antes. Clic para cambiar a Plazo Fijo.`
                               : 'Plazo fijo sin prórroga automática. Clic para activar Prórroga Automática.'
                           }
                         >
@@ -964,13 +1032,15 @@ export function ContratosRenovacionesManager({
                           {a.daysText}
                         </div>
                         {a.noticeDate && a.status !== 'INCOMPLETO' && a.status !== 'INDEFINIDO' && (
-                          <div className="text-[10px] text-muted-foreground mt-0.5">
-                            <span className="text-amber-700 dark:text-amber-400 font-medium">
-                              Aviso desde: {a.noticeDateFormatted}
-                            </span>
-                            {a.autoRenewal && (
-                              <span className="text-muted-foreground/80 ml-1">(-35d)</span>
-                            )}
+                          <div className="text-[10px] space-y-0.5 mt-1">
+                            <div className="text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
+                              <span>Alerta: {a.alertStartDateFormatted}</span>
+                              <span className="text-muted-foreground/80 font-normal">(-{a.effectiveNoticeDays}d)</span>
+                            </div>
+                            <div className="text-muted-foreground flex items-center gap-1">
+                              <span>Límite legal: {a.noticeDateFormatted}</span>
+                              <span className="text-muted-foreground/80 font-normal">(-{a.noticeDays}d)</span>
+                            </div>
                           </div>
                         )}
                       </td>

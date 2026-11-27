@@ -40,7 +40,13 @@ export async function GET(request: NextRequest) {
 
     const rows = contracts
       .map((c) => {
-        const analysis = analyzeContractRenewal(c.contractDate, c.renewalPeriod, new Date(), c.autoRenewal)
+        const analysis = analyzeContractRenewal(
+          c.contractDate,
+          c.renewalPeriod,
+          new Date(),
+          c.autoRenewal,
+          c.noticeDays ?? 30
+        )
 
         // Filtro por edificio
         if (filterBuilding !== 'TODOS' && c.building.toUpperCase() !== filterBuilding.toUpperCase()) {
@@ -74,7 +80,9 @@ export async function GET(request: NextRequest) {
           'DÍAS RESTANTES': analysis.daysRemaining !== null ? analysis.daysRemaining : '-',
           'DETALLE VIGENCIA': analysis.daysText,
           'PRÓXIMO VENCIMIENTO': analysis.expirationDateFormatted,
+          'DÍAS AVISO PACTADOS': `${c.noticeDays ?? 30} DÍAS`,
           'FECHA LÍMITE AVISO': analysis.noticeDateFormatted,
+          'INICIO ALERTA SISTEMA': analysis.alertStartDateFormatted,
           'FECHA CONTRATO INICIAL': analysis.contractDateFormatted,
           'PERÍODO RENOVACIÓN': c.renewalPeriod || 'SIN ESPECIFICAR',
           'EDIFICIO': c.building,

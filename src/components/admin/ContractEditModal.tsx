@@ -47,6 +47,7 @@ export interface ContractItem {
   contractDate: string | null
   renewalPeriod: string | null
   autoRenewal?: boolean
+  noticeDays?: number
   status: string
   tenantName: string
   tenantRut: string | null
@@ -157,6 +158,7 @@ export function ContractEditModal({
   const [contractDate, setContractDate] = useState(contract?.contractDate || '')
   const [renewalPeriod, setRenewalPeriod] = useState(contract?.renewalPeriod || '1 AÑO')
   const [autoRenewal, setAutoRenewal] = useState(contract?.autoRenewal ?? true)
+  const [noticeDays, setNoticeDays] = useState<number>(contract?.noticeDays ?? 30)
   const [status, setStatus] = useState(contract?.status || 'Ocupado')
   const [newAssignee, setNewAssignee] = useState(contract?.newAssignee || '')
 
@@ -241,6 +243,7 @@ export function ContractEditModal({
       contractDate: contractDate.trim() || null,
       renewalPeriod: renewalPeriod.trim() || null,
       autoRenewal,
+      noticeDays: Number(noticeDays) || 30,
       status: status.trim(),
       newAssignee: newAssignee.trim() || null,
       tenantName: finalTenantName,
@@ -475,6 +478,14 @@ export function ContractEditModal({
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Período Renovación:</span>
                     <span className="text-foreground font-semibold">{contract.renewalPeriod || '1 AÑO'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Días Aviso Término:</span>
+                    <span className="text-foreground font-semibold">{contract.noticeDays ?? 30} días</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Alerta Preventiva Sistema:</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold">{(contract.noticeDays ?? 30) + 5} días antes</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Estado Propiedad:</span>
@@ -1031,7 +1042,7 @@ export function ContractEditModal({
               {/* TAB 3: VALORES Y CONDICIONES */}
               {activeTab === 'valores' && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     <DatePickerField
                       label="Fecha de Contrato"
                       value={contractDate}
@@ -1046,6 +1057,26 @@ export function ContractEditModal({
                       options={RENEWAL_OPTIONS}
                       placeholder="Selecciona período..."
                     />
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                        <span>Aviso Término (Leasity)</span>
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">+5d holgura</span>
+                      </label>
+                      <select
+                        value={noticeDays}
+                        onChange={(e) => setNoticeDays(Number(e.target.value))}
+                        className="w-full py-2 px-3 text-xs bg-background border border-border rounded-xl text-foreground font-semibold focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                      >
+                        <option value={30}>30 días (Alerta a los 35d)</option>
+                        <option value={60}>60 días (Alerta a los 65d)</option>
+                        <option value={90}>90 días (Alerta a los 95d)</option>
+                        <option value={120}>120 días (Alerta a los 125d)</option>
+                      </select>
+                      <span className="text-[10px] text-muted-foreground block leading-tight">
+                        Aviso contractual pactado
+                      </span>
+                    </div>
 
                     <ComboboxCustom
                       label="Estado de la Propiedad"
@@ -1068,7 +1099,7 @@ export function ContractEditModal({
                     <label htmlFor="autoRenewalCheckbox" className="text-xs font-bold text-foreground cursor-pointer select-none">
                       <span>Renovación Automática / Prórroga Tácita Sucesiva</span>
                       <span className="block text-[11px] font-normal text-muted-foreground mt-0.5">
-                        Si está activo, el contrato se prorroga automáticamente por cada período cumplido y entra en alerta &ldquo;Por Vencer&rdquo; solo durante los 35 días previos al término de cada ciclo.
+                        Si está activo, el contrato se prorroga automáticamente por cada período cumplido y entra en alerta &ldquo;Por Vencer&rdquo; {noticeDays + 5} días antes del término de cada ciclo ({noticeDays} días contractuales + 5 días de holgura operativa).
                       </span>
                     </label>
                   </div>
